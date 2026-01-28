@@ -2,7 +2,7 @@
   "data": [
     {
       "id": 1,
-      "codigo": "1",
+      "codigo": "PED-1",
       "data": "2017-01-27",
       "situacao": "FINALIZADA",
       "pedidoNumero": "1356",
@@ -35,7 +35,7 @@
     },
     {
       "id": 2,
-      "codigo": "2",
+      "codigo": "PED-2",
       "data": "2024-01-15",
       "situacao": "EM ANDAMENTO",
       "pedidoNumero": "1357",
@@ -53,6 +53,30 @@
           "quantidadeUn": 4500,
           "pesoKg": 1250.5,
           "dataEntrega": "2024-02-20"
+        }
+      ],
+      "ativo": true
+    },
+    {
+      "id": 3,
+      "codigo": "PED-3",
+      "data": "2024-01-20",
+      "situacao": "NÃO INICIADA",
+      "pedidoNumero": "1358",
+      "cliente": {
+        "codigo": "1",
+        "nome": "METALURGICA MOR"
+      },
+      "observacao": "",
+      "itens": [
+        {
+          "id": 4,
+          "codigo": 1,
+          "item": "100000",
+          "descricao": "TUBO ALUM 15,88X1,00X1400MM TESTE CAD SP",
+          "quantidadeUn": 1000,
+          "pesoKg": 176.4,
+          "dataEntrega": "2024-02-04"
         }
       ],
       "ativo": true

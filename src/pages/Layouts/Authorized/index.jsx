@@ -149,7 +149,7 @@ const Authorized = ({ children, userName }) => {
                             {/* Logo e Título */}
                             <Col onClick={() => navigate('/')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                                 {   /*  <img src={logo} alt="Logo" style={{ height: 20 }} /> */}
-                                <Text style={{ color: '#fff', fontSize: '24px', marginLeft: '0px' }}>Mesk</Text>
+                                <Text style={{ color: '#fff', fontSize: '34px', marginLeft: '16px'  , fontWeight: 600}}>MESC</Text>
                             </Col>
                         </Row>
                     </Col>

@@ -427,16 +427,16 @@ const OrdemProducaoConsulta = () => {
                   submitOnSide={true}
                   onClose={null}
                   onSubmit={handleFilter}
+                  secondaryButton={
+                    <Button
+                      icon={<AiOutlineClear />}
+                      onClick={handleClearFilters}
+                      size="middle"
+                    >
+                      Limpar Filtros
+                    </Button>
+                  }
                 />
-                <Row justify="end" style={{ marginTop: 8 }}>
-                  <Button
-                    icon={<AiOutlineClear />}
-                    onClick={handleClearFilters}
-                    size="middle"
-                  >
-                    Limpar Filtros
-                  </Button>
-                </Row>
               </div>
 
               {/* Tabela Principal */}

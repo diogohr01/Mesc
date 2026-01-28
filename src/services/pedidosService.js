@@ -1,5 +1,6 @@
 import Api from './api';
 import pedidosMock from '../mocks/pedidos/pedidos.json';
+import dayjs from 'dayjs';
 
 // Função auxiliar para simular delay da API
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -25,6 +26,23 @@ const getMockData = async (endpoint, data) => {
         if (filtros.situacao) {
             filteredData = filteredData.filter(item => item.situacao === filtros.situacao);
         }
+        if (filtros.pedidoNumero) {
+            filteredData = filteredData.filter(item => 
+                item.pedidoNumero?.toString().includes(filtros.pedidoNumero.toString())
+            );
+        }
+        if (filtros.dataInicio) {
+            filteredData = filteredData.filter(item => {
+                const itemData = dayjs(item.data);
+                return itemData.isSameOrAfter(dayjs(filtros.dataInicio), 'day');
+            });
+        }
+        if (filtros.dataFim) {
+            filteredData = filteredData.filter(item => {
+                const itemData = dayjs(item.data);
+                return itemData.isSameOrBefore(dayjs(filtros.dataFim), 'day');
+            });
+        }
         
         const start = (page - 1) * pageSize;
         const end = start + pageSize;
@@ -49,15 +67,78 @@ const getMockData = async (endpoint, data) => {
         const item = pedidosMock.data.find(p => p.id === id);
         
         return {
-            data: item || null,
+            data: {
+                data: item || null
+            },
             success: !!item,
             message: item ? "Success" : "Pedido não encontrado"
         };
     }
     
+    if (endpoint.includes('buscarPedidoDoTotvs')) {
+        const { pedidoNumero } = data || {};
+        // Simular busca no Totvs - retorna dados mockados
+        const mockPedido = {
+            codigo: `PED-${Date.now()}`,
+            data: new Date().toISOString().split('T')[0],
+            situacao: "NÃO INICIADA",
+            pedidoNumero: pedidoNumero,
+            cliente: {
+                codigo: "95556",
+                nome: "METALURGICA MOR"
+            },
+            observacao: "Pedido importado do Totvs",
+            itens: [
+                {
+                    codigo: 1,
+                    item: "90100002",
+                    descricao: "MTR-027 6063 T6F 19,05X1,20X6000 MM SEQUE",
+                    quantidadeUn: 400,
+                    pesoKg: 436.80,
+                    dataEntrega: "2024-02-20"
+                },
+                {
+                    codigo: 2,
+                    item: "90100002",
+                    descricao: "MTR-027 6063 T6F 19,05X1,20X6000 MM SEQUE",
+                    quantidadeUn: 400,
+                    pesoKg: 436.80,
+                    dataEntrega: "2024-03-02"
+                }
+            ]
+        };
+        
+        return {
+            data: mockPedido,
+            success: true,
+            message: "Pedido encontrado no Totvs"
+        };
+    }
+    
+    if (endpoint.includes('cadastrarOP')) {
+        // Simular criação de OPs do MESC a partir do pedido
+        return {
+            data: {
+                opsCriadas: [
+                    {
+                        id: Date.now(),
+                        numeroOPMESC: "29948",
+                        status: "Em cadastro",
+                        quantidade: 1000,
+                        data: new Date().toISOString().split('T')[0]
+                    }
+                ]
+            },
+            success: true,
+            message: "OPs do MESC cadastradas com sucesso"
+        };
+    }
+    
     if (endpoint.includes('upsert')) {
         return {
-            data: data,
+            data: {
+                data: data
+            },
             success: true,
             message: data.id ? "Pedido atualizado com sucesso" : "Pedido criado com sucesso"
         };
@@ -81,7 +162,9 @@ const getMockData = async (endpoint, data) => {
                 ativo: true
             };
             return {
-                data: copia,
+                data: {
+                    data: copia
+                },
                 success: true,
                 message: "Pedido copiado com sucesso"
             };
@@ -165,6 +248,32 @@ const PedidosService = {
             // return response.data;
             
             const mockResponse = await getMockData('/pedidos/copiar', { id });
+            return mockResponse;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    // Buscar pedido do Totvs
+    buscarPedidoDoTotvs: async (pedidoNumero) => {
+        try {
+            // const response = await Api.post('/pedidos/buscarPedidoDoTotvs', { pedidoNumero });
+            // return response.data;
+            
+            const mockResponse = await getMockData('/pedidos/buscarPedidoDoTotvs', { pedidoNumero });
+            return mockResponse;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    // Cadastrar OP (criar OPs do MESC a partir do pedido)
+    cadastrarOP: async (pedidoId) => {
+        try {
+            // const response = await Api.post('/pedidos/cadastrarOP', { pedidoId });
+            // return response.data;
+            
+            const mockResponse = await getMockData('/pedidos/cadastrarOP', { pedidoId });
             return mockResponse;
         } catch (error) {
             throw error;

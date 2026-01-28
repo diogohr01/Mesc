@@ -1,9 +1,9 @@
-import { Button, Col, DatePicker, Form, Input, InputNumber, Layout, message, Modal, Row, Space, Tooltip, Typography } from 'antd';
+import { Button, Col, Form, Layout, message, Modal, Row, Space, Tooltip, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { debounce } from 'lodash';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AiFillDelete, AiFillEdit, AiOutlineClear, AiOutlineFilter, AiOutlinePlus, AiOutlineSearch } from 'react-icons/ai';
-import { Card, LoadingSpinner, PaginatedTable } from '../../../components';
+import { AiFillDelete, AiFillEdit, AiOutlineClear, AiOutlinePlus, AiOutlineSearch } from 'react-icons/ai';
+import { Card, DynamicForm, LoadingSpinner, PaginatedTable } from '../../../components';
 import Api from '../../../services/api';
 import { colors } from '../../../styles/colors';
 
@@ -221,113 +221,28 @@ const List = ({ onAdd, onEdit }) => {
                   border: '1px solid #f0f0f0',
                   borderRadius: '6px'
                 }}>
-
-                <Form
-                  form={filterForm}
-                  layout="vertical"
-                  onFinish={handleFilter}
-                  style={{ marginBottom: 0 }}
-                >
-                  <Row gutter={[12, 6]} align="bottom">
-                    <Col xs={24} sm={12} md={6} lg={4}>
-                      <Form.Item
-                        name="text"
-                        label="Texto"
-                        style={{ marginBottom: '4px' }}
+                  <DynamicForm
+                    formConfig={filterFormConfig}
+                    formInstance={filterForm}
+                    submitText="Filtrar"
+                    submitIcon={<AiOutlineSearch />}
+                    submitOnSide={true}
+                    onClose={null}
+                    onSubmit={handleFilter}
+                    secondaryButton={
+                      <Button
+                        icon={<AiOutlineClear />}
+                        onClick={() => {
+                          filterForm.resetFields();
+                          debouncedReloadTable();
+                        }}
+                        size="middle"
                       >
-                        <Input
-                          placeholder="Digite o texto..."
-                          size="middle"
-                          allowClear
-                          prefix={<AiOutlineSearch style={{ color: '#bfbfbf' }} />}
-                        />
-                      </Form.Item>
-                    </Col>
-
-                      <Col xs={24} sm={12} md={6} lg={4}>
-                        <Form.Item
-                          name="integer"
-                          label="Número"
-                          style={{ marginBottom: '4px' }}
-                        >
-                        <InputNumber
-                          placeholder="Digite o número..."
-                          size="middle"
-                          style={{ width: '100%' }}
-                          controls={false}
-                          formatter={(value) => value ? value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
-                          parser={(value) => value ? value.replace(/\$\s?|(,*)/g, '') : ''}
-                        />
-                      </Form.Item>
-                    </Col>
-
-                      <Col xs={24} sm={12} md={6} lg={4}>
-                        <Form.Item
-                          name="decimal"
-                          label="Decimal"
-                          style={{ marginBottom: '4px' }}
-                        >
-                        <InputNumber
-                          placeholder="Digite o decimal..."
-                          size="middle"
-                          style={{ width: '100%' }}
-                          step={0.01}
-                          controls={false}
-                          formatter={(value) => value ? value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
-                          parser={(value) => value ? value.replace(/\$\s?|(,*)/g, '') : ''}
-                        />
-                      </Form.Item>
-                    </Col>
-
-                      <Col xs={24} sm={12} md={6} lg={4}>
-                        <Form.Item
-                          name="date"
-                          label="Data"
-                          style={{ marginBottom: '4px' }}
-                        >
-                        <DatePicker
-                          placeholder="Selecione a data..."
-                          size="middle"
-                          style={{ width: '100%' }}
-                          format="DD/MM/YYYY"
-                          allowClear
-                        />
-                      </Form.Item>
-                    </Col>
-
-                      <Col xs={24} sm={12} md={6} lg={4}>
-                        <Form.Item
-                          label=" "
-                          style={{ marginBottom: '4px' }}
-                        >
-                        <Space size="small" style={{ width: '100%' }}>
-                          <Button
-                            type="primary"
-                            htmlType="submit"
-                            size="middle"
-                            icon={<AiOutlineSearch />}
-                            loading={loading}
-                            style={{ minWidth: '80px', flex: 1 }}
-                          >
-                            Filtrar
-                          </Button>
-                          <Button
-                            size="middle"
-                            icon={<AiOutlineClear />}
-                            onClick={() => {
-                              filterForm.resetFields();
-                              debouncedReloadTable();
-                            }}
-                            style={{ minWidth: '80px', flex: 1 }}
-                          >
-                            Limpar
-                          </Button>
-                        </Space>
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                </Form>
-              </div>
+                        Limpar
+                      </Button>
+                    }
+                  />
+                </div>
 
               <div style={{ padding: '16px 0' }}>
                 <PaginatedTable

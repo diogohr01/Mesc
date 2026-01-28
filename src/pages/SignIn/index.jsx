@@ -61,7 +61,7 @@ const SignIn = () => {
     >
       <Col span={6} style={{ textAlign: 'center' }}>
        {/*  <img src={logo} alt="Logo" style={{ height: 25, marginBottom: 20 }} />*/}
-       <Text style={{ color: '#fff', fontSize: '34px', marginLeft: '0px' , fontWeight: 600   }}>Mesk</Text>
+       <Text style={{ color: '#fff', fontSize: '34px', marginLeft: '0px' , fontWeight: 600   }}>MESC</Text>
         <Card  variant="borderless">
           {loading ?
             <Loading /> :

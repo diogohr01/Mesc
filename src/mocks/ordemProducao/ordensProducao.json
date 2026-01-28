@@ -33,7 +33,20 @@
         "transportadora": ""
       },
       "ativo": true,
-      "opsMESC": []
+      "opsMESC": [],
+      "ferramenta": {
+        "codigo": "",
+        "descricao": ""
+      },
+      "numeroCortes": 0,
+      "numeroBillets": 0,
+      "puxada": 0,
+      "tamanhoBillet": 0,
+      "pesoLiquido": 0,
+      "pesoExtrudido": 0,
+      "pesoTotal": 0,
+      "rendimentoMetalico": 0,
+      "numeroPecasOP": 0
     },
     {
       "id": 2,
@@ -74,9 +87,32 @@
           "numeroOPMESC": "29948",
           "status": "Em produção",
           "quantidade": 2000,
-          "data": "2024-01-25"
+          "data": "2024-01-25",
+          "codigoFerramenta": "MTR-017-F16",
+          "numeroCortes": 7,
+          "numeroBillets": 4,
+          "puxada": 41.05,
+          "tamanhoBillet": 841.7,
+          "pesoLiquido": 205.6,
+          "pesoExtrudido": 215.3,
+          "pesoTotal": 224.6,
+          "rendimentoMetalico": 91.55,
+          "numeroPecasOP": 1120
         }
-      ]
+      ],
+      "ferramenta": {
+        "codigo": "MTR-017-F16",
+        "descricao": "Ferramenta MTR-017"
+      },
+      "numeroCortes": 7,
+      "numeroBillets": 4,
+      "puxada": 41.05,
+      "tamanhoBillet": 841.7,
+      "pesoLiquido": 205.6,
+      "pesoExtrudido": 215.3,
+      "pesoTotal": 224.6,
+      "rendimentoMetalico": 91.55,
+      "numeroPecasOP": 1120
     }
   ]
 }

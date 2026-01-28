@@ -1,14 +1,13 @@
-import { Badge, Button, Col, Form, Layout, message, Modal, Row, Tooltip, Typography } from 'antd';
+import { Badge, Button, Col, Form, Layout, message, Modal, Row, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { debounce } from 'lodash';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AiFillDelete, AiFillEdit, AiOutlineClear, AiOutlinePlus, AiOutlineSearch } from 'react-icons/ai';
 import { Card, DynamicForm, LoadingSpinner, PaginatedTable, ActionButtons } from '../../../components';
-import OrdemProducaoService from '../../../services/ordemProducaoService';
+import PedidosService from '../../../services/pedidosService';
 
 const { confirm } = Modal;
 const { Content } = Layout;
-const { Text } = Typography;
 
 const List = ({ onAdd, onEdit, onView }) => {
   const [loading, setLoading] = useState(false);
@@ -19,10 +18,11 @@ const List = ({ onAdd, onEdit, onView }) => {
     {
       columns: 4,
       questions: [
-        { type: 'text', id: 'numeroOPERP', required: false, placeholder: 'Digite o número da OP...', label: 'OP ERP', size: 'middle' },
-        { type: 'text', id: 'cliente', required: false, placeholder: 'Digite o nome do cliente...', label: 'Cliente', size: 'middle' },
+        { type: 'text', id: 'codigo', required: false, placeholder: 'Digite o código...', label: 'Código', size: 'middle' },
+        { type: 'text', id: 'pedidoNumero', required: false, placeholder: 'Digite o número...', label: 'Pedido nº (Totvs)', size: 'middle' },
+        { type: 'text', id: 'cliente', required: false, placeholder: 'Digite o cliente...', label: 'Cliente', size: 'middle' },
         { type: 'text', id: 'situacao', required: false, placeholder: 'Digite a situação...', label: 'Situação', size: 'middle' },
-        { type: 'date', id: 'dataOP', required: false, placeholder: 'Selecione a data...', label: 'Data', size: 'middle' },
+        { type: 'range-date', id: 'dataRange', required: false, placeholder: ['Data início', 'Data fim'], label: 'Período', format: 'DD/MM/YYYY' },
       ],
     },
   ], []);
@@ -43,22 +43,33 @@ const List = ({ onAdd, onEdit, onView }) => {
       setLoading(true);
       try {
         const filters = filterForm.getFieldsValue();
+        
+        // Processar range de datas se existir
+        let dataInicio = null;
+        let dataFim = null;
+        if (filters.dataRange && filters.dataRange.length === 2) {
+          dataInicio = filters.dataRange[0] ? dayjs(filters.dataRange[0]).format('YYYY-MM-DD') : null;
+          dataFim = filters.dataRange[1] ? dayjs(filters.dataRange[1]).format('YYYY-MM-DD') : null;
+        }
+
         const requestData = {
           page,
           pageSize,
           sorterField,
           sortOrder,
-          numeroOPERP: filters.numeroOPERP,
+          codigo: filters.codigo,
+          pedidoNumero: filters.pedidoNumero,
           cliente: filters.cliente,
           situacao: filters.situacao,
-          dataOP: filters.dataOP ? dayjs(filters.dataOP).format('YYYY-MM-DD') : undefined,
+          dataInicio,
+          dataFim,
         };
 
-        const response = await OrdemProducaoService.getAll(requestData);
+        const response = await PedidosService.getAll(requestData);
 
         return {
-          data: response.data.data || [],
-          total: response.data.pagination?.totalRecords || 0
+          data: response.data?.data || [],
+          total: response.data?.pagination?.totalRecords || 0
         };
       } catch (error) {
         message.error('Erro ao buscar dados.');
@@ -82,20 +93,20 @@ const List = ({ onAdd, onEdit, onView }) => {
   const handleDelete = useCallback((record) => {
     confirm({
       title: 'Confirmar exclusão',
-      content: 'Tem certeza de que deseja excluir esta Ordem de Produção?',
+      content: 'Tem certeza de que deseja excluir este Pedido?',
       okText: 'Sim',
       okType: 'danger',
       cancelText: 'Não',
       onOk: async () => {
         setLoading(true);
         try {
-          await OrdemProducaoService.delete(record.id);
-          message.success('Ordem de Produção excluída com sucesso!');
+          await PedidosService.delete(record.id);
+          message.success('Pedido excluído com sucesso!');
           if (tableRef.current) {
             tableRef.current.reloadTable();
           }
         } catch (error) {
-          message.error('Erro ao excluir Ordem de Produção.');
+          message.error('Erro ao excluir Pedido.');
           console.error('Erro ao excluir:', error);
         } finally {
           setLoading(false);
@@ -107,15 +118,15 @@ const List = ({ onAdd, onEdit, onView }) => {
   const handleCopy = useCallback(async (record) => {
     try {
       setLoading(true);
-      const response = await OrdemProducaoService.copiar(record.id);
+      const response = await PedidosService.copiar(record.id);
       if (response.success) {
-        message.success('Ordem de Produção copiada com sucesso!');
+        message.success('Pedido copiado com sucesso!');
         if (tableRef.current) {
           tableRef.current.reloadTable();
         }
       }
     } catch (error) {
-      message.error('Erro ao copiar Ordem de Produção.');
+      message.error('Erro ao copiar Pedido.');
       console.error('Erro ao copiar:', error);
     } finally {
       setLoading(false);
@@ -126,15 +137,15 @@ const List = ({ onAdd, onEdit, onView }) => {
     try {
       setLoading(true);
       const novoStatus = !record.ativo;
-      const response = await OrdemProducaoService.ativarDesativar(record.id, novoStatus);
+      const response = await PedidosService.ativarDesativar(record.id, novoStatus);
       if (response.success) {
-        message.success(novoStatus ? 'Ordem ativada com sucesso!' : 'Ordem desativada com sucesso!');
+        message.success(novoStatus ? 'Pedido ativado com sucesso!' : 'Pedido desativado com sucesso!');
         if (tableRef.current) {
           tableRef.current.reloadTable();
         }
       }
     } catch (error) {
-      message.error('Erro ao alterar status da Ordem.');
+      message.error('Erro ao alterar status do Pedido.');
       console.error('Erro:', error);
     } finally {
       setLoading(false);
@@ -149,24 +160,32 @@ const List = ({ onAdd, onEdit, onView }) => {
   // Memoizar colunas para evitar re-renders desnecessários
   const columns = useMemo(() => [
     { 
-      title: 'OP ERP', 
-      dataIndex: 'numeroOPERP', 
-      key: 'numeroOPERP',
-      width: 120,
+      title: 'Código', 
+      dataIndex: 'codigo', 
+      key: 'codigo',
+      width: 100,
+      sorter: true,
     },
     {
       title: 'Data',
-      dataIndex: 'dataOP',
-      key: 'dataOP',
+      dataIndex: 'data',
+      key: 'data',
       width: 120,
-      render: (date) => date ? dayjs(date).format('DD/MM/YYYY') : '-',
       sorter: true,
+      render: (data) => data ? dayjs(data).format('DD/MM/YYYY') : '-',
+    },
+    {
+      title: 'Pedido nº (Totvs)',
+      dataIndex: 'pedidoNumero',
+      key: 'pedidoNumero',
+      width: 150,
     },
     {
       title: 'Cliente',
       dataIndex: ['cliente', 'nome'],
       key: 'cliente',
-      width: 250,
+      width: 300,
+      render: (text, record) => record.cliente?.nome || '-',
     },
     {
       title: 'Situação',
@@ -174,25 +193,13 @@ const List = ({ onAdd, onEdit, onView }) => {
       key: 'situacao',
       width: 150,
       render: (situacao) => {
-        const colorMap = {
-          'Em cadastro': 'default',
-          'Liberada': 'processing',
-          'Programada': 'warning',
-          'Encerrada': 'success',
+        const statusMap = {
+          'NÃO INICIADA': { color: 'default', text: 'Não Iniciada' },
+          'EM ANDAMENTO': { color: 'processing', text: 'Em Andamento' },
+          'FINALIZADA': { color: 'success', text: 'Finalizada' },
         };
-        return <Badge status={colorMap[situacao] || 'default'} text={situacao} />;
-      },
-    },
-    {
-      title: 'Qtd Total (peças)',
-      dataIndex: 'itens',
-      key: 'quantidadeTotal',
-      width: 150,
-      align: 'right',
-      render: (itens) => {
-        if (!itens || !Array.isArray(itens)) return '0';
-        const total = itens.reduce((sum, item) => sum + (parseFloat(item.quantidadePecas) || 0), 0);
-        return total.toLocaleString('pt-BR');
+        const status = statusMap[situacao] || { color: 'default', text: situacao };
+        return <Badge status={status.color} text={status.text} />;
       },
     },
     {
@@ -253,7 +260,7 @@ const List = ({ onAdd, onEdit, onView }) => {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between' }}>
                 <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#262626' }}>
-                  Ordens de Produção
+                  Pedidos
                 </h2>
                 <Button
                   type="primary"
@@ -262,7 +269,7 @@ const List = ({ onAdd, onEdit, onView }) => {
                   disabled={loading}
                   size="middle"
                 >
-                  Adicionar Ordem
+                  Adicionar Pedido
                 </Button>
               </div>
 

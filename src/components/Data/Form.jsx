@@ -43,6 +43,7 @@ const DynamicForm = React.memo(({
     submitOnSide = false, 
     submitIcon = null, 
     formInstance = null,
+    secondaryButton = null, // Botão secundário (ex: Limpar) na mesma linha do submit
     onValidate, // Nova prop para validação customizada
     validateOnChange = false, // Nova prop para validação em tempo real
     showValidationFeedback = true // Nova prop para controlar feedback visual
@@ -430,6 +431,7 @@ const DynamicForm = React.memo(({
                         </Button>
                     </Col>
                 )}
+                {secondaryButton && <Col>{secondaryButton}</Col>}
                 <Col>
                     <Button type="primary" icon={submitIcon ?? <AiOutlineSend />} onClick={handleSubmit} size="middle">
                         {submitText}
@@ -452,7 +454,7 @@ const DynamicForm = React.memo(({
                 {buttons}
             </>
         );
-    }, [submitOnSide, onClose, submitIcon, submitText, handleSubmit]);
+    }, [submitOnSide, onClose, submitIcon, submitText, handleSubmit, secondaryButton]);
 
     return (
         <Form
