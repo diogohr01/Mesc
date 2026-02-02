@@ -1,4 +1,4 @@
-import { Badge, Button, Col, Form, Layout, message, Modal, Row, Tooltip, Typography } from 'antd';
+import { Badge, Button, Col, Form, Layout, message, Modal, Row, Table, Tooltip, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { debounce } from 'lodash';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -14,6 +14,9 @@ const List = ({ onAdd, onEdit, onView }) => {
   const [loading, setLoading] = useState(false);
   const [filterForm] = Form.useForm();
   const tableRef = useRef(null);
+  const [filhasMap, setFilhasMap] = useState({});
+  const [loadingFilhas, setLoadingFilhas] = useState({});
+  const loadedFilhasRef = useRef({});
 
   const filterFormConfig = useMemo(() => [
     {
@@ -37,7 +40,7 @@ const List = ({ onAdd, onEdit, onView }) => {
     []
   );
 
-  // Atualiza o fetchData para incluir os filtros
+  // Lista mostra apenas OP Pai; OP Filhas aparecem ao expandir a linha
   const fetchData = useCallback(
     async (page, pageSize, sorterField, sortOrder) => {
       setLoading(true);
@@ -48,6 +51,7 @@ const List = ({ onAdd, onEdit, onView }) => {
           pageSize,
           sorterField,
           sortOrder,
+          tipoOp: 'PAI',
           numeroOPERP: filters.numeroOPERP,
           cliente: filters.cliente,
           situacao: filters.situacao,
@@ -146,7 +150,127 @@ const List = ({ onAdd, onEdit, onView }) => {
     debouncedReloadTable();
   }, [debouncedReloadTable]);
 
-  // Memoizar colunas para evitar re-renders desnecessários
+  const fetchFilhas = useCallback(async (opPaiId) => {
+    if (loadedFilhasRef.current[opPaiId]) return;
+    loadedFilhasRef.current[opPaiId] = true;
+    setLoadingFilhas((prev) => ({ ...prev, [opPaiId]: true }));
+    try {
+      const response = await OrdemProducaoService.getAll({
+        opPaiId,
+        page: 1,
+        pageSize: 100,
+      });
+      const data = response?.data?.data || [];
+      setFilhasMap((prev) => ({ ...prev, [opPaiId]: data }));
+    } catch (error) {
+      console.error('Erro ao buscar OP Filhas:', error);
+      setFilhasMap((prev) => ({ ...prev, [opPaiId]: [] }));
+    } finally {
+      setLoadingFilhas((prev) => ({ ...prev, [opPaiId]: false }));
+    }
+  }, []);
+
+  const columnsFilhas = useMemo(() => [
+    { title: 'OP ERP', dataIndex: 'numeroOPERP', key: 'numeroOPERP', width: 120 },
+    {
+      title: 'Data',
+      dataIndex: 'dataOP',
+      key: 'dataOP',
+      width: 120,
+      render: (date) => (date ? dayjs(date).format('DD/MM/YYYY') : '-'),
+    },
+    {
+      title: 'Situação',
+      dataIndex: 'situacao',
+      key: 'situacao',
+      width: 130,
+      render: (situacao) => {
+        const colorMap = {
+          'Em cadastro': 'default',
+          'Liberada': 'processing',
+          'Programada': 'warning',
+          'Encerrada': 'success',
+        };
+        return <Badge status={colorMap[situacao] || 'default'} text={situacao} />;
+      },
+    },
+    {
+      title: 'Qtd Total (peças)',
+      dataIndex: 'itens',
+      key: 'quantidadeTotal',
+      width: 120,
+      align: 'right',
+      render: (itens) => {
+        if (!itens || !Array.isArray(itens)) return '0';
+        const total = itens.reduce((sum, item) => sum + (parseFloat(item.quantidadePecas) || 0), 0);
+        return total.toLocaleString('pt-BR');
+      },
+    },
+    {
+      title: 'Ações',
+      key: 'actions',
+      width: 180,
+      fixed: 'right',
+      render: (_, record) => (
+        <ActionButtons
+          onView={() => handleView(record)}
+          onEdit={() => handleEdit(record)}
+          onCopy={() => handleCopy(record)}
+          onActivate={() => handleAtivarDesativar(record)}
+          onDeactivate={() => handleAtivarDesativar(record)}
+          onDelete={() => handleDelete(record)}
+          showCopy={false}
+          showActivate={false}
+          showDeactivate={false}
+          showDelete={true}
+          isActive={record.ativo}
+          size="small"
+        />
+      ),
+    },
+  ], [handleView, handleEdit, handleCopy, handleAtivarDesativar, handleDelete]);
+
+  const expandable = useMemo(
+    () => ({
+      onExpand: (expanded, record) => {
+        if (expanded) fetchFilhas(record.id);
+      },
+      expandedRowRender: (record) => {
+        const filhas = filhasMap[record.id] || [];
+        const loadingF = loadingFilhas[record.id];
+        if (loadingF) {
+          return (
+            <div style={{ marginLeft: 24, padding: '16px', textAlign: 'center', background: '#fafafa', borderRadius: 6, border: '1px solid #f0f0f0' }}>
+              <Typography.Text type="secondary">Carregando OP Filhas...</Typography.Text>
+            </div>
+          );
+        }
+        if (!filhas.length) {
+          return (
+            <div style={{ marginLeft: 24, padding: '16px', background: '#fafafa', borderRadius: 6, border: '1px solid #f0f0f0' }}>
+              <Typography.Text type="secondary">Nenhuma OP Filha vinculada.</Typography.Text>
+            </div>
+          );
+        }
+        return (
+          <div style={{ marginLeft: 24, padding: 12, background: '#fafafa', borderRadius: 6, border: '1px solid #f0f0f0' }}>
+            <Table
+              dataSource={filhas}
+              columns={columnsFilhas}
+              rowKey="id"
+              pagination={false}
+              size="small"
+              bordered
+              scroll={{ x: 'max-content' }}
+            />
+          </div>
+        );
+      },
+    }),
+    [filhasMap, loadingFilhas, fetchFilhas, columnsFilhas]
+  );
+
+  // Memoizar colunas para evitar re-renders desnecessários (apenas OP Pai na lista)
   const columns = useMemo(() => [
     { 
       title: 'OP ERP', 
@@ -161,6 +285,13 @@ const List = ({ onAdd, onEdit, onView }) => {
       width: 120,
       render: (date) => date ? dayjs(date).format('DD/MM/YYYY') : '-',
       sorter: true,
+    },
+    {
+      title: 'Nº Pedido',
+      dataIndex: 'numeroPedidoCliente',
+      key: 'numeroPedidoCliente',
+      width: 120,
+      render: (val, record) => val || (record.pedidoId ? `Pedido #${record.pedidoId}` : '-'),
     },
     {
       title: 'Cliente',
@@ -219,13 +350,17 @@ const List = ({ onAdd, onEdit, onView }) => {
           onCopy={() => handleCopy(record)}
           onActivate={() => handleAtivarDesativar(record)}
           onDeactivate={() => handleAtivarDesativar(record)}
-          onDelete={() => handleDelete(record)}
+          onDelete={undefined}
+          showCopy={false}
+          showActivate={false}
+          showDeactivate={false}
+          showDelete={false}
           isActive={record.ativo}
           size="small"
         />
       ),
     },
-  ], [handleEdit, handleView, handleDelete, handleCopy, handleAtivarDesativar]);
+  ], [handleEdit, handleView, handleCopy, handleAtivarDesativar]);
 
   // Cleanup do debounce quando o componente for desmontado
   useEffect(() => {
@@ -255,15 +390,7 @@ const List = ({ onAdd, onEdit, onView }) => {
                 <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#262626' }}>
                   Ordens de Produção
                 </h2>
-                <Button
-                  type="primary"
-                  icon={<AiOutlinePlus />}
-                  onClick={onAdd}
-                  disabled={loading}
-                  size="middle"
-                >
-                  Adicionar Ordem
-                </Button>
+               
               </div>
 
               {/* Filtros sempre visíveis */}
@@ -306,6 +433,7 @@ const List = ({ onAdd, onEdit, onView }) => {
                   columns={columns}
                   loadingIcon={<LoadingSpinner />}
                   rowKey="id"
+                  expandable={expandable}
                 />
               </div>
             </Card>

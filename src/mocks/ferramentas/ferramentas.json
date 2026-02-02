@@ -1,0 +1,44 @@
+{
+  "data": [
+    {
+      "id": 1,
+      "codigo": "MTR-017-F16",
+      "descricao": "Ferramenta MTR-017"
+    },
+    {
+      "id": 2,
+      "codigo": "MTR-001-F18",
+      "descricao": "Ferramenta MTR-001"
+    },
+    {
+      "id": 3,
+      "codigo": "MTR-027-F20",
+      "descricao": "Ferramenta MTR-027"
+    },
+    {
+      "id": 4,
+      "codigo": "TUB-020-F12",
+      "descricao": "Ferramenta TUB-020"
+    },
+    {
+      "id": 5,
+      "codigo": "TUB-035-F14",
+      "descricao": "Ferramenta TUB-035"
+    },
+    {
+      "id": 6,
+      "codigo": "EXT-010-F08",
+      "descricao": "Ferramenta Extrusão 010"
+    },
+    {
+      "id": 7,
+      "codigo": "EXT-015-F10",
+      "descricao": "Ferramenta Extrusão 015"
+    },
+    {
+      "id": 8,
+      "codigo": "CORT-005-F06",
+      "descricao": "Ferramenta Corte 005"
+    }
+  ]
+}

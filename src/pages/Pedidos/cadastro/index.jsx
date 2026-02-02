@@ -8,12 +8,6 @@ const PedidosCadastro = () => {
   const [editingRecord, setEditingRecord] = useState(null);
   const [viewingRecord, setViewingRecord] = useState(null);
 
-  const handleAdd = useCallback(() => {
-    setEditingRecord(null);
-    setViewingRecord(null);
-    setView('form');
-  }, []);
-
   const handleEdit = useCallback((record) => {
     setEditingRecord(record);
     setViewingRecord(null);
@@ -53,8 +47,7 @@ const PedidosCadastro = () => {
   return (
     <>
       {view === 'list' && (
-        <List 
-          onAdd={handleAdd} 
+        <List
           onEdit={handleEdit}
           onView={handleView}
         />

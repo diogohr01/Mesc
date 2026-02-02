@@ -2,42 +2,37 @@
   "data": [
     {
       "id": 1,
-      "numeroOPERP": "10101",
+      "tipoOp": "PAI",
+      "pedidoId": 1,
+      "numeroOPERP": "OP-1356-1",
       "dataOP": "2024-01-15",
       "numeroPedidoCliente": "1356",
       "cliente": {
         "codigo": "95556",
-        "nome": "METALURGICA MOR"
+        "nome": "SEQUENCIAL MILIMÉTRICA IND DE EQUIP ORTOPÉDICO"
       },
-      "situacao": "Liberada",
+      "situacao": "Em cadastro",
       "itens": [
         {
           "id": 1,
-          "codigoItem": "707395",
-          "descricaoItem": "TUBO RETANG ALUM 20X35X1,00X2070 MM",
-          "codigoItemCliente": "TUB-001",
-          "quantidadePecas": 4500,
-          "quantidadeKg": 1250.5,
-          "dataEntrega": "2024-02-20",
-          "acabamento": "Anodizado",
-          "cubagemPrevista": 15.5,
+          "codigoItem": "90100002",
+          "descricaoItem": "MTR-027 6063 T6F 19,05X1,20X6000 MM SEQUE",
+          "codigoItemCliente": "",
+          "quantidadePecas": 400,
+          "quantidadeKg": 436.80,
+          "dataEntrega": "2017-02-20",
+          "acabamento": "",
+          "cubagemPrevista": null,
           "cubagemReal": null,
-          "localEntrega": "Porto Alegre",
-          "observacoes": "Item prioritário"
+          "localEntrega": "",
+          "observacoes": ""
         }
       ],
-      "informacoesComplementares": {
-        "naturezaOperacao": "Venda",
-        "numeroEmbarque": "",
-        "numeroNotaFiscal": "",
-        "transportadora": ""
-      },
+      "informacoesComplementares": {},
       "ativo": true,
+      "observacoes": "",
       "opsMESC": [],
-      "ferramenta": {
-        "codigo": "",
-        "descricao": ""
-      },
+      "ferramenta": { "codigo": "", "descricao": "" },
       "numeroCortes": 0,
       "numeroBillets": 0,
       "puxada": 0,
@@ -46,27 +41,74 @@
       "pesoExtrudido": 0,
       "pesoTotal": 0,
       "rendimentoMetalico": 0,
-      "numeroPecasOP": 0
+      "numeroPecasOP": 0,
+      "ferramentas": []
     },
     {
       "id": 2,
-      "numeroOPERP": "10102",
-      "dataOP": "2024-01-20",
-      "numeroPedidoCliente": "1357",
+      "tipoOp": "PAI",
+      "pedidoId": 1,
+      "numeroOPERP": "OP-1356-2",
+      "dataOP": "2024-01-15",
+      "numeroPedidoCliente": "1356",
       "cliente": {
         "codigo": "95556",
-        "nome": "METALURGICA MOR"
+        "nome": "SEQUENCIAL MILIMÉTRICA IND DE EQUIP ORTOPÉDICO"
+      },
+      "situacao": "Em cadastro",
+      "itens": [
+        {
+          "id": 2,
+          "codigoItem": "707395",
+          "descricaoItem": "TUBO RETANG ALUM 20X35X1,00X2070 MM",
+          "codigoItemCliente": "",
+          "quantidadePecas": 400,
+          "quantidadeKg": 436.80,
+          "dataEntrega": "2017-03-02",
+          "acabamento": "",
+          "cubagemPrevista": null,
+          "cubagemReal": null,
+          "localEntrega": "",
+          "observacoes": ""
+        }
+      ],
+      "informacoesComplementares": {},
+      "ativo": true,
+      "observacoes": "",
+      "opsMESC": [],
+      "ferramenta": { "codigo": "", "descricao": "" },
+      "numeroCortes": 0,
+      "numeroBillets": 0,
+      "puxada": 0,
+      "tamanhoBillet": 0,
+      "pesoLiquido": 0,
+      "pesoExtrudido": 0,
+      "pesoTotal": 0,
+      "rendimentoMetalico": 0,
+      "numeroPecasOP": 0,
+      "ferramentas": []
+    },
+    {
+      "id": 3,
+      "tipoOp": "FILHA",
+      "opPaiId": 1,
+      "numeroOPERP": "10102",
+      "dataOP": "2024-01-20",
+      "numeroPedidoCliente": "1356",
+      "cliente": {
+        "codigo": "95556",
+        "nome": "SEQUENCIAL MILIMÉTRICA IND DE EQUIP ORTOPÉDICO"
       },
       "situacao": "Programada",
       "itens": [
         {
-          "id": 2,
+          "id": 1,
           "codigoItem": "90100002",
           "descricaoItem": "MTR-027 6063 T6F 19,05X1,20X6000 MM SEQUE",
           "codigoItemCliente": "MTR-027",
           "quantidadePecas": 400,
           "quantidadeKg": 436.80,
-          "dataEntrega": "2024-03-02",
+          "dataEntrega": "2017-02-20",
           "acabamento": "Natural",
           "cubagemPrevista": 12.3,
           "cubagemReal": null,
@@ -74,32 +116,10 @@
           "observacoes": ""
         }
       ],
-      "informacoesComplementares": {
-        "naturezaOperacao": "Venda",
-        "numeroEmbarque": "EMB-001",
-        "numeroNotaFiscal": "NF-12345",
-        "transportadora": "Transportadora ABC"
-      },
+      "informacoesComplementares": {},
       "ativo": true,
-      "opsMESC": [
-        {
-          "id": 1,
-          "numeroOPMESC": "29948",
-          "status": "Em produção",
-          "quantidade": 2000,
-          "data": "2024-01-25",
-          "codigoFerramenta": "MTR-017-F16",
-          "numeroCortes": 7,
-          "numeroBillets": 4,
-          "puxada": 41.05,
-          "tamanhoBillet": 841.7,
-          "pesoLiquido": 205.6,
-          "pesoExtrudido": 215.3,
-          "pesoTotal": 224.6,
-          "rendimentoMetalico": 91.55,
-          "numeroPecasOP": 1120
-        }
-      ],
+      "observacoes": "OP programada para produção.",
+      "opsMESC": [],
       "ferramenta": {
         "codigo": "MTR-017-F16",
         "descricao": "Ferramenta MTR-017"
@@ -112,7 +132,77 @@
       "pesoExtrudido": 215.3,
       "pesoTotal": 224.6,
       "rendimentoMetalico": 91.55,
-      "numeroPecasOP": 1120
+      "numeroPecasOP": 1120,
+      "ferramentas": [
+        {
+          "op": "10102",
+          "codigoFerramenta": "MTR-017-F16",
+          "nc": 7,
+          "nb": 4,
+          "puxada": 41.05,
+          "billet": 841.7,
+          "np": 1120,
+          "npr": 91.55
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "tipoOp": "FILHA",
+      "opPaiId": 2,
+      "numeroOPERP": "10103",
+      "dataOP": "2024-01-22",
+      "numeroPedidoCliente": "1356",
+      "cliente": {
+        "codigo": "95556",
+        "nome": "SEQUENCIAL MILIMÉTRICA IND DE EQUIP ORTOPÉDICO"
+      },
+      "situacao": "Programada",
+      "itens": [
+        {
+          "id": 2,
+          "codigoItem": "707395",
+          "descricaoItem": "TUBO RETANG ALUM 20X35X1,00X2070 MM",
+          "codigoItemCliente": "TUB-001",
+          "quantidadePecas": 400,
+          "quantidadeKg": 436.80,
+          "dataEntrega": "2017-03-02",
+          "acabamento": "Natural",
+          "cubagemPrevista": null,
+          "cubagemReal": null,
+          "localEntrega": "São Paulo",
+          "observacoes": ""
+        }
+      ],
+      "informacoesComplementares": {},
+      "ativo": true,
+      "observacoes": "",
+      "opsMESC": [],
+      "ferramenta": {
+        "codigo": "TUB-020-F12",
+        "descricao": "Ferramenta TUB-020"
+      },
+      "numeroCortes": 5,
+      "numeroBillets": 3,
+      "puxada": 32.0,
+      "tamanhoBillet": 700,
+      "pesoLiquido": 180,
+      "pesoExtrudido": 190,
+      "pesoTotal": 200,
+      "rendimentoMetalico": 90,
+      "numeroPecasOP": 380,
+      "ferramentas": [
+        {
+          "op": "10103",
+          "codigoFerramenta": "TUB-020-F12",
+          "nc": 5,
+          "nb": 3,
+          "puxada": 32.0,
+          "billet": 700,
+          "np": 380,
+          "npr": 90
+        }
+      ]
     }
   ]
 }

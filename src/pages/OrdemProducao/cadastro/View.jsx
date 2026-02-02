@@ -1,9 +1,10 @@
 import { Button, Col, Form, Layout, Row, Space, Table, Typography } from 'antd';
 import { Card, Loading, ViewForm } from '../../../components';
 import React, { useCallback, useEffect, useState } from 'react';
-import { AiOutlineArrowLeft, AiOutlineCopy, AiOutlineEdit, AiOutlinePoweroff } from 'react-icons/ai';
+import { AiOutlineArrowLeft, AiOutlineEdit } from 'react-icons/ai';
 import dayjs from 'dayjs';
 import OrdemProducaoService from '../../../services/ordemProducaoService';
+import FerramentasOPTable from '../components/FerramentasOPTable';
 import { message } from 'antd';
 
 const { Content } = Layout;
@@ -19,31 +20,13 @@ const View = ({ record, onEdit, onCancel, onCopy, onAtivarDesativar }) => {
       title: "Dados da Ordem (Cabeçalho)",
       columns: 2,
       questions: [
-        {
-          type: "text",
-          id: "numeroOPERP",
-          label: "Número da OP (ERP / TOTVS)",
-        },
-        {
-          type: "date",
-          id: "dataOP",
-          label: "Data da OP",
-          format: "DD/MM/YYYY"
-        },
-        {
-          type: "text",
-          id: "numeroPedidoCliente",
-          label: "Número do pedido do cliente",
-        },
-        {
-          type: "text",
-          id: "clienteNome",
-          label: "Cliente",
-        },
+        { type: "text", id: "numeroOPERP", label: "Número da OP (EMS/TOTVS)" },
+        { type: "date", id: "dataOP", label: "Data do Registro", format: "DD/MM/YYYY" },
+        { type: "date", id: "dataEntrega", label: "Data de Entrega", format: "DD/MM/YYYY" },
         {
           type: "select",
           id: "situacao",
-          label: "Situação da OP",
+          label: "Situação",
           options: [
             { label: "Em cadastro", value: "Em cadastro" },
             { label: "Liberada", value: "Liberada" },
@@ -51,6 +34,12 @@ const View = ({ record, onEdit, onCancel, onCopy, onAtivarDesativar }) => {
             { label: "Encerrada", value: "Encerrada" },
           ]
         },
+        { type: "text", id: "itemCodigo", label: "Item a Produzir (Código)" },
+        { type: "text", id: "itemDescricao", label: "Item a Produzir (Descrição)" },
+        { type: "integer", id: "quantidadeAProduzir", label: "Quantidade a Produzir" },
+        { type: "text", id: "clienteNome", label: "Cliente" },
+        { type: "text", id: "numeroPedidoCliente", label: "Nº Pedido do Cliente" },
+        { type: "textarea", id: "observacoes", label: "Observações" },
       ],
     },
     {
@@ -106,12 +95,19 @@ const View = ({ record, onEdit, onCancel, onCopy, onAtivarDesativar }) => {
           }
         };
 
+        const primeiroItem = data.itens?.[0];
+        const dataEntregaOrdem = data.dataEntrega ?? primeiroItem?.dataEntrega;
         const formData = {
           numeroOPERP: data.numeroOPERP || '',
           dataOP: convertToDayjs(data.dataOP),
+          dataEntrega: dataEntregaOrdem ? convertToDayjs(dataEntregaOrdem) : null,
           numeroPedidoCliente: data.numeroPedidoCliente || '',
           clienteNome: data.cliente?.nome || '',
           situacao: data.situacao || '',
+          itemCodigo: primeiroItem?.codigoItem || '',
+          itemDescricao: primeiroItem?.descricaoItem || '',
+          quantidadeAProduzir: primeiroItem?.quantidadePecas ?? 0,
+          observacoes: data.observacoes || '',
           naturezaOperacao: data.informacoesComplementares?.naturezaOperacao || '',
           numeroEmbarque: data.informacoesComplementares?.numeroEmbarque || '',
           numeroNotaFiscal: data.informacoesComplementares?.numeroNotaFiscal || '',
@@ -253,24 +249,6 @@ const View = ({ record, onEdit, onCancel, onCopy, onAtivarDesativar }) => {
                   >
                     Editar
                   </Button>
-                  <Button
-                    type="default"
-                    icon={<AiOutlineCopy />}
-                    onClick={handleCopy}
-                    disabled={loading}
-                    size="middle"
-                  >
-                    Copiar
-                  </Button>
-                  <Button
-                    type="default"
-                    icon={<AiOutlinePoweroff />}
-                    onClick={handleAtivarDesativar}
-                    disabled={loading}
-                    size="middle"
-                  >
-                    {ordemData?.ativo ? 'Desativar' : 'Ativar'}
-                  </Button>
                 </Space>
               </div>
 
@@ -280,6 +258,14 @@ const View = ({ record, onEdit, onCancel, onCopy, onAtivarDesativar }) => {
                     formConfig={formConfig}
                     formInstance={form}
                   />
+
+                  {/* Grid Ferramentas da OP (apenas nas OP Filhas) */}
+                  {ordemData?.tipoOp === 'FILHA' && (
+                    <div style={{ marginTop: 24 }}>
+                      <Title level={4} style={{ marginBottom: 16 }}>Ferramentas da OP</Title>
+                      <FerramentasOPTable ordemData={ordemData} />
+                    </div>
+                  )}
 
                   {/* Tabela de Itens */}
                   {ordemData?.itens && ordemData.itens.length > 0 && (

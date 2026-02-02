@@ -224,19 +224,13 @@ const ViewForm = React.memo(({
                             name={question.id}
                             valuePropName={question.type === "checkbox" ? "checked" : undefined}
                             style={{
-                                marginBottom: '16px'
-                            }}
-                        >
-                            <div style={{
+                                marginBottom: '16px',
                                 padding: '8px 12px',
                                 backgroundColor: '#f5f5f5',
                                 borderRadius: '4px',
-                                minHeight: '32px',
-                                display: 'flex',
-                                alignItems: 'center'
-                            }}>
-                                {renderInput(question)}
-                            </div>
+                            }}
+                        >
+                            {renderInput(question)}
                         </Form.Item>
                     </Col>
                 ))}

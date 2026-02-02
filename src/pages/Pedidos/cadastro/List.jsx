@@ -1,4 +1,4 @@
-import { Badge, Button, Col, Form, Layout, message, Modal, Row, Typography } from 'antd';
+import { Badge, Button, Col, Form, Layout, message, Row, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { debounce } from 'lodash';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -6,10 +6,9 @@ import { AiFillDelete, AiFillEdit, AiOutlineClear, AiOutlinePlus, AiOutlineSearc
 import { Card, DynamicForm, LoadingSpinner, PaginatedTable, ActionButtons } from '../../../components';
 import PedidosService from '../../../services/pedidosService';
 
-const { confirm } = Modal;
 const { Content } = Layout;
 
-const List = ({ onAdd, onEdit, onView }) => {
+const List = ({ onEdit, onView }) => {
   const [loading, setLoading] = useState(false);
   const [filterForm] = Form.useForm();
   const tableRef = useRef(null);
@@ -90,30 +89,8 @@ const List = ({ onAdd, onEdit, onView }) => {
     onView(record);
   }, [onView]);
 
-  const handleDelete = useCallback((record) => {
-    confirm({
-      title: 'Confirmar exclusão',
-      content: 'Tem certeza de que deseja excluir este Pedido?',
-      okText: 'Sim',
-      okType: 'danger',
-      cancelText: 'Não',
-      onOk: async () => {
-        setLoading(true);
-        try {
-          await PedidosService.delete(record.id);
-          message.success('Pedido excluído com sucesso!');
-          if (tableRef.current) {
-            tableRef.current.reloadTable();
-          }
-        } catch (error) {
-          message.error('Erro ao excluir Pedido.');
-          console.error('Erro ao excluir:', error);
-        } finally {
-          setLoading(false);
-        }
-      },
-    });
-  }, []);
+  // Pedidos não podem ser excluídos (regra de negócio - vêm da integração TOTVS)
+  const handleDelete = undefined;
 
   const handleCopy = useCallback(async (record) => {
     try {
@@ -226,13 +203,17 @@ const List = ({ onAdd, onEdit, onView }) => {
           onCopy={() => handleCopy(record)}
           onActivate={() => handleAtivarDesativar(record)}
           onDeactivate={() => handleAtivarDesativar(record)}
-          onDelete={() => handleDelete(record)}
+          onDelete={handleDelete}
+          showCopy={false}
+          showActivate={false}
+          showDeactivate={false}
+          showDelete={false}
           isActive={record.ativo}
           size="small"
         />
       ),
     },
-  ], [handleEdit, handleView, handleDelete, handleCopy, handleAtivarDesativar]);
+  ], [handleEdit, handleView, handleCopy, handleAtivarDesativar]);
 
   // Cleanup do debounce quando o componente for desmontado
   useEffect(() => {
@@ -262,15 +243,7 @@ const List = ({ onAdd, onEdit, onView }) => {
                 <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#262626' }}>
                   Pedidos
                 </h2>
-                <Button
-                  type="primary"
-                  icon={<AiOutlinePlus />}
-                  onClick={onAdd}
-                  disabled={loading}
-                  size="middle"
-                >
-                  Adicionar Pedido
-                </Button>
+               
               </div>
 
               {/* Filtros sempre visíveis */}

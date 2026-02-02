@@ -5,6 +5,7 @@ import React, { useCallback, useMemo } from "react";
 import { AiOutlineClose, AiOutlineSend } from "react-icons/ai";
 import { validateCNPJ, validateCPF } from "../../helpers/helper";
 import {
+    AsyncSelectInput,
     BaseSwitchGroupInput,
     CepInput,
     CheckboxGroupInput,
@@ -66,6 +67,7 @@ const DynamicForm = React.memo(({
         time: TimeInput,
         'range-date': DateRangeInput,
         select: SelectInput,
+        'async-select': AsyncSelectInput,
         multiselect: SelectInput,
         'tree-select': TreeSelectInput,
         phone: PhoneInput,
@@ -164,6 +166,11 @@ const DynamicForm = React.memo(({
                 specificProps.options = options;
                 specificProps.multiple = false;
                 specificProps.showSearch = showSearch;
+                specificProps.allowClear = allowClear;
+                break;
+            case "async-select":
+                specificProps.fetchOptionsOnSearch = question.fetchOptionsOnSearch;
+                specificProps.showSearch = true;
                 specificProps.allowClear = allowClear;
                 break;
             case "multiselect":

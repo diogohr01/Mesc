@@ -1,0 +1,28 @@
+{
+  "data": [
+    {
+      "id": 1,
+      "codigo": "90100002",
+      "descricao": "MTR-027 6063 T6F 19,05X1,20X6000 MM SEQUE",
+      "unidade": "UN",
+      "observacoes": "",
+      "ativo": true
+    },
+    {
+      "id": 2,
+      "codigo": "707395",
+      "descricao": "TUBO RETANG ALUM 20X35X1,00X2070 MM",
+      "unidade": "UN",
+      "observacoes": "",
+      "ativo": true
+    },
+    {
+      "id": 3,
+      "codigo": "100000",
+      "descricao": "TUBO ALUM 15,88X1,00X1400MM TESTE CAD SP",
+      "unidade": "UN",
+      "observacoes": "Item de teste",
+      "ativo": true
+    }
+  ]
+}

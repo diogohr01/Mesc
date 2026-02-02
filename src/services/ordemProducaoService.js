@@ -27,6 +27,12 @@ const getMockData = async (endpoint, data) => {
         if (filtros.situacao) {
             filteredData = filteredData.filter(item => item.situacao === filtros.situacao);
         }
+        if (filtros.tipoOp) {
+            filteredData = filteredData.filter(item => item.tipoOp === filtros.tipoOp);
+        }
+        if (filtros.opPaiId != null) {
+            filteredData = filteredData.filter(item => item.opPaiId === filtros.opPaiId);
+        }
         
         // Paginação
         const start = (page - 1) * pageSize;
@@ -102,11 +108,18 @@ const getMockData = async (endpoint, data) => {
     }
     
     if (endpoint.includes('upsert')) {
-        // Simular salvamento
+        const payload = data || {};
+        const existingIndex = ordensProducaoMock.data.findIndex(op => op.id === payload.id);
+        if (existingIndex >= 0) {
+            ordensProducaoMock.data[existingIndex] = { ...ordensProducaoMock.data[existingIndex], ...payload };
+        } else {
+            const newOp = { ...payload, id: payload.id || Date.now() };
+            ordensProducaoMock.data.push(newOp);
+        }
         return {
-            data: data,
+            data: { data: payload },
             success: true,
-            message: data.id ? "Ordem atualizada com sucesso" : "Ordem criada com sucesso"
+            message: payload.id ? "Ordem atualizada com sucesso" : "Ordem criada com sucesso"
         };
     }
     

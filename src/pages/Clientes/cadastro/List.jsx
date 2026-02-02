@@ -182,8 +182,9 @@ const List = ({ onAdd, onEdit, onView }) => {
           onEdit={() => handleEdit(record)}
           onCopy={() => handleCopy(record)}
           onActivate={() => handleAtivarDesativar(record)}
-          onDeactivate={() => handleAtivarDesativar(record)}
-          onDelete={() => handleDelete(record)}
+          showCopy={false}
+          showActivate={false}
+          showDeactivate={false}
           isActive={record.ativo}
           size="small"
         />
@@ -219,15 +220,7 @@ const List = ({ onAdd, onEdit, onView }) => {
                 <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#262626' }}>
                   Clientes / Fornecedores
                 </h2>
-                <Button
-                  type="primary"
-                  icon={<AiOutlinePlus />}
-                  onClick={onAdd}
-                  disabled={loading}
-                  size="middle"
-                >
-                  Adicionar Cliente
-                </Button>
+             
               </div>
 
               {/* Filtros sempre visíveis */}

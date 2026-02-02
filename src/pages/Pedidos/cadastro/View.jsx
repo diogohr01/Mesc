@@ -1,7 +1,7 @@
 import { Button, Col, Form, Layout, Row, Space, Table, Typography } from 'antd';
 import { Card, Loading, ViewForm } from '../../../components';
 import React, { useCallback, useEffect, useState } from 'react';
-import { AiOutlineArrowLeft, AiOutlineCopy, AiOutlineEdit, AiOutlinePoweroff } from 'react-icons/ai';
+import { AiOutlineArrowLeft, AiOutlineEdit } from 'react-icons/ai';
 import PedidosService from '../../../services/pedidosService';
 import { message } from 'antd';
 import dayjs from 'dayjs';
@@ -221,24 +221,6 @@ const View = ({ record, onEdit, onCancel, onCopy, onAtivarDesativar }) => {
                     size="middle"
                   >
                     Editar
-                  </Button>
-                  <Button
-                    type="default"
-                    icon={<AiOutlineCopy />}
-                    onClick={handleCopy}
-                    disabled={loading}
-                    size="middle"
-                  >
-                    Copiar
-                  </Button>
-                  <Button
-                    type="default"
-                    icon={<AiOutlinePoweroff />}
-                    onClick={handleAtivarDesativar}
-                    disabled={loading}
-                    size="middle"
-                  >
-                    {pedidoData?.ativo ? 'Desativar' : 'Ativar'}
                   </Button>
                 </Space>
               </div>

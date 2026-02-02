@@ -9,6 +9,8 @@ import PedidosItensTable from '../components/PedidosItensTable';
 
 const { Content } = Layout;
 
+// Pedidos: apenas visualização, edição de campos permitidos e configuração de itens via modal.
+// Novos pedidos só via integração TOTVS (Buscar Pedido do Totvs).
 const AddEdit = ({ editingRecord, onCancel, onSave }) => {
   const [loading, setLoading] = useState(false);
   const [loadingBuscarPedido, setLoadingBuscarPedido] = useState(false);
@@ -327,32 +329,7 @@ const AddEdit = ({ editingRecord, onCancel, onSave }) => {
               {loading ? <Loading /> : (
                 <div style={{ padding: '16px 0' }}>
                   {/* Botão Buscar Pedido do Totvs */}
-                  <Row style={{ marginBottom: 16 }}>
-                    <Col span={24}>
-                      <Space>
-                        <Button
-                          type="default"
-                          icon={<AiOutlineSearch />}
-                          onClick={handleBuscarPedidoDoTotvs}
-                          loading={loadingBuscarPedido}
-                          size="middle"
-                        >
-                          Buscar Pedido do Totvs
-                        </Button>
-                        {editingRecord?.id && (
-                          <Button
-                            type="primary"
-                            icon={<AiOutlineFileText />}
-                            onClick={handleCadastrarOP}
-                            disabled={loading || !itens || itens.length === 0}
-                            size="middle"
-                          >
-                            Cadastrar OP
-                          </Button>
-                        )}
-                      </Space>
-                    </Col>
-                  </Row>
+                 
 
                   {/* Formulário principal */}
                   <DynamicForm
@@ -373,7 +350,6 @@ const AddEdit = ({ editingRecord, onCancel, onSave }) => {
                     <PedidosItensTable
                       value={itens}
                       onChange={setItens}
-                      form={form}
                     />
                   </div>
                 </div>

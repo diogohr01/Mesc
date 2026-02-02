@@ -1,5 +1,6 @@
 import Api from './api';
 import pedidosMock from '../mocks/pedidos/pedidos.json';
+import ordensProducaoMock from '../mocks/ordemProducao/ordensProducao.json';
 import dayjs from 'dayjs';
 
 // Função auxiliar para simular delay da API
@@ -116,31 +117,95 @@ const getMockData = async (endpoint, data) => {
     }
     
     if (endpoint.includes('cadastrarOP')) {
-        // Simular criação de OPs do MESC a partir do pedido
+        const pedidoId = data?.pedidoId;
+        const pedido = pedidosMock.data.find(p => p.id === pedidoId);
+        if (!pedido) {
+            return { data: null, success: false, message: 'Pedido não encontrado' };
+        }
+        const itensPedido = pedido.itens || [];
+        if (itensPedido.length === 0) {
+            return { data: null, success: false, message: 'Pedido sem itens' };
+        }
+        let nextId = Math.max(0, ...ordensProducaoMock.data.map(o => o.id)) + 1;
+        const baseNumero = `OP-${pedido.pedidoNumero || pedido.id}-${Date.now().toString().slice(-6)}`;
+        const opsCriadas = [];
+        const dataOP = new Date().toISOString().split('T')[0];
+        for (let idx = 0; idx < itensPedido.length; idx++) {
+            const item = itensPedido[idx];
+            const itemOP = {
+                id: item.id || idx + 1,
+                codigoItem: item.item ?? '',
+                descricaoItem: item.descricao ?? '',
+                codigoItemCliente: item.codigo != null ? String(item.codigo) : '',
+                quantidadePecas: item.quantidadeUn ?? 0,
+                quantidadeKg: item.pesoKg ?? 0,
+                dataEntrega: item.dataEntrega ?? null,
+                acabamento: '',
+                cubagemPrevista: null,
+                cubagemReal: null,
+                localEntrega: '',
+                observacoes: item.observacao ?? '',
+            };
+            const opPai = {
+                id: nextId,
+                tipoOp: 'PAI',
+                pedidoId: pedido.id,
+                numeroOPERP: itensPedido.length > 1 ? `${baseNumero}-${idx + 1}` : baseNumero,
+                dataOP,
+                numeroPedidoCliente: pedido.pedidoNumero ?? '',
+                cliente: pedido.cliente ?? {},
+                situacao: 'Em cadastro',
+                itens: [itemOP],
+                informacoesComplementares: {},
+                ativo: true,
+                observacoes: pedido.observacao ?? '',
+                ferramentas: [],
+            };
+            ordensProducaoMock.data.push(opPai);
+            opsCriadas.push({
+                id: opPai.id,
+                numeroOPMESC: opPai.numeroOPERP,
+                status: 'Em cadastro',
+                quantidade: itemOP.quantidadePecas || 0,
+                data: opPai.dataOP,
+            });
+            nextId += 1;
+        }
         return {
             data: {
-                opsCriadas: [
-                    {
-                        id: Date.now(),
-                        numeroOPMESC: "29948",
-                        status: "Em cadastro",
-                        quantidade: 1000,
-                        data: new Date().toISOString().split('T')[0]
-                    }
-                ]
+                opsCriadas,
+                opPaiList: ordensProducaoMock.data.slice(-opsCriadas.length),
             },
             success: true,
-            message: "OPs do MESC cadastradas com sucesso"
+            message: opsCriadas.length > 1 ? `${opsCriadas.length} OPs do MESC cadastradas com sucesso` : 'OP do MESC cadastrada com sucesso',
         };
     }
     
     if (endpoint.includes('upsert')) {
+        const payload = data || {};
+        const existingIndex = pedidosMock.data.findIndex(p => p.id === payload.id);
+        const pedidoToSave = {
+            id: payload.id || Math.max(0, ...pedidosMock.data.map(p => p.id)) + 1,
+            codigo: payload.codigo ?? '',
+            data: payload.data ?? '',
+            situacao: payload.situacao ?? 'NÃO INICIADA',
+            pedidoNumero: payload.pedidoNumero ?? '',
+            cliente: payload.cliente ?? {},
+            observacao: payload.observacao ?? '',
+            itens: Array.isArray(payload.itens) ? payload.itens : [],
+            ativo: payload.ativo !== false,
+        };
+        if (existingIndex >= 0) {
+            pedidosMock.data[existingIndex] = { ...pedidosMock.data[existingIndex], ...pedidoToSave };
+        } else {
+            pedidosMock.data.push(pedidoToSave);
+        }
         return {
             data: {
-                data: data
+                data: pedidoToSave
             },
             success: true,
-            message: data.id ? "Pedido atualizado com sucesso" : "Pedido criado com sucesso"
+            message: payload.id ? "Pedido atualizado com sucesso" : "Pedido criado com sucesso"
         };
     }
     

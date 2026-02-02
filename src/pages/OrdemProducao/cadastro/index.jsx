@@ -61,10 +61,12 @@ const OrdemProducaoCadastro = () => {
         />
       )}
       {view === 'form' && (
-        <AddEdit 
+        <AddEdit
           editingRecord={editingRecord}
           onCancel={handleCancel}
           onSave={handleSave}
+          onEdit={handleEdit}
+          onView={handleView}
         />
       )}
       {view === 'view' && (

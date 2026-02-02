@@ -147,7 +147,7 @@ const Authorized = ({ children, userName }) => {
                                 */}
                             </Col>
                             {/* Logo e Título */}
-                            <Col onClick={() => navigate('/')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                            <Col onClick={() => navigate('/ordem-producao/cadastro')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                                 {   /*  <img src={logo} alt="Logo" style={{ height: 20 }} /> */}
                                 <Text style={{ color: '#fff', fontSize: '34px', marginLeft: '16px'  , fontWeight: 600}}>MESC</Text>
                             </Col>
@@ -210,7 +210,7 @@ const Authorized = ({ children, userName }) => {
 
                 {/* Conteúdo Principal */}
                 <Layout>
-                    <Content style={{ padding: '16px', margin: 0, minHeight: 280 }}>
+                    <Content style={{ padding: '12px', margin: 0, minHeight: 280 }}>
                         <main role="main">{children}</main>
                     </Content>
                 </Layout>
