@@ -63,9 +63,14 @@ const getMockData = async (endpoint, data) => {
     const newItem = {
       id: payload.id || Date.now(),
       codigo: payload.codigo || '',
+      cod_ferramenta: payload.cod_ferramenta || '',
       descricao: payload.descricao || '',
       unidade: payload.unidade || 'UN',
       observacoes: payload.observacoes || '',
+      leadtime_producao: payload.leadtime_producao ?? 0,
+      leadtime_entrega: payload.leadtime_entrega ?? 0,
+      tipo_acabamento: payload.tipo_acabamento || 'nenhum',
+      peso_unitario: payload.peso_unitario ?? 0,
       ativo: payload.ativo !== false,
     };
     if (existingIndex >= 0) {

@@ -1,4 +1,5 @@
 import React from "react";
+import { Navigate } from 'react-router-dom';
 import { 
     AiFillEdit, 
     AiFillHome, 
@@ -11,6 +12,8 @@ import {
     AiOutlineSearch
 } from 'react-icons/ai';
 import { roles } from '../helpers/roles';
+
+const ConsultasRedirect = () => <Navigate to="/ordem-producao/consulta" replace />;
 
 // Função para preload de componentes
 const preloadComponent = (importFunc) => {
@@ -45,6 +48,21 @@ const ClientesConsulta = preloadComponent(() => import('../pages/Clientes/consul
 // Rotas de Itens
 const ItensCadastro = preloadComponent(() => import('../pages/Itens/cadastro'));
 
+// Rotas de Perfis
+const PerfisCadastro = preloadComponent(() => import('../pages/Perfis/cadastro'));
+
+// Rotas de Ferramentas
+const FerramentasCadastro = preloadComponent(() => import('../pages/Ferramentas/cadastro'));
+
+// Rotas de Ligas
+const LigasCadastro = preloadComponent(() => import('../pages/Ligas/cadastro'));
+
+// Gestão de Forno
+const GestaoForno = preloadComponent(() => import('../pages/Forno'));
+
+// Gestão de Usuários (mock - RF-022)
+const GestaoUsuarios = preloadComponent(() => import('../pages/Usuarios'));
+
 // Rotas dinâmicas (pode ser carregado de uma API)
 export const defaultRoutes = [
     //{ key: '/', icon: <AiFillHome />, label: 'Home', element: Home, roles: [roles.roleAdmin] },
@@ -63,11 +81,15 @@ export const defaultRoutes = [
         children: [
             { key: '/ordem-producao/cadastro', icon: <AiOutlineFileText />, label: 'Ordem de Produção', element: OrdemProducaoCadastro, roles: [roles.roleAdmin] },
             { key: '/pedidos/cadastro', icon: <AiOutlineFileText />, label: 'Pedidos', element: PedidosCadastro, roles: [roles.roleAdmin] },
+            { key: '/perfis/cadastro', icon: <AiOutlineFileText />, label: 'Perfis', element: PerfisCadastro, roles: [roles.roleAdmin] },
+            { key: '/ferramentas/cadastro', icon: <AiOutlineFileText />, label: 'Ferramentas', element: FerramentasCadastro, roles: [roles.roleAdmin] },
             { key: '/itens/cadastro', icon: <AiOutlineFileText />, label: 'Itens', element: ItensCadastro, roles: [roles.roleAdmin] },
+            { key: '/ligas/cadastro', icon: <AiOutlineFileText />, label: 'Ligas', element: LigasCadastro, roles: [roles.roleAdmin] },
             { key: '/clientes/cadastro', icon: <AiOutlineUser />, label: 'Clientes', element: ClientesCadastro, roles: [roles.roleAdmin] },
+            { key: '/forno', icon: <AiOutlineForm />, label: 'Gestão de Forno', element: GestaoForno, roles: [roles.roleAdmin] },
+            { key: '/usuarios', icon: <AiOutlineUser />, label: 'Gestão de Usuários', element: GestaoUsuarios, roles: [roles.roleAdmin] },
         ]
     },
-    
-    // Item pai: Consultas
-    
+
+   
 ];

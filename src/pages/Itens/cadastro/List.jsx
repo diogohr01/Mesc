@@ -1,13 +1,13 @@
 import { Badge, Button, Col, Form, Input, Layout, message, Row, Space } from 'antd';
 import { debounce } from 'lodash';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AiOutlineClear, AiOutlineSearch } from 'react-icons/ai';
+import { AiOutlineClear, AiOutlinePlus, AiOutlineSearch } from 'react-icons/ai';
 import { Card, LoadingSpinner, PaginatedTable, ActionButtons } from '../../../components';
 import ItensService from '../../../services/itensService';
 
 const { Content } = Layout;
 
-const List = ({ onView }) => {
+const List = ({ onAdd, onEdit, onView }) => {
   const [loading, setLoading] = useState(false);
   const [filterForm] = Form.useForm();
   const tableRef = useRef(null);
@@ -51,6 +51,7 @@ const List = ({ onView }) => {
   );
 
   const handleView = useCallback((record) => onView(record), [onView]);
+  const handleEdit = useCallback((record) => onEdit(record), [onEdit]);
 
   const handleFilter = useCallback(() => {
     debouncedReloadTable();
@@ -93,12 +94,12 @@ const List = ({ onView }) => {
       {
         title: 'Ações',
         key: 'actions',
-        width: 100,
+        width: 140,
         fixed: 'right',
         render: (text, record) => (
           <ActionButtons
             onView={() => handleView(record)}
-            showEdit={false}
+            onEdit={() => handleEdit(record)}
             showDelete={false}
             showCopy={false}
             showActivate={false}
@@ -108,7 +109,7 @@ const List = ({ onView }) => {
         ),
       },
     ],
-    [handleView]
+    [handleView, handleEdit]
   );
 
   useEffect(() => {
@@ -134,10 +135,11 @@ const List = ({ onView }) => {
                 },
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'flex-start' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                 <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#262626' }}>
                   Itens
                 </h2>
+                
               </div>
 
               {/* Filtros sempre visíveis - padrão das outras telas */}

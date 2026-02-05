@@ -54,6 +54,11 @@ const View = ({ record, onEdit, onCancel, onCopy, onAtivarDesativar }) => {
           id: "observacao",
           label: "Observação",
         },
+        {
+          type: "textarea",
+          id: "obs_tolerancia",
+          label: "Observação tolerância",
+        },
       ],
     },
   ]);
@@ -85,6 +90,7 @@ const View = ({ record, onEdit, onCancel, onCopy, onAtivarDesativar }) => {
           pedidoNumero: data.pedidoNumero || '',
           clienteNome: data.cliente?.nome || '',
           observacao: data.observacao || '',
+          obs_tolerancia: data.obs_tolerancia || '',
         };
 
         setPedidoData(data);
@@ -178,6 +184,20 @@ const View = ({ record, onEdit, onCancel, onCopy, onAtivarDesativar }) => {
       dataIndex: 'dataEntrega',
       key: 'dataEntrega',
       width: 150,
+      render: (data) => data ? dayjs(data).format('DD/MM/YYYY') : '-',
+    },
+    {
+      title: 'Controle',
+      dataIndex: 'controle_tipo',
+      key: 'controle_tipo',
+      width: 90,
+      render: (t) => (t === 'PESO' ? 'Peso' : 'Peça'),
+    },
+    {
+      title: 'Dt lim. prod.',
+      dataIndex: 'data_limite_prod',
+      key: 'data_limite_prod',
+      width: 110,
       render: (data) => data ? dayjs(data).format('DD/MM/YYYY') : '-',
     },
   ];

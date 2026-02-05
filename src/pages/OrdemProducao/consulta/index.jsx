@@ -297,6 +297,17 @@ const OrdemProducaoConsulta = () => {
       sorter: true,
     },
     {
+      title: 'Controle',
+      dataIndex: 'itens',
+      key: 'controle_tipo',
+      width: 90,
+      render: (itens) => {
+        if (!itens || itens.length === 0) return '-';
+        const t = itens[0]?.controle_tipo;
+        return t === 'PESO' ? 'Peso' : (t === 'PEÇA' ? 'Peça' : '-');
+      },
+    },
+    {
       title: 'Status',
       dataIndex: 'situacao',
       key: 'status',

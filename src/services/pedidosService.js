@@ -89,22 +89,27 @@ const getMockData = async (endpoint, data) => {
                 nome: "METALURGICA MOR"
             },
             observacao: "Pedido importado do Totvs",
+            obs_tolerancia: "",
             itens: [
                 {
                     codigo: 1,
                     item: "90100002",
                     descricao: "MTR-027 6063 T6F 19,05X1,20X6000 MM SEQUE",
+                    controle_tipo: "PEÇA",
                     quantidadeUn: 400,
                     pesoKg: 436.80,
-                    dataEntrega: "2024-02-20"
+                    dataEntrega: "2024-02-20",
+                    data_limite_prod: null
                 },
                 {
                     codigo: 2,
                     item: "90100002",
                     descricao: "MTR-027 6063 T6F 19,05X1,20X6000 MM SEQUE",
+                    controle_tipo: "PEÇA",
                     quantidadeUn: 400,
                     pesoKg: 436.80,
-                    dataEntrega: "2024-03-02"
+                    dataEntrega: "2024-03-02",
+                    data_limite_prod: null
                 }
             ]
         };
@@ -137,9 +142,11 @@ const getMockData = async (endpoint, data) => {
                 codigoItem: item.item ?? '',
                 descricaoItem: item.descricao ?? '',
                 codigoItemCliente: item.codigo != null ? String(item.codigo) : '',
+                controle_tipo: item.controle_tipo ?? 'PEÇA',
                 quantidadePecas: item.quantidadeUn ?? 0,
                 quantidadeKg: item.pesoKg ?? 0,
                 dataEntrega: item.dataEntrega ?? null,
+                data_limite_prod: item.data_limite_prod ?? null,
                 acabamento: '',
                 cubagemPrevista: null,
                 cubagemReal: null,
@@ -192,7 +199,12 @@ const getMockData = async (endpoint, data) => {
             pedidoNumero: payload.pedidoNumero ?? '',
             cliente: payload.cliente ?? {},
             observacao: payload.observacao ?? '',
-            itens: Array.isArray(payload.itens) ? payload.itens : [],
+            obs_tolerancia: payload.obs_tolerancia ?? '',
+            itens: Array.isArray(payload.itens) ? payload.itens.map(it => ({
+                ...it,
+                controle_tipo: it.controle_tipo ?? 'PEÇA',
+                data_limite_prod: it.data_limite_prod ?? null,
+            })) : [],
             ativo: payload.ativo !== false,
         };
         if (existingIndex >= 0) {

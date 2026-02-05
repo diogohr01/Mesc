@@ -1,0 +1,43 @@
+{
+  "data": [
+    {
+      "id": 1,
+      "cod_perfil": "NBC-0001",
+      "descricao": "Perfil NBC 0001",
+      "gramatura": 1.2,
+      "peso_nominal": 0.85,
+      "caminho_desenho": "",
+      "anexo_perfil": "",
+      "embalamento": "",
+      "observacoes": "",
+      "dimensionais": []
+    },
+    {
+      "id": 2,
+      "cod_perfil": "NBC-0002",
+      "descricao": "Perfil tubular 20x35",
+      "gramatura": 1.5,
+      "peso_nominal": 1.02,
+      "caminho_desenho": "",
+      "anexo_perfil": "especificacao-nbc0002.pdf",
+      "embalamento": "",
+      "observacoes": "",
+      "dimensionais": [
+        { "nome_cota": "Largura", "cota_mm": 20, "tolerancia_menos": 0.05, "tolerancia_mais": 0.1 },
+        { "nome_cota": "Altura", "cota_mm": 35, "tolerancia_menos": 0.08, "tolerancia_mais": 0.08 }
+      ]
+    },
+    {
+      "id": 3,
+      "cod_perfil": "MTR-027",
+      "descricao": "MTR-027 6063 T6F",
+      "gramatura": 1.09,
+      "peso_nominal": 0.95,
+      "caminho_desenho": "",
+      "anexo_perfil": "",
+      "embalamento": "",
+      "observacoes": "",
+      "dimensionais": []
+    }
+  ]
+}

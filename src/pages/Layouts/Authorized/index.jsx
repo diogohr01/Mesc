@@ -62,7 +62,8 @@ const Authorized = ({ children, userName }) => {
 
     // Efeito para determinar quais submenus devem estar abertos com base na rota atual
     useEffect(() => {
-        const segments = location.pathname.split('/').filter(Boolean);
+        const path = location.pathname;
+        const segments = path.split('/').filter(Boolean);
         const rootSubmenuKeys = defaultRoutes.map((x) => x.key);
         let newOpenKeys = [];
 
@@ -73,7 +74,14 @@ const Authorized = ({ children, userName }) => {
             if (rootSubmenuKeys.includes(firstSegment)) {
                 newOpenKeys = [firstSegment];
             } else {
-                newOpenKeys = ['/main'];
+                // Abrir submenu pai quando a rota atual for um filho (ex.: /ordem-producao/consulta -> Consultas)
+                for (const route of defaultRoutes) {
+                    if (route.children?.some((c) => c.key === path || path.startsWith(c.key + '/'))) {
+                        newOpenKeys.push(route.key);
+                        break;
+                    }
+                }
+                if (newOpenKeys.length === 0) newOpenKeys = ['/main'];
             }
         }
 

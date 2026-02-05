@@ -94,6 +94,13 @@ const AddEdit = ({ editingRecord, onCancel, onSave }) => {
           placeholder: "Digite observações",
           label: "Observação",
         },
+        {
+          type: "textarea",
+          id: "obs_tolerancia",
+          required: false,
+          placeholder: "Observação sobre tolerância (peça/peso)",
+          label: "Observação tolerância",
+        },
       ],
     },
   ], [clientesOptions]);
@@ -127,9 +134,12 @@ const AddEdit = ({ editingRecord, onCancel, onSave }) => {
             codigo: item.codigo || index + 1,
             item: item.item || '',
             descricao: item.descricao || '',
+            controle_tipo: item.controle_tipo || 'PEÇA',
             quantidadeUn: item.quantidadeUn || 0,
             pesoKg: item.pesoKg || 0,
             dataEntrega: item.dataEntrega ? dayjs(item.dataEntrega) : null,
+            data_limite_prod: item.data_limite_prod ? dayjs(item.data_limite_prod) : null,
+            observacao: item.observacao || '',
           }));
           setItens(itensFormatados);
         }
@@ -174,6 +184,7 @@ const AddEdit = ({ editingRecord, onCancel, onSave }) => {
           pedidoNumero: fetchedRecord.pedidoNumero || '',
           clienteId: fetchedRecord.cliente?.codigo || '',
           observacao: fetchedRecord.observacao || '',
+          obs_tolerancia: fetchedRecord.obs_tolerancia || '',
         };
 
         // Formatar itens
@@ -183,9 +194,12 @@ const AddEdit = ({ editingRecord, onCancel, onSave }) => {
             codigo: item.codigo || index + 1,
             item: item.item || '',
             descricao: item.descricao || '',
+            controle_tipo: item.controle_tipo || 'PEÇA',
             quantidadeUn: item.quantidadeUn || 0,
             pesoKg: item.pesoKg || 0,
             dataEntrega: item.dataEntrega ? convertToDayjs(item.dataEntrega) : null,
+            data_limite_prod: item.data_limite_prod ? convertToDayjs(item.data_limite_prod) : null,
+            observacao: item.observacao || '',
           }));
           setItens(itensFormatados);
         }
@@ -235,10 +249,12 @@ const AddEdit = ({ editingRecord, onCancel, onSave }) => {
           return null;
         };
 
-        // Serializar itens
+        // Serializar itens (inclui controle_tipo e data_limite_prod para propagação)
         const itensSerializados = itens.map(item => ({
           ...item,
+          controle_tipo: item.controle_tipo || 'PEÇA',
           dataEntrega: item.dataEntrega ? (dayjs.isDayjs(item.dataEntrega) ? item.dataEntrega.format('YYYY-MM-DD') : item.dataEntrega) : null,
+          data_limite_prod: item.data_limite_prod ? (dayjs.isDayjs(item.data_limite_prod) ? item.data_limite_prod.format('YYYY-MM-DD') : item.data_limite_prod) : null,
         }));
 
         const pedidoData = {
@@ -248,6 +264,7 @@ const AddEdit = ({ editingRecord, onCancel, onSave }) => {
           cliente: {
             codigo: values.clienteId || '',
           },
+          obs_tolerancia: values.obs_tolerancia || '',
           itens: itensSerializados,
           ativo: true,
         };

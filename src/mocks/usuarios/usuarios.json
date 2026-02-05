@@ -1,0 +1,25 @@
+{
+  "data": [
+    {
+      "id": 1,
+      "nome": "Admin",
+      "email": "admin@mesc.com.br",
+      "perfil": "Administrador",
+      "modulos": ["PCP", "Consultas", "Cadastros", "Gestão de Usuários"]
+    },
+    {
+      "id": 2,
+      "nome": "Operador",
+      "email": "operador@mesc.com.br",
+      "perfil": "Operador",
+      "modulos": ["PCP", "Consultas"]
+    },
+    {
+      "id": 3,
+      "nome": "Consulta",
+      "email": "consulta@mesc.com.br",
+      "perfil": "Consulta",
+      "modulos": ["Consultas"]
+    }
+  ]
+}

@@ -7,7 +7,7 @@ import { message } from 'antd';
 
 const { Content } = Layout;
 
-const View = ({ record, onCancel }) => {
+const View = ({ record, onEdit, onCancel }) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(null);
   const [form] = Form.useForm();
@@ -18,8 +18,13 @@ const View = ({ record, onCancel }) => {
       columns: 2,
       questions: [
         { type: 'text', id: 'codigo', label: 'Código' },
+        { type: 'text', id: 'cod_ferramenta', label: 'Ferramenta' },
         { type: 'text', id: 'descricao', label: 'Descrição' },
         { type: 'text', id: 'unidade', label: 'Unidade' },
+        { type: 'text', id: 'leadtime_producao', label: 'Lead time produção (dias)' },
+        { type: 'text', id: 'leadtime_entrega', label: 'Lead time entrega (dias)' },
+        { type: 'text', id: 'tipo_acabamento', label: 'Tipo acabamento' },
+        { type: 'text', id: 'peso_unitario', label: 'Peso unitário (kg)' },
         { type: 'textarea', id: 'observacoes', label: 'Observações' },
       ],
     },
@@ -35,8 +40,13 @@ const View = ({ record, onCancel }) => {
         const data = response.data.data;
         const values = {
           codigo: data.codigo || '',
+          cod_ferramenta: data.cod_ferramenta || '',
           descricao: data.descricao || '',
           unidade: data.unidade || '',
+          leadtime_producao: data.leadtime_producao != null ? String(data.leadtime_producao) : '',
+          leadtime_entrega: data.leadtime_entrega != null ? String(data.leadtime_entrega) : '',
+          tipo_acabamento: data.tipo_acabamento || '',
+          peso_unitario: data.peso_unitario != null ? String(data.peso_unitario) : '',
           observacoes: data.observacoes || '',
         };
         setFormData(values);
@@ -82,15 +92,16 @@ const View = ({ record, onCancel }) => {
                 <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#262626' }}>
                   Visualizar Item
                 </h2>
-                <Button
-                  type="default"
-                  icon={<AiOutlineArrowLeft />}
-                  onClick={onCancel}
-                  disabled={loading}
-                  size="middle"
-                >
-                  Voltar
-                </Button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <Button type="default" icon={<AiOutlineArrowLeft />} onClick={onCancel} disabled={loading} size="middle">
+                    Voltar
+                  </Button>
+                  {!loading && formData && (
+                    <Button type="primary" onClick={onEdit} size="middle">
+                      Editar
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {loading ? (

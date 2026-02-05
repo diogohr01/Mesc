@@ -3,6 +3,11 @@ import dayjs from 'dayjs';
 import React, { useCallback, useEffect, useMemo } from 'react';
 import { DynamicForm } from '../../../components';
 
+const CONTROLE_OPCOES = [
+    { label: 'Peça', value: 'PEÇA' },
+    { label: 'Peso', value: 'PESO' },
+];
+
 const formConfig = [
     {
         title: 'Configuração do item',
@@ -31,6 +36,13 @@ const formConfig = [
                 disabled: true,
             },
             {
+                type: 'radio',
+                id: 'controle_tipo',
+                required: true,
+                label: 'Controle',
+                options: CONTROLE_OPCOES,
+            },
+            {
                 type: 'integer',
                 id: 'quantidadeUn',
                 required: true,
@@ -54,6 +66,14 @@ const formConfig = [
                 format: 'DD/MM/YYYY',
             },
             {
+                type: 'date',
+                id: 'data_limite_prod',
+                required: false,
+                placeholder: 'Data limite produção',
+                label: 'Data limite produção',
+                format: 'DD/MM/YYYY',
+            },
+            {
                 type: 'textarea',
                 id: 'observacao',
                 required: false,
@@ -73,10 +93,14 @@ const PedidoItemConfigModal = ({ open, item, onClose, onSave }) => {
             codigo: item.codigo,
             item: item.item || '',
             descricao: item.descricao || '',
+            controle_tipo: item.controle_tipo || 'PEÇA',
             quantidadeUn: item.quantidadeUn ?? 0,
             pesoKg: item.pesoKg ?? 0,
             dataEntrega: item.dataEntrega
                 ? (dayjs.isDayjs(item.dataEntrega) ? item.dataEntrega : dayjs(item.dataEntrega))
+                : null,
+            data_limite_prod: item.data_limite_prod
+                ? (dayjs.isDayjs(item.data_limite_prod) ? item.data_limite_prod : dayjs(item.data_limite_prod))
                 : null,
             observacao: item.observacao || '',
         };
@@ -97,12 +121,18 @@ const PedidoItemConfigModal = ({ open, item, onClose, onSave }) => {
             const updatedItem = {
                 ...item,
                 item: values.item,
+                controle_tipo: values.controle_tipo || 'PEÇA',
                 quantidadeUn: values.quantidadeUn ?? 0,
                 pesoKg: values.pesoKg ?? 0,
                 dataEntrega: values.dataEntrega
                     ? (dayjs.isDayjs(values.dataEntrega)
                           ? values.dataEntrega.format('YYYY-MM-DD')
                           : dayjs(values.dataEntrega).format('YYYY-MM-DD'))
+                    : null,
+                data_limite_prod: values.data_limite_prod
+                    ? (dayjs.isDayjs(values.data_limite_prod)
+                          ? values.data_limite_prod.format('YYYY-MM-DD')
+                          : dayjs(values.data_limite_prod).format('YYYY-MM-DD'))
                     : null,
                 observacao: values.observacao || '',
             };

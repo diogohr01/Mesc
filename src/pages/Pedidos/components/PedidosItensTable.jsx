@@ -106,6 +106,28 @@ const PedidosItensTable = ({ value = [], onChange }) => {
             ),
         },
         {
+            title: 'Controle',
+            dataIndex: 'controle_tipo',
+            key: 'controle_tipo',
+            width: 90,
+            render: (text) => <span>{text === 'PESO' ? 'Peso' : 'Peça'}</span>,
+        },
+        {
+            title: 'Dt lim. prod.',
+            dataIndex: 'data_limite_prod',
+            key: 'data_limite_prod',
+            width: 110,
+            render: (text) => (
+                <span>
+                    {text
+                        ? dayjs.isDayjs(text)
+                            ? text.format('DD/MM/YYYY')
+                            : dayjs(text).format('DD/MM/YYYY')
+                        : '-'}
+                </span>
+            ),
+        },
+        {
             title: 'Ações',
             key: 'actions',
             width: 120,

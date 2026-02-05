@@ -59,9 +59,11 @@ const ItensTable = ({ value = [], onChange, form }) => {
             codigoItem: '',
             descricaoItem: '',
             codigoItemCliente: '',
+            controle_tipo: 'PEÇA',
             quantidadePecas: 0,
             quantidadeKg: 0,
             dataEntrega: null,
+            data_limite_prod: null,
             acabamento: '',
             cubagemPrevista: 0,
             cubagemReal: null,
@@ -245,6 +247,13 @@ const ItensTable = ({ value = [], onChange, form }) => {
             },
         },
         {
+            title: 'Controle',
+            dataIndex: 'controle_tipo',
+            key: 'controle_tipo',
+            width: 90,
+            render: (text) => (text === 'PESO' ? 'Peso' : 'Peça'),
+        },
+        {
             title: 'Data Entrega',
             dataIndex: 'dataEntrega',
             key: 'dataEntrega',
@@ -266,6 +275,13 @@ const ItensTable = ({ value = [], onChange, form }) => {
                 }
                 return text ? dayjs(text).format('DD/MM/YYYY') : '-';
             },
+        },
+        {
+            title: 'Dt lim. prod.',
+            dataIndex: 'data_limite_prod',
+            key: 'data_limite_prod',
+            width: 110,
+            render: (text) => (text ? dayjs(text).format('DD/MM/YYYY') : '-'),
         },
         {
             title: 'Acabamento',

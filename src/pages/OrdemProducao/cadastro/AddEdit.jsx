@@ -277,9 +277,11 @@ const AddEdit = ({ editingRecord, onCancel, onSave, onEdit, onView }) => {
             codigoItem: item.codigoItem || '',
             descricaoItem: item.descricaoItem || '',
             codigoItemCliente: item.codigoItemCliente || '',
+            controle_tipo: item.controle_tipo || 'PEÇA',
             quantidadePecas: item.quantidadePecas || 0,
             quantidadeKg: item.quantidadeKg || 0,
             dataEntrega: item.dataEntrega ? dayjs(item.dataEntrega) : null,
+            data_limite_prod: item.data_limite_prod ? dayjs(item.data_limite_prod) : null,
             acabamento: item.acabamento || '',
             cubagemPrevista: item.cubagemPrevista || 0,
             cubagemReal: item.cubagemReal || null,
@@ -350,9 +352,11 @@ const AddEdit = ({ editingRecord, onCancel, onSave, onEdit, onView }) => {
             codigoItem: item.codigoItem || '',
             descricaoItem: item.descricaoItem || '',
             codigoItemCliente: item.codigoItemCliente || '',
+            controle_tipo: item.controle_tipo || 'PEÇA',
             quantidadePecas: item.quantidadePecas || 0,
             quantidadeKg: item.quantidadeKg || 0,
             dataEntrega: item.dataEntrega ? dayjs(item.dataEntrega) : null,
+            data_limite_prod: item.data_limite_prod ? dayjs(item.data_limite_prod) : null,
             acabamento: item.acabamento || '',
             cubagemPrevista: item.cubagemPrevista || 0,
             cubagemReal: item.cubagemReal || null,
@@ -517,10 +521,12 @@ const AddEdit = ({ editingRecord, onCancel, onSave, onEdit, onView }) => {
           return null;
         };
 
-        // Serializar itens
+        // Serializar itens (preserva controle_tipo e data_limite_prod para propagação)
         const itensSerializados = itens.map(item => ({
           ...item,
+          controle_tipo: item.controle_tipo || 'PEÇA',
           dataEntrega: item.dataEntrega ? (dayjs.isDayjs(item.dataEntrega) ? item.dataEntrega.format('YYYY-MM-DD') : item.dataEntrega) : null,
+          data_limite_prod: item.data_limite_prod ? (dayjs.isDayjs(item.data_limite_prod) ? item.data_limite_prod.format('YYYY-MM-DD') : item.data_limite_prod) : null,
         }));
 
         const isOpFilha = editingRecord?.tipoOp === 'FILHA' || !editingRecord;
@@ -752,9 +758,11 @@ const AddEdit = ({ editingRecord, onCancel, onSave, onEdit, onView }) => {
                               { title: 'Código Item', dataIndex: 'codigoItem', key: 'codigoItem', width: 120 },
                               { title: 'Descrição', dataIndex: 'descricaoItem', key: 'descricaoItem' },
                               { title: 'Cód. Cliente', dataIndex: 'codigoItemCliente', key: 'codigoItemCliente', width: 100 },
+                              { title: 'Controle', dataIndex: 'controle_tipo', key: 'controle_tipo', width: 90, render: (t) => (t === 'PESO' ? 'Peso' : 'Peça') },
                               { title: 'Qtd (peças)', dataIndex: 'quantidadePecas', key: 'quantidadePecas', width: 100, align: 'right', render: (v) => v?.toLocaleString('pt-BR') ?? '0' },
                               { title: 'Qtd (kg)', dataIndex: 'quantidadeKg', key: 'quantidadeKg', width: 100, align: 'right', render: (v) => v?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '0.00' },
                               { title: 'Data Entrega', dataIndex: 'dataEntrega', key: 'dataEntrega', width: 120, render: (d) => d ? dayjs(d).format('DD/MM/YYYY') : '-' },
+                              { title: 'Dt lim. prod.', dataIndex: 'data_limite_prod', key: 'data_limite_prod', width: 110, render: (d) => d ? dayjs(d).format('DD/MM/YYYY') : '-' },
                             ]}
                             rowKey={(r, i) => r.key ?? r.id ?? `item-${i}`}
                             pagination={false}
@@ -772,6 +780,7 @@ const AddEdit = ({ editingRecord, onCancel, onSave, onEdit, onView }) => {
                             columns={[
                               { title: 'Código Item', dataIndex: 'codigoItem', key: 'codigoItem', width: 120 },
                               { title: 'Descrição', dataIndex: 'descricaoItem', key: 'descricaoItem' },
+                              { title: 'Controle', dataIndex: 'controle_tipo', key: 'controle_tipo', width: 90, render: (t) => (t === 'PESO' ? 'Peso' : 'Peça') },
                               {
                                 title: 'Qtd (peças)',
                                 dataIndex: 'quantidadePecas',

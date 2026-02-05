@@ -14,7 +14,9 @@ import {
     CurrencyInput,
     DateInput,
     DateRangeInput,
+    DimensionaisTableInput,
     EmailInput,
+    FileDisplayInput,
     FileUploadInput,
     NumberInput,
     PasswordInput,
@@ -66,6 +68,8 @@ const ViewForm = React.memo(({
         radio: RadioInput,
         images: FileUploadInput,
         files: FileUploadInput,
+        'file-display': FileDisplayInput,
+        'dimensionais-table': DimensionaisTableInput,
         switch: SwitchInput,
         'toggle-switch': ToggleSwitch,
         'conditional-switch': ConditionalSwitch,
@@ -206,6 +210,18 @@ const ViewForm = React.memo(({
                 specificProps.layout = question.layout || "vertical";
                 specificProps.direction = direction;
                 break;
+            case "file-display":
+                specificProps.variant = question.variant || "attachment";
+                specificProps.placeholder = question.placeholder;
+                specificProps.accept = question.accept;
+                specificProps.boxStyle = question.boxStyle;
+                specificProps.areaStyle = question.areaStyle;
+                break;
+            case "dimensionais-table":
+                specificProps.columns = question.columns;
+                specificProps.addButtonText = question.addButtonText;
+                specificProps.emptyText = question.emptyText;
+                break;
         }
 
         return <Component {...commonProps} {...specificProps} />;
@@ -242,22 +258,46 @@ const ViewForm = React.memo(({
     const formSections = useMemo(() => {
         if (!formConfig) return null;
 
-        return formConfig.map((section, index) => (
-            <div key={section.id || index} style={{ marginBottom: '24px' }}>
-                {section.title && (
-                    <h3 style={{ 
-                        marginTop: index > 0 ? 25 : 0, 
-                        marginBottom: 16,
-                        fontSize: '16px',
-                        fontWeight: 600,
-                        color: '#262626'
-                    }}>
-                        {section.title}
-                    </h3>
-                )}
-                {renderQuestions(section.questions, section.columns)}
-            </div>
-        ));
+        return formConfig.map((section, index) => {
+            if (section.leftQuestions && section.rightQuestions) {
+                const rightQuestionsRow = section.rightQuestionsRow || [];
+                return (
+                    <div key={section.id || index} style={{ marginBottom: '24px' }}>
+                        {section.title && (
+                            <h3 style={{ marginTop: index > 0 ? 25 : 0, marginBottom: 16, fontSize: '16px', fontWeight: 600, color: '#262626' }}>
+                                {section.title}
+                            </h3>
+                        )}
+                        <Row gutter={24}>
+                            <Col span={12}>{renderQuestions(section.leftQuestions, 1)}</Col>
+                            <Col span={12}>
+                                {renderQuestions(section.rightQuestions, 1)}
+                                {rightQuestionsRow.length > 0 && (
+                                    <Row gutter={16} align="top" style={{ marginTop: 16 }}>
+                                        <Col span={12} style={{ minHeight: 120, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                                            {renderQuestions(rightQuestionsRow.slice(0, 1), 1)}
+                                        </Col>
+                                        <Col span={12} style={{ minHeight: 120, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                                            {renderQuestions(rightQuestionsRow.slice(1, 2), 1)}
+                                        </Col>
+                                    </Row>
+                                )}
+                            </Col>
+                        </Row>
+                    </div>
+                );
+            }
+            return (
+                <div key={section.id || index} style={{ marginBottom: '24px' }}>
+                    {section.title && (
+                        <h3 style={{ marginTop: index > 0 ? 25 : 0, marginBottom: 16, fontSize: '16px', fontWeight: 600, color: '#262626' }}>
+                            {section.title}
+                        </h3>
+                    )}
+                    {renderQuestions(section.questions, section.columns)}
+                </div>
+            );
+        });
     }, [formConfig, renderQuestions]);
 
     return (

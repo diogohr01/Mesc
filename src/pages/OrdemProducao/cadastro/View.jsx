@@ -203,6 +203,18 @@ const View = ({ record, onEdit, onCancel, onCopy, onAtivarDesativar }) => {
       render: (date) => date ? dayjs(date).format('DD/MM/YYYY') : '-',
     },
     {
+      title: 'Controle',
+      dataIndex: 'controle_tipo',
+      key: 'controle_tipo',
+      render: (t) => (t === 'PESO' ? 'Peso' : 'Peça'),
+    },
+    {
+      title: 'Dt lim. prod.',
+      dataIndex: 'data_limite_prod',
+      key: 'data_limite_prod',
+      render: (date) => date ? dayjs(date).format('DD/MM/YYYY') : '-',
+    },
+    {
       title: 'Acabamento',
       dataIndex: 'acabamento',
       key: 'acabamento',

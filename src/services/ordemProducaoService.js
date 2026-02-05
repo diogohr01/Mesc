@@ -92,9 +92,11 @@ const getMockData = async (endpoint, data) => {
                     codigoItem: "707395",
                     descricaoItem: "TUBO RETANG ALUM 20X35X1,00X2070 MM",
                     codigoItemCliente: "TUB-001",
+                    controle_tipo: "PEÇA",
                     quantidadePecas: 4500,
                     quantidadeKg: 1250.5,
                     dataEntrega: "2024-02-20",
+                    data_limite_prod: null,
                     acabamento: "Anodizado"
                 }
             ]

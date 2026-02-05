@@ -1,3 +1,7 @@
+/**
+ * Tema e identidade visual (RNF-001).
+ * Ajustar primary/secondary conforme identidade MOR quando definida.
+ */
 export const colors = {
   primary: "#385E9D",
   secondary: "#52c41a",

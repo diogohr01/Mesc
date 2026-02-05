@@ -23,3 +23,9 @@ export * from './checkbox-radio';
 
 // Componentes de Upload
 export * from './file-upload';
+
+// Exibição/seleção de arquivo (valor string, variante dinâmica)
+export * from './file-display';
+
+// Tabela editável (ex.: dimensionais)
+export * from './table';
