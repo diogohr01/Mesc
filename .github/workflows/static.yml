@@ -31,11 +31,16 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      # Base path para GitHub Pages project site (ex: usuario.github.io/Frontend/)
+      # Base path para GitHub Pages project site (ex: usuario.github.io/Mesk/)
       - name: Build
         run: yarn build
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/
+
+      - name: List dist (debug)
+        run: ls -la dist && ls -la dist/assets 2>/dev/null || true
+      - name: Verificar 404.html (SPA no GitHub Pages)
+        run: test -f dist/404.html && echo "404.html OK" || (echo "ERRO: 404.html nao encontrado" && exit 1)
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -51,6 +56,9 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     steps:
       - name: Deploy to GitHub Pages
         id: deployment

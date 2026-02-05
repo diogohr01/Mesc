@@ -32,7 +32,7 @@ class ErrorBoundary extends React.Component {
                         <Button type="primary" key="retry" onClick={this.handleRetry}>
                             Tentar Novamente
                         </Button>,
-                        <Button key="home" onClick={() => window.location.href = '/'}>
+                        <Button key="home" onClick={() => { const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) || '/'; window.location.href = window.location.origin + base.replace(/\/?$/, '/'); }}>
                             Ir para Home
                         </Button>
                     ]}

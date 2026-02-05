@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect } from 'react';
-import { createBrowserRouter, RouterProvider, useLocation } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, useLocation, Navigate } from 'react-router-dom';
 import { Loading } from '../components';
 import { LazyWrapper } from '../components';
 import Layout from '../pages/Layouts/Authorized';
@@ -78,13 +78,18 @@ const RoutesList = () => {
                 path: "/signIn",
                 element: <RouteWrapper element={SignIn} />
             },
+            // Redireciona /signin (minúsculo) para /signIn — GitHub Pages é case-sensitive
+            {
+                path: "/signin",
+                element: <Navigate to="/signIn" replace />
+            },
             ...dynamicRoutes, // Adiciona as rotas dinâmicas geradas
             {
                 path: "*",
                 element: <LayoutWithSuspense><RouteWrapper element={NotFound} /></LayoutWithSuspense>
             },
         ],
-        { basename: import.meta.env.BASE_URL || '/' }
+        { basename: (import.meta.env.BASE_URL || '/').replace(/\/$/, '') || '/' }
     );
 
     return (

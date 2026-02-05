@@ -2,14 +2,30 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// GitHub Pages: 404 deve servir o SPA para rotas client-side funcionarem
+function copyIndexTo404() {
+  return {
+    name: 'copy-index-to-404',
+    closeBundle() {
+      const outDir = path.resolve(__dirname, 'dist');
+      const indexPath = path.join(outDir, 'index.html');
+      const notFoundPath = path.join(outDir, '404.html');
+      if (fs.existsSync(indexPath)) {
+        fs.copyFileSync(indexPath, notFoundPath);
+      }
+    },
+  };
+}
+
 // https://vitejs.dev/config/
-// Para GitHub Pages (project site): use base '/nome-do-repo/' (ex: /Frontend/)
+// Para GitHub Pages (project site): use base '/nome-do-repo/' (ex: /Mesk/)
 export default defineConfig({
   base: process.env.VITE_BASE_PATH || '/',
-  plugins: [react()],
+  plugins: [react(), copyIndexTo404()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
