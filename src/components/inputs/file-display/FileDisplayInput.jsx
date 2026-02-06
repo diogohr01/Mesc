@@ -86,9 +86,9 @@ const FileDisplayInput = ({
 
   // variant === 'attachment'
   const boxMerge = {
-    width: 72,
-    height: 88,
-    minWidth: 72,
+    width: 100,
+    height: 90,
+    minWidth: 100,
     minHeight: 88,
     border: '1px solid #d9d9d9',
     borderRadius: 6,

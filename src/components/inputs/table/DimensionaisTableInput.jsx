@@ -1,12 +1,30 @@
-import React, { useCallback, useMemo } from 'react';
-import { Button, Input, InputNumber, Table } from 'antd';
+import React, { useCallback, useMemo, useState } from 'react';
+import { Button, Form, Input, InputNumber, Modal, Table } from 'antd';
 import { AiOutlinePlus } from 'react-icons/ai';
+
+const DynamicForm = React.lazy(() =>
+  import('../../../components/Data/Form').then((m) => ({ default: m.default }))
+);
 
 const defaultColumnsConfig = [
   { dataIndex: 'nome_cota', title: 'Nome da Cota', width: 200 },
   { dataIndex: 'cota_mm', title: 'Cota (mm)', width: 120 },
   { dataIndex: 'tolerancia_menos', title: 'Tolerância (-)', width: 120 },
   { dataIndex: 'tolerancia_mais', title: 'Tolerância (+)', width: 120 },
+];
+
+const initialFormRow = { nome_cota: '', cota_mm: 0, tolerancia_menos: 0, tolerancia_mais: 0 };
+
+const modalFormConfig = [
+  {
+    columns: 1,
+    questions: [
+      { type: 'text', id: 'nome_cota', label: 'Nome da Cota', required: true, placeholder: 'Nome da cota' },
+      { type: 'decimal', id: 'cota_mm', label: 'Cota (mm)', precision: 2, step: 0.01, questionProps: { min: 0 } },
+      { type: 'decimal', id: 'tolerancia_menos', label: 'Tolerância (-)', precision: 2, step: 0.01 },
+      { type: 'decimal', id: 'tolerancia_mais', label: 'Tolerância (+)', precision: 2, step: 0.01 },
+    ],
+  },
 ];
 
 const ensureKeys = (arr) =>
@@ -22,6 +40,7 @@ const stripKeys = (arr) =>
  * DimensionaisTableInput - Tabela editável de dimensionais.
  * value: array de { nome_cota, cota_mm, tolerancia_menos, tolerancia_mais }
  * onChange: chamado com array atualizado (sem keys). Compatível com Form.Item.
+ * "Adicionar linha" abre um modal para preencher a nova cota.
  */
 const DimensionaisTableInput = ({
   value = [],
@@ -30,8 +49,12 @@ const DimensionaisTableInput = ({
   columns: columnsConfig = defaultColumnsConfig,
   addButtonText = 'Adicionar linha',
   emptyText = 'Nenhuma cota. Clique em "Adicionar linha".',
+  modalTitle = 'Adicionar cota',
   ...rest
 }) => {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [form] = Form.useForm();
+
   const rows = useMemo(() => ensureKeys(value), [value]);
 
   const emitChange = useCallback(
@@ -41,10 +64,29 @@ const DimensionaisTableInput = ({
     [onChange]
   );
 
-  const addRow = useCallback(() => {
-    const newRow = { nome_cota: '', cota_mm: 0, tolerancia_menos: 0, tolerancia_mais: 0 };
-    emitChange([...rows, newRow]);
-  }, [rows, emitChange]);
+  const openAddModal = useCallback(() => {
+    form.setFieldsValue({ ...initialFormRow });
+    setModalOpen(true);
+  }, [form]);
+
+  const closeModal = useCallback(() => {
+    setModalOpen(false);
+    form.resetFields();
+  }, [form]);
+
+  const submitAddRow = useCallback(
+    (values) => {
+      const newRow = {
+        nome_cota: values.nome_cota ?? '',
+        cota_mm: values.cota_mm ?? 0,
+        tolerancia_menos: values.tolerancia_menos ?? 0,
+        tolerancia_mais: values.tolerancia_mais ?? 0,
+      };
+      emitChange([...rows, newRow]);
+      closeModal();
+    },
+    [rows, emitChange, closeModal]
+  );
 
   const removeRow = useCallback(
     (key) => {
@@ -116,11 +158,29 @@ const DimensionaisTableInput = ({
     <div {...rest}>
       {!disabled && (
         <div style={{ marginBottom: 8 }}>
-          <Button type="primary" icon={<AiOutlinePlus />} onClick={addRow} size="small">
+          <Button type="primary" icon={<AiOutlinePlus />} onClick={openAddModal}>
             {addButtonText}
           </Button>
         </div>
       )}
+      <Modal
+        title={modalTitle}
+        open={modalOpen}
+        onCancel={closeModal}
+        footer={null}
+        destroyOnClose
+        width={440}
+      >
+        <React.Suspense fallback={null}>
+          <DynamicForm
+            formConfig={modalFormConfig}
+            formInstance={form}
+            onSubmit={submitAddRow}
+            onClose={closeModal}
+            submitText="Adicionar"
+          />
+        </React.Suspense>
+      </Modal>
       <Table
         dataSource={rows}
         columns={tableColumns}
