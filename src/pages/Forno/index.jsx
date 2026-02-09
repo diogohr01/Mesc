@@ -1,6 +1,6 @@
 import React, { memo, useCallback, useEffect, useState } from 'react';
-import { Card, Col, Layout, Row, Space, Typography } from 'antd';
-import { LoadingSpinner } from '../../components';
+import { Col, Layout, Row, Space, Typography } from 'antd';
+import { Card, LoadingSpinner } from '../../components';
 import FornoService from '../../services/fornoService';
 import dayjs from 'dayjs';
 

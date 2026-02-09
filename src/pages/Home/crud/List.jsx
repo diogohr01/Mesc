@@ -188,31 +188,9 @@ const List = ({ onAdd, onEdit }) => {
           <Col span={24}>
             <Card
               variant="borderless"
-              styles={{
-                header: {
-                  padding: '16px 24px',
-                  borderBottom: '1px solid #f0f0f0',
-                  display: 'flex',
-                  justifyContent: 'flex-start',
-                  alignItems: 'center'
-                }
-              }}
+              title="Lista de Registros"
+              extra={<Button type="primary" icon={<AiOutlinePlus />} onClick={onAdd} disabled={loading} size="middle">Adicionar Registro</Button>}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#262626' }}>
-                  Lista de Registros
-                </h2>
-                <Button
-                  type="primary"
-                  icon={<AiOutlinePlus />}
-                  onClick={onAdd}
-                  disabled={loading}
-                  size="middle"
-                >
-                  Adicionar Registro
-                </Button>
-              </div>
-
                 {/* Filtros sempre visíveis */}
                 <div style={{
                   margin: '12px 0',

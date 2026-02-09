@@ -1,163 +1,110 @@
 import React, { memo } from 'react';
-import { Card as AntCard, Typography, Space } from 'antd';
+import { Card as AntCard, Typography } from 'antd';
 import { colors } from '../../../styles/colors.js';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
+const DEFAULT_HEADER_STYLE = {
+  padding: '16px 24px',
+  borderBottom: '1px solid #f0f0f0',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  gap: 12,
+};
 
 /**
- * Componente Card customizado e otimizado
- * @param {Object} props - Propriedades do componente
- * @param {React.ReactNode} props.children - Conteúdo do card
- * @param {string} props.title - Título do card
- * @param {string} props.subtitle - Subtítulo do card
- * @param {React.ReactNode} props.extra - Elemento extra (botões, ações)
- * @param {React.ReactNode} props.header - Cabeçalho customizado
- * @param {React.ReactNode} props.footer - Rodapé customizado
- * @param {boolean} props.loading - Estado de carregamento
- * @param {boolean} props.bordered - Se tem borda (padrão: false)
- * @param {boolean} props.hoverable - Se tem efeito hover
- * @param {string} props.size - Tamanho ('small' | 'default' | 'large')
- * @param {string} props.variant - Variante ('default' | 'borderless' | 'outlined')
- * @param {Object} props.style - Estilos customizados
- * @param {string} props.className - Classe CSS customizada
- * @param {Function} props.onClick - Função de clique
- * @param {boolean} props.clickable - Se é clicável
- * @param {string} props.icon - Ícone do título
- * @param {string} props.description - Descrição do card
+ * Card unificado: header padrão (title, subtitle, extra) e repasse de props ao Ant Design Card.
+ * Qualquer alteração de visual do header fica só aqui.
+ * @param {React.ReactNode} [props.title] - Título (string ou ReactNode)
+ * @param {React.ReactNode|string} [props.subtitle] - Subtítulo
+ * @param {React.ReactNode} [props.extra] - Conteúdo à direita do header (botões, etc.)
+ * @param {Object} [props.styles] - Merge com estilos padrão (ex.: styles.header)
+ * @param {string} [props.variant] - 'default' | 'borderless' | 'outlined' (default: 'borderless')
  */
 const Card = memo(({
-    children,
-    title,
-    subtitle,
-    extra,
-    header,
-    footer,
-    loading = false,
-    bordered = false,
-    hoverable = false,
-    size = 'default',
-    variant = 'default',
-    style = {},
-    className = '',
-    onClick,
-    clickable = false,
-    icon,
-    description,
-    ...props
+  children,
+  title,
+  subtitle,
+  extra,
+  header,
+  footer,
+  loading = false,
+  bordered = false,
+  hoverable = false,
+  size = 'default',
+  variant = 'borderless',
+  style = {},
+  className = '',
+  onClick,
+  clickable = false,
+  icon,
+  description,
+  styles: stylesProp,
+  ...rest
 }) => {
-    // Estilos base otimizados
-    const baseStyle = {
-        borderRadius: '8px',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
-        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-        ...style
-    };
+  const hasHeader = !!(title != null && title !== '' || extra || header);
 
-    // Estilos para hover
-    const hoverStyle = hoverable || clickable ? {
-        cursor: clickable ? 'pointer' : 'default',
-        transform: 'translateY(-2px)',
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)'
-    } : {};
+  const mergedStyles = {
+    ...(stylesProp || {}),
+    header: hasHeader
+      ? { ...DEFAULT_HEADER_STYLE, ...(stylesProp?.header || {}) }
+      : (stylesProp?.header || {}),
+  };
 
-    // Variantes de estilo
-    const variantStyles = {
-        default: {
-            backgroundColor: '#fff',
-            border: '1px solid #f0f0f0'
-        },
-        borderless: {
-            backgroundColor: '#fff',
-            border: 'none'
-        },
-        outlined: {
-            backgroundColor: '#fff',
-            border: `2px solid ${colors.primary}20`
-        }
-    };
+  const titleNode =
+    header ||
+    (title != null && title !== '') ? (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {icon && <span style={{ color: colors.primary }}>{icon}</span>}
+          {typeof title === 'string' ? (
+            <span style={{ fontSize: 18, fontWeight: 600, color: colors.text.primary }}>{title}</span>
+          ) : (
+            title
+          )}
+        </div>
+        {(subtitle != null && subtitle !== '') && (
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {subtitle}
+          </Text>
+        )}
+        {(description != null && description !== '' && subtitle == null) && (
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {description}
+          </Text>
+        )}
+      </div>
+    ) : undefined;
 
-    // Tamanhos
-    const sizeStyles = {
-        small: { padding: '12px' },
-        default: { padding: '16px' },
-        large: { padding: '24px' }
-    };
-
-    // Header customizado
-    const renderHeader = () => {
-        if (header) return header;
-        
-        if (title || subtitle || extra) {
-            return (
-                <div style={{ marginBottom: '16px' }}>
-                    <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                        {title && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                {icon && <span style={{ color: colors.primary }}>{icon}</span>}
-                                <Title level={4} style={{ margin: 0, color: colors.text.primary }}>
-                                    {title}
-                                </Title>
-                            </div>
-                        )}
-                        {subtitle && (
-                            <Text type="secondary" style={{ fontSize: '14px' }}>
-                                {subtitle}
-                            </Text>
-                        )}
-                        {description && (
-                            <Text type="secondary" style={{ fontSize: '13px' }}>
-                                {description}
-                            </Text>
-                        )}
-                        {extra && (
-                            <div style={{ marginTop: '8px' }}>
-                                {extra}
-                            </div>
-                        )}
-                    </Space>
-                </div>
-            );
-        }
-        return null;
-    };
-
-    // Footer customizado
-    const renderFooter = () => {
-        if (footer) {
-            return (
-                <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f0f0f0' }}>
-                    {footer}
-                </div>
-            );
-        }
-        return null;
-    };
-
-    return (
-        <AntCard
-            loading={loading}
-            bordered={bordered}
-            hoverable={hoverable}
-            size={size}
-            variant={variant}
-            style={{
-                ...baseStyle,
-                ...variantStyles[variant],
-                ...sizeStyles[size],
-                ...(hoverable || clickable ? hoverStyle : {}),
-            }}
-            className={`custom-card ${className}`}
-            onClick={onClick}
-            {...props}
-        >
-            {renderHeader()}
-            <div style={{ minHeight: '60px' }}>
-                {children}
-            </div>
-            {renderFooter()}
-        </AntCard>
-    );
+  return (
+    <AntCard
+      title={header ? header : (titleNode != null ? titleNode : (extra ? '' : undefined))}
+      extra={extra}
+      loading={loading}
+      bordered={bordered}
+      hoverable={hoverable}
+      size={size}
+      variant={variant}
+      style={style}
+      className={className}
+      onClick={onClick}
+      styles={mergedStyles}
+      {...rest}
+    >
+      {footer ? (
+        <>
+          <div style={{ minHeight: '40px' }}>{children}</div>
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
+            {footer}
+          </div>
+        </>
+      ) : (
+        children
+      )}
+    </AntCard>
+  );
 });
 
 Card.displayName = 'Card';

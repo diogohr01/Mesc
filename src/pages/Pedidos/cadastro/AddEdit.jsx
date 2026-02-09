@@ -318,31 +318,9 @@ const AddEdit = ({ editingRecord, onCancel, onSave }) => {
           <Col span={24}>
             <Card
               variant="borderless"
-              styles={{
-                header: {
-                  padding: '16px 24px',
-                  borderBottom: '1px solid #f0f0f0',
-                  display: 'flex',
-                  justifyContent: 'flex-start',
-                  alignItems: 'center'
-                }
-              }}
+              title={editingRecord ? 'Editar Pedido' : 'Novo Pedido'}
+              extra={<Button type="default" icon={<AiOutlineArrowLeft />} onClick={onCancel} disabled={loading} size="middle">Voltar</Button>}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#262626' }}>
-                  {editingRecord ? 'Editar Pedido' : 'Novo Pedido'}
-                </h2>
-                <Button
-                  type="default"
-                  icon={<AiOutlineArrowLeft />}
-                  onClick={onCancel}
-                  disabled={loading}
-                  size="middle"
-                >
-                  Voltar
-                </Button>
-              </div>
-
               {loading ? <Loading /> : (
                 <div style={{ padding: '16px 0' }}>
                   {/* Botão Buscar Pedido do Totvs */}

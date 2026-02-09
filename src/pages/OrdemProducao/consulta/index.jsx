@@ -406,22 +406,7 @@ const OrdemProducaoConsulta = () => {
       <Content>
         <Row gutter={[8, 8]}>
           <Col span={24}>
-            <Card
-              variant="borderless"
-              styles={{
-                header: {
-                  padding: '16px 24px',
-                  borderBottom: '1px solid #f0f0f0',
-                  display: 'flex',
-                  justifyContent: 'flex-start',
-                  alignItems: 'center'
-                }
-              }}
-            >
-              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#262626' }}>
-                Consulta de Ordens de Produção
-              </h2>
-
+            <Card variant="borderless" title="Consulta de Ordens de Produção">
               {/* Área de Filtros */}
               <div style={{
                 margin: '16px 0',

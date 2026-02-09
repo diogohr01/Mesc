@@ -114,25 +114,9 @@ const List = ({ onAdd, onEdit, onView }) => {
           <Col span={24}>
             <Card
               variant="borderless"
-              styles={{
-                header: {
-                  padding: '16px 24px',
-                  borderBottom: '1px solid #f0f0f0',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                },
-              }}
+              title="Perfis de Extrusão"
+              extra={<Button type="primary" icon={<AiOutlinePlus />} onClick={onAdd} size="middle">Novo Perfil</Button>}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#262626' }}>
-                  Perfis de Extrusão
-                </h2>
-                <Button type="primary" icon={<AiOutlinePlus />} onClick={onAdd} size="middle">
-                  Novo Perfil
-                </Button>
-              </div>
-
               <div
                 style={{
                   margin: '12px 0',

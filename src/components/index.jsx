@@ -11,3 +11,6 @@ export * from './Data';
 
 // Input Components
 export * from './inputs';
+
+// Dashboard Components
+export * from './Dashboard';

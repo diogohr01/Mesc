@@ -15,13 +15,26 @@ function App() {
                 token: {
                     colorPrimary: colors.primary,
                     colorPrimaryBg: colors.background,
+                    colorText: colors.text.primary,
+                    colorTextSecondary: colors.text.secondary,
+                    colorBorderSecondary: colors.backgroundGray,
                     // Otimizações de performance
-                    motion: false, // Desabilitar animações do Ant Design
+                    motion: false,
                     motionDurationFast: 0,
                     motionDurationMid: 0,
                     motionDurationSlow: 0,
                 },
-                // Desabilitar animações globais
+                components: {
+                    Table: {
+                        headerBg: colors.backgroundGray,
+                        headerColor: colors.text.primary,
+                        headerSplitColor: colors.backgroundGray,
+                        borderColor: '#f0f0f0',
+                        rowHoverBg: colors.background,
+                        cellPaddingBlock: 6,
+                        cellPaddingInline: 10,
+                    },
+                },
                 hashed: false,
                 cssVar: false,
             }}

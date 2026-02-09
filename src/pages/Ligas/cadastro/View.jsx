@@ -51,14 +51,16 @@ const View = ({ record, onEdit, onCancel }) => {
       <Content>
         <Row gutter={[8, 8]}>
           <Col span={24}>
-            <Card variant="borderless" styles={{ header: { padding: '16px 24px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>Visualizar Liga</h2>
+            <Card
+              variant="borderless"
+              title="Visualizar Liga"
+              extra={
                 <div style={{ display: 'flex', gap: 8 }}>
                   <Button type="default" icon={<AiOutlineArrowLeft />} onClick={onCancel} disabled={loading}>Voltar</Button>
                   {!loading && formData && <Button type="primary" onClick={onEdit}>Editar</Button>}
                 </div>
-              </div>
+              }
+            >
               {loading ? <Loading /> : formData ? <div style={{ padding: '16px 0' }}><ViewForm formConfig={formConfig} formInstance={form} /></div> : null}
             </Card>
           </Col>

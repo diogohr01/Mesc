@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
-import { Button, Card, Col, Layout, Row, Space, Tag, Typography } from 'antd';
+import { Button, Col, Layout, Row, Space, Tag, Typography } from 'antd';
+import { Card } from '../../components';
 import { AiOutlineArrowLeft } from 'react-icons/ai';
 
 const { Content } = Layout;
@@ -41,7 +42,7 @@ const View = ({ record, onCancel }) => {
             Voltar
           </Button>
         </Space>
-        <Card title="Usuário" styles={{ header: { padding: '16px 24px', borderBottom: '1px solid #f0f0f0' } }}>
+        <Card title="Usuário">
           {formConfig.map((section) => (
             <div key={section.sectionTitle} style={{ marginBottom: 24 }}>
               <Text strong style={{ display: 'block', marginBottom: 12 }}>{section.sectionTitle}</Text>

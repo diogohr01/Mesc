@@ -83,36 +83,15 @@ const View = ({ record, onEdit, onCancel }) => {
           <Col span={24}>
             <Card
               variant="borderless"
-              styles={{
-                header: {
-                  padding: '16px 24px',
-                  borderBottom: '1px solid #f0f0f0',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                },
-                body: {
-                  padding: '24px 24px',
-                  minHeight: 420,
-                },
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#262626' }}>
-                  Visualizar Perfil
-                </h2>
+              title="Visualizar Perfil"
+              extra={
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <Button type="default" icon={<AiOutlineArrowLeft />} onClick={onCancel} disabled={loading} size="middle">
-                    Voltar
-                  </Button>
-                  {!loading && data && (
-                    <Button type="primary" onClick={onEdit} size="middle">
-                      Editar
-                    </Button>
-                  )}
+                  <Button type="default" icon={<AiOutlineArrowLeft />} onClick={onCancel} disabled={loading} size="middle">Voltar</Button>
+                  {!loading && data && <Button type="primary" onClick={onEdit} size="middle">Editar</Button>}
                 </div>
-              </div>
-
+              }
+              styles={{ body: { padding: '24px 24px', minHeight: 420 } }}
+            >
               {loading ? (
                 <Loading />
               ) : data ? (

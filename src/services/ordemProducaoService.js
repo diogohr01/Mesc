@@ -33,6 +33,21 @@ const getMockData = async (endpoint, data) => {
         if (filtros.opPaiId != null) {
             filteredData = filteredData.filter(item => item.opPaiId === filtros.opPaiId);
         }
+        if (filtros.dataInicio) {
+            filteredData = filteredData.filter(item => item.dataOP >= filtros.dataInicio);
+        }
+        if (filtros.dataFim) {
+            filteredData = filteredData.filter(item => item.dataOP <= filtros.dataFim);
+        }
+        if (filtros.search && String(filtros.search).trim()) {
+            const term = String(filtros.search).trim().toLowerCase();
+            filteredData = filteredData.filter(item => {
+                const matchCodigo = item.numeroOPERP?.toLowerCase().includes(term);
+                const matchCliente = item.cliente?.nome?.toLowerCase().includes(term);
+                const matchProduto = (item.itens || []).some(it => it.descricaoItem?.toLowerCase().includes(term));
+                return matchCodigo || matchCliente || matchProduto;
+            });
+        }
         
         // Paginação
         const start = (page - 1) * pageSize;

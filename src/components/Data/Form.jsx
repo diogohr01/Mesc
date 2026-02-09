@@ -33,6 +33,7 @@ import {
     ToggleSwitch,
     TreeSelectInput
 } from "../inputs";
+import PeriodFilter from "./PeriodFilter";
 
 dayjs.locale("pt-br"); // Define o locale do dayjs para português
 
@@ -87,6 +88,7 @@ const DynamicForm = React.memo(({
         'toggle-switch': ToggleSwitch,
         'conditional-switch': ConditionalSwitch,
         'switch-group': BaseSwitchGroupInput,
+        period: PeriodFilter,
     }), []);
 
     // Função para renderizar input baseada no tipo
@@ -189,7 +191,7 @@ const DynamicForm = React.memo(({
                 specificProps.allowClear = allowClear;
                 break;
             case "checkbox":
-                specificProps.label = placeholder;
+                specificProps.label = question.noLabel ? question.label : (placeholder || '');
                 break;
             case "checkbox-group":
                 specificProps.options = options;
@@ -368,7 +370,7 @@ const DynamicForm = React.memo(({
                 {questions.map((question) => (
                     <Col span={colSpan} key={question.id}>
                         <Form.Item
-                            label={question.label}
+                            label={question.noLabel ? null : question.label}
                             name={question.id}
                             valuePropName={question.type === "checkbox" ? "checked" : undefined}
                             rules={getValidationRules(question)}
@@ -444,8 +446,9 @@ const DynamicForm = React.memo(({
                         <Row gutter={24}>
                             <Col span={12}>{renderQuestions(section.leftQuestions, 1)}</Col>
                             <Col span={12}>
-                                {renderQuestions(section.rightQuestions, 1)}
-                                {rightQuestionsRow.length > 0 && (
+                                <div style={section.rightWrapperStyle} className={section.rightWrapperClassName}>
+                                    {renderQuestions(section.rightQuestions, 1)}
+                                    {rightQuestionsRow.length > 0 && (
                                     <Row gutter={16} align="top" style={{ marginTop: 16 }}>
                                         <Col span={12} style={{ minHeight: 120, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                                             {renderQuestions(rightQuestionsRow.slice(0, 1), 1)}
@@ -455,6 +458,7 @@ const DynamicForm = React.memo(({
                                         </Col>
                                     </Row>
                                 )}
+                                </div>
                             </Col>
                         </Row>
                     </div>

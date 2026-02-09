@@ -9,7 +9,9 @@ import {
     AiOutlineWindows,
     AiOutlineFileText,
     AiOutlineUser,
-    AiOutlineSearch
+    AiOutlineSearch,
+    AiOutlineSetting,
+    AiOutlineTool
 } from 'react-icons/ai';
 import { roles } from '../helpers/roles';
 
@@ -63,6 +65,15 @@ const GestaoForno = preloadComponent(() => import('../pages/Forno'));
 // Gestão de Usuários (mock - RF-022)
 const GestaoUsuarios = preloadComponent(() => import('../pages/Usuarios'));
 
+// Dashboard do Planejador
+const Dashboard = preloadComponent(() => import('../pages/Dashboard'));
+
+// Configurações (Motor de Sequenciamento + Integração ERP)
+const Configuracoes = preloadComponent(() => import('../pages/Configuracoes'));
+
+// Recursos Produtivos (Máquinas, matrizes e linhas)
+const RecursosProdutivos = preloadComponent(() => import('../pages/RecursosProdutivos'));
+
 // Rotas dinâmicas (pode ser carregado de uma API)
 export const defaultRoutes = [
     //{ key: '/', icon: <AiFillHome />, label: 'Home', element: Home, roles: [roles.roleAdmin] },
@@ -79,6 +90,7 @@ export const defaultRoutes = [
         label: 'PCP', 
         roles: [roles.roleAdmin],
         children: [
+            { key: '/dashboard', icon: <AiFillHome />, label: 'Dashboard', element: Dashboard, roles: [roles.roleAdmin] },
             { key: '/ordem-producao/cadastro', icon: <AiOutlineFileText />, label: 'Ordem de Produção', element: OrdemProducaoCadastro, roles: [roles.roleAdmin] },
             { key: '/pedidos/cadastro', icon: <AiOutlineFileText />, label: 'Pedidos', element: PedidosCadastro, roles: [roles.roleAdmin] },
             { key: '/perfis/cadastro', icon: <AiOutlineFileText />, label: 'Perfis', element: PerfisCadastro, roles: [roles.roleAdmin] },
@@ -88,6 +100,8 @@ export const defaultRoutes = [
             { key: '/clientes/cadastro', icon: <AiOutlineUser />, label: 'Clientes', element: ClientesCadastro, roles: [roles.roleAdmin] },
             { key: '/forno', icon: <AiOutlineForm />, label: 'Gestão de Forno', element: GestaoForno, roles: [roles.roleAdmin] },
             { key: '/usuarios', icon: <AiOutlineUser />, label: 'Gestão de Usuários', element: GestaoUsuarios, roles: [roles.roleAdmin] },
+            { key: '/configuracoes', icon: <AiOutlineSetting />, label: 'Configurações', element: Configuracoes, roles: [roles.roleAdmin] },
+            { key: '/recursos-produtivos', icon: <AiOutlineTool />, label: 'Recursos Produtivos', element: RecursosProdutivos, roles: [roles.roleAdmin] },
         ]
     },
 

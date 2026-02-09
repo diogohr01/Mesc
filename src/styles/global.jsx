@@ -38,14 +38,20 @@ export default createGlobalStyle`
         background: ${colors.primary}75;
     }
 
-    body{
+    html, body {
         margin: 0px !important;
+        padding: 0;
+        overflow-x: hidden;
+        max-width: 100vw;
+    }
+    body {
         background-color: #fafafb !important;
         transition: all 150ms ease-out 0s;
     }
 
+    /* Fonte global estilo iPhone (Inter ≈ San Francisco), igual em todos os dispositivos */
     * {
-        font-family: 'Montserrat', sans-serif !important;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif !important;
     }
 
     /* Otimizações de performance para animações */
@@ -131,6 +137,29 @@ export default createGlobalStyle`
         outline: none !important;
     }
 
+    /* Menu do Sider: menos espaço à esquerda */
+    .app-sidebar-menu.ant-menu-inline .ant-menu-item,
+    .app-sidebar-menu.ant-menu-inline .ant-menu-submenu-title {
+        padding-left: 12px !important;
+    }
+    .app-sidebar-menu.ant-menu-inline .ant-menu-sub .ant-menu-item {
+        padding-left: 24px !important;
+    }
+
+    /* Item selecionado do menu do Sider: marcação da rota */
+    .app-sidebar-menu .ant-menu-item-selected {
+        background: ${colors.primary}15 !important;
+        color: ${colors.primary} !important;
+        border-left: 3px solid ${colors.primary};
+        //border-top: 1px solid ${colors.primary};
+       // border-bottom: 1px solid ${colors.primary};
+        //border-right: 1px solid ${colors.primary};
+        border-radius: 6px;
+    }
+    .app-sidebar-menu .ant-menu-item-selected .anticon {
+        color: ${colors.primary} !important;
+    }
+
     /* Corrigir posicionamento do dropdown do perfil do usuário */
     .user-profile-dropdown {
         position: absolute !important;
@@ -143,5 +172,9 @@ export default createGlobalStyle`
         bottom: auto !important;
         left: auto !important;
         right: auto !important;
+    }
+
+    .op-atrasada {
+        border-left: 2px solid #ff4d4f !important;
     }
 `;

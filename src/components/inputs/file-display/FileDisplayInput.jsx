@@ -86,9 +86,9 @@ const FileDisplayInput = ({
 
   // variant === 'attachment'
   const boxMerge = {
-    width: 100,
+    width: 160,
     height: 90,
-    minWidth: 100,
+    minWidth: 160,
     minHeight: 88,
     border: '1px solid #d9d9d9',
     borderRadius: 6,
@@ -99,6 +99,14 @@ const FileDisplayInput = ({
     background: '#fafafa',
     flexShrink: 0,
     ...boxStyle,
+  };
+  const fileNameStyle = {
+    width: '100%',
+    padding: '4px 6px 0',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    textAlign: 'center',
   };
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 88, ...style }} className={className} {...rest}>
@@ -112,9 +120,11 @@ const FileDisplayInput = ({
       />
       <div style={boxMerge}>
         <FilePdfOutlined style={{ fontSize: 28, color: value ? '#1890ff' : '#bfbfbf' }} />
-        <Typography.Text type="secondary" style={{ fontSize: 11, marginTop: 4 }}>
-          {displayText}
-        </Typography.Text>
+        <div style={fileNameStyle}>
+          <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+            {displayText}
+          </Typography.Text>
+        </div>
       </div>
       <Button type="default" icon={<AiOutlineFolderOpen />} onClick={handleClick} size={size} disabled={disabled} />
     </div>

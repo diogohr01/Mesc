@@ -13,6 +13,7 @@ const AddEdit = ({ editingRecord, onCancel, onSave }) => {
   const [loading, setLoading] = useState(false);
   const [perfisOptions, setPerfisOptions] = useState([]);
   const [form] = Form.useForm();
+  const acompanhamento = Form.useWatch('acompanhamento', form);
 
   useEffect(() => {
     const load = async () => {
@@ -34,8 +35,7 @@ const AddEdit = ({ editingRecord, onCancel, onSave }) => {
     () => [
       {
         title: 'Dados da Ferramenta',
-        columns: 2,
-        questions: [
+        leftQuestions: [
           {
             type: 'text',
             id: 'codigo',
@@ -59,12 +59,27 @@ const AddEdit = ({ editingRecord, onCancel, onSave }) => {
           { type: 'integer', id: 'nitr_limite', required: false, placeholder: '0', label: 'Nitretação limite (m linear)' },
           { type: 'integer', id: 'tempo_forno_min', required: false, placeholder: '0', label: 'Tempo forno mín (min)' },
           { type: 'integer', id: 'tempo_forno_max', required: false, placeholder: '0', label: 'Tempo forno máx (min)' },
-          { type: 'checkbox', id: 'acompanhamento', required: false, label: 'Acompanhamento especial' },
-          { type: 'textarea', id: 'motivo_acomp', required: false, placeholder: 'Motivo (obrigatório se acompanhamento)', label: 'Motivo acompanhamento' },
+        ],
+        rightWrapperStyle: {
+          border: '1px solid #f0f0f0',
+          borderRadius: 8,
+          padding: 16,
+          background: '#fafafa',
+        },
+        rightQuestions: [
+          { type: 'checkbox', id: 'acompanhamento', required: false, label: 'Acompanhamento especial', noLabel: true },
+          {
+            type: 'textarea',
+            id: 'motivo_acomp',
+            required: false,
+            placeholder: 'Motivo (obrigatório se acompanhamento)',
+            label: 'Motivo acompanhamento',
+            disabled: !acompanhamento,
+          },
         ],
       },
     ],
-    [perfisOptions]
+    [perfisOptions, acompanhamento]
   );
 
   const fetchRecordData = useCallback(
@@ -149,25 +164,9 @@ const AddEdit = ({ editingRecord, onCancel, onSave }) => {
           <Col span={24}>
             <Card
               variant="borderless"
-              styles={{
-                header: {
-                  padding: '16px 24px',
-                  borderBottom: '1px solid #f0f0f0',
-                  display: 'flex',
-                  justifyContent: 'flex-start',
-                  alignItems: 'center',
-                },
-              }}
+              title={editingRecord ? 'Editar Ferramenta' : 'Nova Ferramenta'}
+              extra={<Button type="default" icon={<AiOutlineArrowLeft />} onClick={onCancel} disabled={loading} size="middle">Voltar</Button>}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#262626' }}>
-                  {editingRecord ? 'Editar Ferramenta' : 'Nova Ferramenta'}
-                </h2>
-                <Button type="default" icon={<AiOutlineArrowLeft />} onClick={onCancel} disabled={loading} size="middle">
-                  Voltar
-                </Button>
-              </div>
-
               {loading ? (
                 <Loading />
               ) : (

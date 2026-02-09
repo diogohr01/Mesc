@@ -204,25 +204,7 @@ const List = ({ onAdd, onEdit, onView }) => {
       <Content>
         <Row gutter={[8, 8]}>
           <Col span={24}>
-            <Card
-              variant="borderless"
-              styles={{
-                header: {
-                  padding: '16px 24px',
-                  borderBottom: '1px solid #f0f0f0',
-                  display: 'flex',
-                  justifyContent: 'flex-start',
-                  alignItems: 'center'
-                }
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between'  }}>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#262626' }}>
-                  Clientes / Fornecedores
-                </h2>
-             
-              </div>
-
+            <Card variant="borderless" title="Clientes / Fornecedores">
               {/* Filtros sempre visíveis */}
               <div style={{
                 margin: '12px 0',

@@ -148,42 +148,14 @@ const View = ({ record, onEdit, onCancel, onCopy, onAtivarDesativar }) => {
           <Col span={24}>
             <Card
               variant="borderless"
-              styles={{
-                header: {
-                  padding: '16px 24px',
-                  borderBottom: '1px solid #f0f0f0',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#262626' }}>
-                  Visualizar Cliente/Fornecedor
-                </h2>
+              title="Visualizar Cliente/Fornecedor"
+              extra={
                 <Space>
-                  <Button
-                    type="default"
-                    icon={<AiOutlineArrowLeft />}
-                    onClick={onCancel}
-                    disabled={loading}
-                    size="middle"
-                  >
-                    Voltar
-                  </Button>
-                  <Button
-                    type="default"
-                    icon={<AiOutlineEdit />}
-                    onClick={onEdit}
-                    disabled={loading}
-                    size="middle"
-                  >
-                    Editar
-                  </Button>
+                  <Button type="default" icon={<AiOutlineArrowLeft />} onClick={onCancel} disabled={loading} size="middle">Voltar</Button>
+                  <Button type="default" icon={<AiOutlineEdit />} onClick={onEdit} disabled={loading} size="middle">Editar</Button>
                 </Space>
-              </div>
-
+              }
+            >
               {loading ? <Loading /> : (
                 <div style={{ padding: '16px 0' }}>
                   <ViewForm

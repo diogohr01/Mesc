@@ -75,11 +75,11 @@ const AddEdit = ({ editingRecord, onCancel, onSave }) => {
       <Content>
         <Row gutter={[8, 8]}>
           <Col span={24}>
-            <Card variant="borderless" styles={{ header: { padding: '16px 24px', borderBottom: '1px solid #f0f0f0' } }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>{editingRecord ? 'Editar Liga' : 'Nova Liga'}</h2>
-                <Button type="default" icon={<AiOutlineArrowLeft />} onClick={onCancel} disabled={loading}>Voltar</Button>
-              </div>
+            <Card
+              variant="borderless"
+              title={editingRecord ? 'Editar Liga' : 'Nova Liga'}
+              extra={<Button type="default" icon={<AiOutlineArrowLeft />} onClick={onCancel} disabled={loading}>Voltar</Button>}
+            >
               {loading ? <Loading /> : (
                 <div style={{ padding: '16px 0' }}>
                   <DynamicForm formConfig={formConfig} formInstance={form} onSubmit={handleSave} submitText="Salvar" submitIcon={<AiOutlineSave />} submitOnSide={false} onClose={onCancel} />

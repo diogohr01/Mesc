@@ -213,31 +213,9 @@ const AddEdit = ({ editingRecord, onCancel, onSave }) => {
           <Col span={24}>
             <Card
               variant="borderless"
-              styles={{
-                header: {
-                  padding: '16px 24px',
-                  borderBottom: '1px solid #f0f0f0',
-                  display: 'flex',
-                  justifyContent: 'flex-start',
-                  alignItems: 'center'
-                }
-              }}
+              title={editingRecord ? 'Editar Registro' : 'Adicionar Registro'}
+              extra={<Button type="primary" icon={<AiOutlineArrowLeft />} onClick={onCancel} disabled={loading} size="middle">Voltar para a Lista</Button>}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#262626' }}>
-                  {editingRecord ? 'Editar Registro' : 'Adicionar Registro'}
-                </h2>
-                <Button
-                  type="primary"
-                  icon={<AiOutlineArrowLeft />}
-                  onClick={onCancel}
-                  disabled={loading}
-                  size="middle"
-                >
-                  Voltar para a Lista
-                </Button>
-              </div>
-
               {loading ? <Loading /> : (
                 <div style={{ padding: '16px 0' }}>
                   <p style={{ margin: '16px 0', color: '#8c8c8c', fontSize: '14px' }}>

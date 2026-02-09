@@ -83,11 +83,7 @@ const List = ({ onView }) => {
       <Content>
         <Row gutter={[8, 8]}>
           <Col span={24}>
-            <Card
-              variant="borderless"
-              styles={{ header: { padding: '16px 24px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }}
-            >
-              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#262626' }}>Gestão de Usuários</h2>
+            <Card variant="borderless" title="Gestão de Usuários">
               <div style={{ margin: '12px 0', padding: '12px', backgroundColor: '#fafafa', border: '1px solid #f0f0f0', borderRadius: '6px' }}>
                 <Form form={filterForm} layout="vertical" onFinish={() => debouncedReloadTable()} style={{ marginBottom: 0 }}>
                   <Row gutter={[12, 6]} align="bottom">
