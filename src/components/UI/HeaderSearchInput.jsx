@@ -20,17 +20,17 @@ const inputStyles = {
 /**
  * Input de pesquisa no header (fundo primaryLight, texto/borda do layout).
  */
-function HeaderSearchInput({ placeholder = 'Pesquisar', onSearch, value, onChange, ...rest }) {
+function HeaderSearchInput({ placeholder = 'Pesquisar', onSearch, value, onChange, style, ...rest }) {
   return (
     <Input
       className="header-search-input"
       placeholder={placeholder}
-      prefix={<SearchOutlined style={{ color: colors.layout.headerText, fontSize: 14, marginRight: 6 }} />}
+      prefix={<SearchOutlined style={{ color: colors.layout.headerText, fontSize: 14, marginRight: 7 }} />}
       onPressEnter={(e) => onSearch?.(e.target?.value)}
       value={value}
       onChange={onChange}
       allowClear={{ clearIcon: <span style={{ color: colors.layout.headerText }}>✕</span> }}
-      style={wrapperStyle}
+      style={{...wrapperStyle, ...style}}
       styles={{
         input: inputStyles,
       }}

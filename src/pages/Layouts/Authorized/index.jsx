@@ -203,7 +203,7 @@ const AuthorizedLayout = ({ children, userName }) => {
                             justifyContent: 'space-between',
                         }}
                     >
-                            <HeaderSearchInput placeholder="Pesquisar" {...searchProps} />
+                            <HeaderSearchInput placeholder="Pesquisar" {...searchProps}  style={{marginLeft: 4}} />
                         <Space size="middle" align="center" style={{borderLeft: `0.5px solid ${colors.white}`}}>
                             <Button
                                 type="text"
