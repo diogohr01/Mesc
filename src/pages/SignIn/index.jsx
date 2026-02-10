@@ -7,6 +7,7 @@ import { colors } from '../../styles/colors';
 import { useAuth } from '../../hooks/auth';
 import { Loading } from '../../components';
 import { Card } from '../../components';
+import { AppstoreOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
 
@@ -45,7 +46,7 @@ const SignIn = () => {
       // Verificar se o login foi bem-sucedido (API retorna data.response ou data.data)
       const responseData = result?.data?.response || result?.data?.data;
       if (result && result.data && responseData && responseData.accessToken) {
-        navigate("/ordem-producao/cadastro");
+        navigate("/");
       }
     } catch (error) {
       console.error('Erro no login:', error);
@@ -61,7 +62,11 @@ const SignIn = () => {
     >
       <Col span={6} style={{ textAlign: 'center' }}>
        {/*  <img src={logo} alt="Logo" style={{ height: 25, marginBottom: 20 }} />*/}
+       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 20 }}>
+      <AppstoreOutlined style={{ backgroundColor: colors.primaryLight, borderRadius: 8, padding: 8, fontSize: 32, color: colors.white }} />
+
        <Text style={{ color: '#fff', fontSize: '34px', marginLeft: '0px' , fontWeight: 600   }}>MESC</Text>
+       </div>
         <Card  variant="borderless">
           {loading ?
             <Loading /> :

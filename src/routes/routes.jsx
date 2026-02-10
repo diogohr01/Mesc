@@ -12,7 +12,9 @@ import {
     AiOutlineSearch,
     AiOutlineSetting,
     AiOutlineTool,
-    AiOutlineSchedule
+    AiOutlineSchedule,
+    AiOutlineUnorderedList,
+    AiOutlineAppstore
 } from 'react-icons/ai';
 import { roles } from '../helpers/roles';
 
@@ -40,6 +42,8 @@ const Charts = preloadComponent(() => import('../pages/Home/charts'));
 const OrdemProducaoCadastro = preloadComponent(() => import('../pages/OrdemProducao/cadastro'));
 const OrdemProducaoConsulta = preloadComponent(() => import('../pages/OrdemProducao/consulta'));
 const GanttProducao = preloadComponent(() => import('../pages/OrdemProducao/gantt'));
+const FilaProducao = preloadComponent(() => import('../pages/FilaProducao'));
+const KanbanProducao = preloadComponent(() => import('../pages/KanbanProducao'));
 
 // Rotas de Pedidos
 const PedidosCadastro = preloadComponent(() => import('../pages/Pedidos/cadastro'));
@@ -86,15 +90,17 @@ export const defaultRoutes = [
   //  { key: '/charts', icon: <AiOutlinePieChart />, label: 'Charts - Exemplo', element: Charts, roles: [roles.roleAdmin] },
     
     // Item pai: Cadastros
+    { key: '/dashboard', icon: <AiFillHome />, label: 'Dashboard', element: Dashboard, roles: [roles.roleAdmin] },
     { 
         key: '/cadastros', 
         icon: <AiOutlineForm />, 
         label: 'PCP', 
         roles: [roles.roleAdmin],
         children: [
-            { key: '/', icon: <AiFillHome />, label: 'Dashboard', element: Dashboard, roles: [roles.roleAdmin] },
             { key: '/ordem-producao/cadastro', icon: <AiOutlineFileText />, label: 'Ordem de Produção', element: OrdemProducaoCadastro, roles: [roles.roleAdmin] },
             { key: '/ordem-producao/gantt', icon: <AiOutlineSchedule />, label: 'Gantt de Produção', element: GanttProducao, roles: [roles.roleAdmin] },
+            { key: '/fila-producao', icon: <AiOutlineUnorderedList />, label: 'Fila de Produção', element: FilaProducao, roles: [roles.roleAdmin] },
+            { key: '/kanban-producao', icon: <AiOutlineAppstore />, label: 'Kanban de Produção', element: KanbanProducao, roles: [roles.roleAdmin] },
             { key: '/pedidos/cadastro', icon: <AiOutlineFileText />, label: 'Pedidos', element: PedidosCadastro, roles: [roles.roleAdmin] },
             { key: '/perfis/cadastro', icon: <AiOutlineFileText />, label: 'Perfis', element: PerfisCadastro, roles: [roles.roleAdmin] },
             { key: '/ferramentas/cadastro', icon: <AiOutlineFileText />, label: 'Ferramentas', element: FerramentasCadastro, roles: [roles.roleAdmin] },

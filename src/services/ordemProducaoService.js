@@ -359,6 +359,100 @@ const OrdemProducaoService = {
         };
     },
 
+    // Fila de Produção: OPs FILHA não concluídas/canceladas, ordenadas por score, paginadas
+    getFilaProducao: async (requestData) => {
+        await delay(300);
+        const { page = 1, pageSize = 10, search } = requestData || {};
+        const list = ordensProducaoMock.data || [];
+        const pais = list.filter((op) => op.tipoOp === 'PAI');
+        let fila = list
+            .filter((op) => op.tipoOp === 'FILHA' && op.status !== 'concluida' && op.status !== 'cancelada')
+            .map((f) => {
+                const pai = pais.find((p) => p.id === f.opPaiId);
+                const primeiroItem = (f.itens && f.itens[0]) || (pai && pai.itens && pai.itens[0]);
+                const quantidade = (f.itens || []).reduce((s, i) => s + (parseFloat(i.quantidadePecas) || 0), 0);
+                const dataEntrega = primeiroItem?.dataEntrega || '';
+                const produto = (pai && pai.produto) || primeiroItem?.descricaoItem || '';
+                return {
+                    id: f.id,
+                    codigo: f.numeroOPERP || '',
+                    status: f.status || 'rascunho',
+                    score: f.score != null ? f.score : 0,
+                    produto,
+                    cliente: (f.cliente && f.cliente.nome) || (pai && pai.cliente && pai.cliente.nome) || '',
+                    liga: (pai && pai.liga) || f.liga || '',
+                    tempera: (pai && pai.tempera) || f.tempera || '',
+                    quantidade,
+                    dataEntrega,
+                    recurso: f.recurso || '',
+                };
+            });
+
+        if (search && String(search).trim()) {
+            const term = String(search).trim().toLowerCase();
+            fila = fila.filter(
+                (op) =>
+                    op.codigo?.toLowerCase().includes(term) ||
+                    op.cliente?.toLowerCase().includes(term) ||
+                    op.produto?.toLowerCase().includes(term)
+            );
+        }
+
+        fila.sort((a, b) => (b.score || 0) - (a.score || 0));
+        const totalRecords = fila.length;
+        const start = (page - 1) * pageSize;
+        const data = fila.slice(start, start + pageSize);
+
+        return {
+            data: {
+                data,
+                pagination: { totalRecords, page, pageSize },
+            },
+            success: true,
+            message: 'Success',
+        };
+    },
+
+    // Kanban: todas as OPs FILHA (exceto cancelada) no formato flat, sem paginação
+    getDadosKanban: async () => {
+        await delay(300);
+        const list = ordensProducaoMock.data || [];
+        const pais = list.filter((op) => op.tipoOp === 'PAI');
+        const ops = list
+            .filter((op) => op.tipoOp === 'FILHA' && op.status !== 'cancelada')
+            .map((f) => {
+                const pai = pais.find((p) => p.id === f.opPaiId);
+                const primeiroItem = (f.itens && f.itens[0]) || (pai && pai.itens && pai.itens[0]);
+                const dataEntrega = primeiroItem?.dataEntrega || '';
+                const produto = (pai && pai.produto) || primeiroItem?.descricaoItem || '';
+                return {
+                    id: f.id,
+                    codigo: f.numeroOPERP || '',
+                    status: f.status || 'rascunho',
+                    score: f.score != null ? f.score : 0,
+                    produto,
+                    cliente: (f.cliente && f.cliente.nome) || (pai && pai.cliente && pai.cliente.nome) || '',
+                    liga: (pai && pai.liga) || f.liga || '',
+                    tempera: (pai && pai.tempera) || f.tempera || '',
+                    dataEntrega,
+                    recurso: f.recurso || '',
+                };
+            });
+        return {
+            data: { ops },
+            success: true,
+            message: 'Success',
+        };
+    },
+
+    // Alterar status de uma OP (mock: atualiza em memória)
+    alterarStatus: async (id, novoStatus) => {
+        await delay(100);
+        const item = ordensProducaoMock.data.find((op) => op.id === id);
+        if (item) item.status = novoStatus;
+        return { success: true, message: 'Status atualizado' };
+    },
+
     // Dados para o Gantt (OPs agrupadas pai/filhas + recursos + manutenções)
     getDadosGantt: async () => {
         await delay(200);

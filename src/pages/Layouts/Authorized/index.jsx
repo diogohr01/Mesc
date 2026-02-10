@@ -129,7 +129,7 @@ const AuthorizedLayout = ({ children, userName }) => {
             selectedKeys={[location.pathname]}
             openKeys={openKeys}
             onOpenChange={handleOpenChange}
-            style={{ height: '100%', borderRight: 0 }}
+            style={{ height: '100%', borderRight: 0, marginTop: 60 }}
             onClick={handleMenuClick} // Adiciona a lógica de clique no menu
             items={generateMenuItems(routes)} // Gera os itens do menu dinamicamente
         />
@@ -143,12 +143,13 @@ const AuthorizedLayout = ({ children, userName }) => {
                     onCollapse={(value) => setCollapsed(value)}
                     width={230}
                     style={{
-                        backgroundColor: colors.layout.siderBg,
+                        backgroundColor: colors.white,
                         position: 'sticky',
                         top: 0,
                         height: '100%',
                         minHeight: '100vh',
                         willChange: 'width',
+                        overflowY: 'auto',
                         transform: 'translateZ(0)',
                         borderRight: `1px solid ${colors.layout.siderBorder}`,
                         transition: 'width 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -160,6 +161,7 @@ const AuthorizedLayout = ({ children, userName }) => {
                             height: 64,
                             padding: '0 16px',
                             boxSizing: 'border-box',
+                            
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: collapsed ? 'center' : 'flex-start',
@@ -187,7 +189,7 @@ const AuthorizedLayout = ({ children, userName }) => {
                             </div>
                         )}
                     </div>
-                    <Divider style={{ margin: 0 }} />
+                    <Divider style={{ margin: 0}} />
                     {sidebarMenu}
                 </Sider>
 
@@ -197,7 +199,7 @@ const AuthorizedLayout = ({ children, userName }) => {
                             backgroundColor: colors.layout.headerBg,
                             padding: '0 16px',
                             borderBottom: `1px solid ${colors.layout.headerBorder}`,
-                            height: 65,
+                            height: 64,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',

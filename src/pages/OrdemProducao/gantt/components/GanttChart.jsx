@@ -1,6 +1,7 @@
 import React, { memo, useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import { Tooltip } from 'antd';
 import dayjs from 'dayjs';
+import { StyledScroll } from '../../../../components';
 import { getBarPosition, positionToDate } from '../../../../hooks/useGanttTime';
 
 const LANE_HEIGHT = 88;
@@ -450,7 +451,7 @@ function GanttChart({
         ))}
       </div>
 
-      <div className="gantt-timeline-scroll" style={{ overflowX: 'auto', flex: 1 }} ref={scrollRef}>
+      <StyledScroll style={{ overflowX: 'auto', flex: 1 }} ref={scrollRef}>
         <div style={{ position: 'relative', width: timeConfig.totalWidth, minWidth: '100%' }} ref={timelineRef}>
           <div
             style={{
@@ -679,7 +680,7 @@ function GanttChart({
               </div>
           ))}
         </div>
-      </div>
+      </StyledScroll>
     </div>
   );
 }

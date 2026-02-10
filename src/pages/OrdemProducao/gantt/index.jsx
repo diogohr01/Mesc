@@ -21,6 +21,7 @@ import { Layout } from 'antd';
 const { Content } = Layout;
 import OrdemProducaoService from '../../../services/ordemProducaoService';
 import { statusLabels } from '../../../constants/ordemProducaoStatus';
+import { StyledScroll } from '../../../components';
 import GanttChart from './components/GanttChart';
 import GanttLegend from './components/GanttLegend';
 import GanttDetailPanel from './components/GanttDetailPanel';
@@ -389,7 +390,7 @@ const GanttProducao = () => {
               minHeight: isFullscreen ? 0 : 'calc(100vh - 300px)',
             }}
           >
-            <div className="gantt-timeline-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
+            <StyledScroll style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
               <GanttChart
                 recursos={filteredRecursos}
                 barras={barras}
@@ -401,7 +402,7 @@ const GanttProducao = () => {
                 onSelectOP={setSelectedOP}
                 onMoveOP={handleMoveOP}
               />
-            </div>
+            </StyledScroll>
             <AnimatePresence mode="wait">
               {selectedData && (
                 <motion.div
