@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AiOutlineClear, AiOutlinePlus, AiOutlineSearch } from 'react-icons/ai';
 import { Card, DynamicForm, LoadingSpinner, PaginatedTable, ActionButtons } from '../../../components';
 import { useFilterSearchContext } from '../../../contexts/FilterSearchContext';
-import LigasService from '../../../services/ligasService';
+import SequenciamentoService from '../../../services/sequenciamentoService';
 
 const { confirm } = Modal;
 const { Content } = Layout;
@@ -16,37 +16,45 @@ const List = ({ onAdd, onEdit, onView }) => {
   const { searchTerm, clearSearch } = useFilterSearchContext();
 
   const debouncedReloadTable = useMemo(
-    () => debounce(() => { if (tableRef.current) tableRef.current.reloadTable(); }, 300),
+    () => debounce(() => {
+      if (tableRef.current) tableRef.current.reloadTable();
+    }, 300),
     []
   );
 
   const filterFormConfig = useMemo(
     () => [
       {
-        columns: 4,
+        columns: 2,
         questions: [
-          { type: 'text', id: 'cod_liga', required: false, placeholder: 'Código...', label: 'Código', size: 'middle' },
-          { type: 'text', id: 'descricao', required: false, placeholder: 'Descrição...', label: 'Descrição', size: 'middle' },
+          { type: 'text', id: 'nome', required: false, placeholder: 'Nome...', label: 'Nome', size: 'middle' },
         ],
       },
     ],
     []
   );
 
-  const handleFilter = useCallback(() => {
-    debouncedReloadTable();
-  }, [debouncedReloadTable]);
-
   useEffect(() => {
     debouncedReloadTable();
   }, [searchTerm, debouncedReloadTable]);
+
+  const handleFilter = useCallback(() => {
+    debouncedReloadTable();
+  }, [debouncedReloadTable]);
 
   const fetchData = useCallback(
     async (page, pageSize, sorterField, sortOrder) => {
       setLoading(true);
       try {
         const filters = filterForm.getFieldsValue();
-        const response = await LigasService.getAll({ page, pageSize, sorterField, sortOrder, ...filters, search: searchTerm?.trim() || undefined });
+        const response = await SequenciamentoService.getAll({
+          page,
+          pageSize,
+          sorterField,
+          sortOrder,
+          ...filters,
+          search: searchTerm?.trim() || undefined,
+        });
         return {
           data: response.data?.data || [],
           total: response.data?.pagination?.totalRecords || 0,
@@ -64,17 +72,17 @@ const List = ({ onAdd, onEdit, onView }) => {
   const handleDelete = useCallback((record) => {
     confirm({
       title: 'Confirmar exclusão',
-      content: 'Tem certeza de que deseja excluir esta Liga?',
+      content: 'Tem certeza de que deseja excluir este Cenário?',
       okText: 'Sim',
       okType: 'danger',
       cancelText: 'Não',
       onOk: async () => {
         try {
-          await LigasService.delete(record.id);
-          message.success('Liga excluída com sucesso!');
+          await SequenciamentoService.delete(record.id);
+          message.success('Cenário excluído com sucesso!');
           if (tableRef.current) tableRef.current.reloadTable();
         } catch (error) {
-          message.error('Erro ao excluir Liga.');
+          message.error('Erro ao excluir cenário.');
         }
       },
     });
@@ -82,10 +90,8 @@ const List = ({ onAdd, onEdit, onView }) => {
 
   const columns = useMemo(
     () => [
-      { title: 'Código', dataIndex: 'cod_liga', key: 'cod_liga', width: 120 },
-      { title: 'Descrição', dataIndex: 'descricao', key: 'descricao', width: 300 },
-      { title: 'Composição', dataIndex: 'composicao', key: 'composicao', width: 150 },
-      { title: 'Propriedades', dataIndex: 'propriedades', key: 'propriedades' },
+      { title: 'Nome', dataIndex: 'nome', key: 'nome', width: 220, sorter: true },
+      { title: 'Descrição', dataIndex: 'descricao', key: 'descricao', ellipsis: true },
       {
         title: 'Ações',
         key: 'actions',
@@ -107,6 +113,10 @@ const List = ({ onAdd, onEdit, onView }) => {
     [onView, onEdit, handleDelete]
   );
 
+  useEffect(() => {
+    return () => debouncedReloadTable.cancel?.();
+  }, [debouncedReloadTable]);
+
   return (
     <Layout>
       <Content>
@@ -114,10 +124,22 @@ const List = ({ onAdd, onEdit, onView }) => {
           <Col span={24}>
             <Card
               variant="borderless"
-              title="Ligas"
-              extra={<Button type="primary" icon={<AiOutlinePlus />} onClick={onAdd} size="middle">Nova Liga</Button>}
+              title="Cenários"
+              extra={
+                <Button type="primary" icon={<AiOutlinePlus />} onClick={onAdd} size="middle">
+                  Novo Cenário
+                </Button>
+              }
             >
-              <div style={{ margin: '12px 0', padding: '12px', backgroundColor: '#fafafa', border: '1px solid #f0f0f0', borderRadius: '6px' }}>
+              <div
+                style={{
+                  margin: '12px 0',
+                  padding: '12px',
+                  backgroundColor: '#fafafa',
+                  border: '1px solid #f0f0f0',
+                  borderRadius: '6px',
+                }}
+              >
                 <DynamicForm
                   formConfig={filterFormConfig}
                   formInstance={filterForm}
@@ -142,7 +164,15 @@ const List = ({ onAdd, onEdit, onView }) => {
                 />
               </div>
               <div style={{ padding: '16px 0' }}>
-                <PaginatedTable ref={tableRef} disabled={loading} fetchData={fetchData} initialPageSize={10} columns={columns} loadingIcon={<LoadingSpinner />} rowKey="id" />
+                <PaginatedTable
+                  ref={tableRef}
+                  disabled={loading}
+                  fetchData={fetchData}
+                  initialPageSize={10}
+                  columns={columns}
+                  loadingIcon={<LoadingSpinner />}
+                  rowKey="id"
+                />
               </div>
             </Card>
           </Col>

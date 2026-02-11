@@ -162,13 +162,13 @@ const AuthorizedLayout = ({ children, userName }) => {
                             flexShrink: 0,
                         }}
                     >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginRight: 30 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginRight: 33 }}>
                             <div
                                 style={{
                                     width: 40,
                                     height: 40,
                                     borderRadius: 8,
-                                    background: 'rgba(255,255,255,0.14)',
+                                    background: colors.primaryLight,
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -243,7 +243,6 @@ const AuthorizedLayout = ({ children, userName }) => {
                     style={{
                         backgroundColor: colors.white,
                         height: '100%',
-                        overflowY: 'auto',
                         willChange: 'width',
                         transform: 'translateZ(0)',
                         borderRight: `1px solid ${colors.layout.siderBorder}`,

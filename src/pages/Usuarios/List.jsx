@@ -1,8 +1,8 @@
-import { Button, Col, Form, Input, Layout, message, Row, Space, Tag } from 'antd';
+import { Button, Col, Form, Layout, message, Row, Space, Tag } from 'antd';
 import { debounce } from 'lodash';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AiOutlineClear, AiOutlineSearch } from 'react-icons/ai';
-import { Card, LoadingSpinner, PaginatedTable, ActionButtons } from '../../components';
+import { Card, DynamicForm, LoadingSpinner, PaginatedTable, ActionButtons } from '../../components';
 import { useFilterSearchContext } from '../../contexts/FilterSearchContext';
 import UsuariosService from '../../services/usuariosService';
 
@@ -18,6 +18,24 @@ const List = ({ onView }) => {
     () => debounce(() => { if (tableRef.current) tableRef.current.reloadTable(); }, 300),
     []
   );
+
+  const filterFormConfig = useMemo(
+    () => [
+      {
+        columns: 4,
+        questions: [
+          { type: 'text', id: 'nome', required: false, placeholder: 'Nome...', label: 'Nome', size: 'middle' },
+          { type: 'text', id: 'email', required: false, placeholder: 'E-mail...', label: 'E-mail', size: 'middle' },
+          { type: 'text', id: 'perfil', required: false, placeholder: 'Perfil...', label: 'Perfil', size: 'middle' },
+        ],
+      },
+    ],
+    []
+  );
+
+  const handleFilter = useCallback(() => {
+    debouncedReloadTable();
+  }, [debouncedReloadTable]);
 
   useEffect(() => {
     debouncedReloadTable();
@@ -91,42 +109,40 @@ const List = ({ onView }) => {
           <Col span={24}>
             <Card variant="borderless" title="Gestão de Usuários">
               <div style={{ margin: '12px 0', padding: '12px', backgroundColor: '#fafafa', border: '1px solid #f0f0f0', borderRadius: '6px' }}>
-                <Form form={filterForm} layout="vertical" onFinish={() => debouncedReloadTable()} style={{ marginBottom: 0 }}>
-                  <Row gutter={[12, 6]} align="bottom">
-                    <Col xs={24} sm={12} md={6} lg={4}>
-                      <Form.Item name="nome" label="Nome" style={{ marginBottom: '4px' }}>
-                        <Input placeholder="Nome..." size="middle" allowClear />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} sm={12} md={6} lg={4}>
-                      <Form.Item name="email" label="E-mail" style={{ marginBottom: '4px' }}>
-                        <Input placeholder="E-mail..." size="middle" allowClear />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} sm={12} md={6} lg={4}>
-                      <Form.Item name="perfil" label="Perfil" style={{ marginBottom: '4px' }}>
-                        <Input placeholder="Perfil..." size="middle" allowClear />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} sm={12} md={6} lg={4}>
-                      <Form.Item label=" " style={{ marginBottom: '4px' }}>
-                        <Space size="small">
-                          <Button type="primary" htmlType="submit" size="middle" icon={<AiOutlineSearch />} loading={loading}>Filtrar</Button>
-                          <Button size="middle" icon={<AiOutlineClear />} onClick={() => { filterForm.resetFields(); clearSearch(); debouncedReloadTable(); }}>Limpar</Button>
-                        </Space>
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                </Form>
+                <DynamicForm
+                  formConfig={filterFormConfig}
+                  formInstance={filterForm}
+                  submitText="Filtrar"
+                  submitIcon={<AiOutlineSearch />}
+                  submitOnSide={true}
+                  onClose={null}
+                  onSubmit={handleFilter}
+                  secondaryButton={
+                    <Button
+                      icon={<AiOutlineClear />}
+                      onClick={() => {
+                        filterForm.resetFields();
+                        clearSearch();
+                        debouncedReloadTable();
+                      }}
+                      size="middle"
+                    >
+                      Limpar
+                    </Button>
+                  }
+                />
               </div>
-              <PaginatedTable
-                ref={tableRef}
-                columns={columns}
-                fetchData={fetchData}
-                loading={loading}
-                rowKey="id"
-                pageSize={10}
-              />
+              <div style={{ padding: '16px 0' }}>
+                <PaginatedTable
+                  ref={tableRef}
+                  disabled={loading}
+                  fetchData={fetchData}
+                  initialPageSize={10}
+                  columns={columns}
+                  loadingIcon={<LoadingSpinner />}
+                  rowKey="id"
+                />
+              </div>
             </Card>
           </Col>
         </Row>

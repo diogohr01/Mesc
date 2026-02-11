@@ -67,6 +67,9 @@ const FerramentasCadastro = preloadComponent(() => import('../pages/Ferramentas/
 // Rotas de Ligas
 const LigasCadastro = preloadComponent(() => import('../pages/Ligas/cadastro'));
 
+// Rotas de Sequenciamento
+const SequenciamentoCadastro = preloadComponent(() => import('../pages/Sequenciamento/cadastro'));
+
 // Gestão de Forno
 const GestaoForno = preloadComponent(() => import('../pages/Forno'));
 
@@ -107,6 +110,7 @@ export const defaultRoutes = [
             { key: '/ferramentas/cadastro', icon: <GradientizeIcon gradientId="menu-ferramentas" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Ferramentas', element: FerramentasCadastro, roles: [roles.roleAdmin] },
             { key: '/itens/cadastro', icon: <GradientizeIcon gradientId="menu-itens" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Itens', element: ItensCadastro, roles: [roles.roleAdmin] },
             { key: '/ligas/cadastro', icon: <GradientizeIcon gradientId="menu-ligas" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Ligas', element: LigasCadastro, roles: [roles.roleAdmin] },
+            { key: '/sequenciamento/cadastro', icon: <GradientizeIcon gradientId="menu-sequenciamento" fillGradient><AiOutlineUnorderedList /></GradientizeIcon>, label: 'Cenários', element: SequenciamentoCadastro, roles: [roles.roleAdmin] },
             { key: '/clientes/cadastro', icon: <GradientizeIcon gradientId="menu-clientes" fillGradient><AiOutlineUser /></GradientizeIcon>, label: 'Clientes', element: ClientesCadastro, roles: [roles.roleAdmin] },
             { key: '/forno', icon: <GradientizeIcon gradientId="menu-forno" fillGradient><AiOutlineForm /></GradientizeIcon>, label: 'Gestão de Forno', element: GestaoForno, roles: [roles.roleAdmin] },
             { key: '/usuarios', icon: <GradientizeIcon gradientId="menu-usuarios" fillGradient><AiOutlineUser /></GradientizeIcon>, label: 'Gestão de Usuários', element: GestaoUsuarios, roles: [roles.roleAdmin] },

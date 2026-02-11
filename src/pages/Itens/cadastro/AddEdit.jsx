@@ -10,9 +10,7 @@ const { Content } = Layout;
 const UNIDADES = [
   { label: 'UN', value: 'UN' },
   { label: 'KG', value: 'KG' },
-  { label: 'M', value: 'M' },
-  { label: 'M²', value: 'M²' },
-  { label: 'PC', value: 'PC' },
+  
 ];
 
 const TIPO_ACABAMENTO = [

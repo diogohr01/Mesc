@@ -1,0 +1,43 @@
+{
+  "data": [
+    {
+      "id": 1,
+      "nome": "Foco em Entrega",
+      "descricao": "Prioriza prazo de entrega",
+      "criterios": [
+        { "id": "entrega", "label": "Data de Entrega", "value": 40 },
+        { "id": "produto", "label": "Código do Produto", "value": 10 },
+        { "id": "setup", "label": "Setup de Máquina", "value": 15 },
+        { "id": "produtividade", "label": "Produtividade", "value": 10 },
+        { "id": "liga", "label": "Liga do Material", "value": 15 },
+        { "id": "tempera", "label": "Têmpera", "value": 10 }
+      ]
+    },
+    {
+      "id": 2,
+      "nome": "Foco em Produtividade",
+      "descricao": "Minimiza setups e trocas",
+      "criterios": [
+        { "id": "produtividade", "label": "Produtividade", "value": 30 },
+        { "id": "setup", "label": "Setup de Máquina", "value": 25 },
+        { "id": "entrega", "label": "Data de Entrega", "value": 15 },
+        { "id": "liga", "label": "Liga do Material", "value": 10 },
+        { "id": "tempera", "label": "Têmpera", "value": 10 },
+        { "id": "produto", "label": "Código do Produto", "value": 10 }
+      ]
+    },
+    {
+      "id": 3,
+      "nome": "Balanceado",
+      "descricao": "Equilíbrio entre entrega e produtividade",
+      "criterios": [
+        { "id": "entrega", "label": "Data de Entrega", "value": 20 },
+        { "id": "produtividade", "label": "Produtividade", "value": 20 },
+        { "id": "setup", "label": "Setup de Máquina", "value": 17 },
+        { "id": "liga", "label": "Liga do Material", "value": 15 },
+        { "id": "tempera", "label": "Têmpera", "value": 15 },
+        { "id": "produto", "label": "Código do Produto", "value": 13 }
+      ]
+    }
+  ]
+}

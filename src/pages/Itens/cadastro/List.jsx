@@ -1,8 +1,8 @@
-import { Badge, Button, Col, Form, Input, Layout, message, Row, Space } from 'antd';
+import { Badge, Button, Col, Form, Layout, message, Row } from 'antd';
 import { debounce } from 'lodash';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AiOutlineClear, AiOutlinePlus, AiOutlineSearch } from 'react-icons/ai';
-import { Card, LoadingSpinner, PaginatedTable, ActionButtons } from '../../../components';
+import { Card, DynamicForm, LoadingSpinner, PaginatedTable, ActionButtons } from '../../../components';
 import { useFilterSearchContext } from '../../../contexts/FilterSearchContext';
 import ItensService from '../../../services/itensService';
 
@@ -21,6 +21,19 @@ const List = ({ onAdd, onEdit, onView }) => {
           tableRef.current.reloadTable();
         }
       }, 300),
+    []
+  );
+
+  const filterFormConfig = useMemo(
+    () => [
+      {
+        columns: 4,
+        questions: [
+          { type: 'text', id: 'codigo', required: false, placeholder: 'Digite o código...', label: 'Código', size: 'middle' },
+          { type: 'text', id: 'descricao', required: false, placeholder: 'Digite a descrição...', label: 'Descrição', size: 'middle' },
+        ],
+      },
+    ],
     []
   );
 
@@ -141,63 +154,28 @@ const List = ({ onAdd, onEdit, onView }) => {
                   borderRadius: '6px',
                 }}
               >
-                <Form
-                  form={filterForm}
-                  layout="vertical"
-                  onFinish={handleFilter}
-                  style={{ marginBottom: 0 }}
-                >
-                  <Row gutter={[12, 6]} align="bottom">
-                    <Col xs={24} sm={12} md={6} lg={4}>
-                      <Form.Item name="codigo" label="Código" style={{ marginBottom: '4px' }}>
-                        <Input
-                          placeholder="Digite o código..."
-                          size="middle"
-                          allowClear
-                          prefix={<AiOutlineSearch style={{ color: '#bfbfbf' }} />}
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} sm={12} md={6} lg={4}>
-                      <Form.Item name="descricao" label="Descrição" style={{ marginBottom: '4px' }}>
-                        <Input
-                          placeholder="Digite a descrição..."
-                          size="middle"
-                          allowClear
-                          prefix={<AiOutlineSearch style={{ color: '#bfbfbf' }} />}
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} sm={12} md={6} lg={4}>
-                      <Form.Item label=" " style={{ marginBottom: '4px' }}>
-                        <Space size="small" style={{ width: '100%' }}>
-                          <Button
-                            type="primary"
-                            htmlType="submit"
-                            size="middle"
-                            icon={<AiOutlineSearch />}
-                            loading={loading}
-                            style={{ minWidth: '80px', flex: 1 }}
-                          >
-                            Filtrar
-                          </Button>
-                          <Button
-                            size="middle"
-                            icon={<AiOutlineClear />}
-                            onClick={() => {
-                              filterForm.resetFields();
-                              clearSearch();
-                              debouncedReloadTable();
-                            }}
-                            style={{ minWidth: '80px', flex: 1 }}
-                          >
-                            Limpar
-                          </Button>
-                        </Space>
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                </Form>
+                <DynamicForm
+                  formConfig={filterFormConfig}
+                  formInstance={filterForm}
+                  submitText="Filtrar"
+                  submitIcon={<AiOutlineSearch />}
+                  submitOnSide={true}
+                  onClose={null}
+                  onSubmit={handleFilter}
+                  secondaryButton={
+                    <Button
+                      icon={<AiOutlineClear />}
+                      onClick={() => {
+                        filterForm.resetFields();
+                        clearSearch();
+                        debouncedReloadTable();
+                      }}
+                      size="middle"
+                    >
+                      Limpar
+                    </Button>
+                  }
+                />
               </div>
 
               <div style={{ padding: '16px 0' }}>

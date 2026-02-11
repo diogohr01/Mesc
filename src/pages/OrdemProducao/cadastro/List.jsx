@@ -37,12 +37,14 @@ const List = ({ onAdd, onEdit, onView }) => {
     {
       columns: 1,
       questions: [
-        { type: 'period', id: 'period', noLabel: true },
+        { type: 'period', id: 'period', noLabel: false, label: 'Período', size: 'middle' },
       ],
     },
+   
     {
       columns: 4,
       questions: [
+        
         { type: 'text', id: 'numeroOPERP', required: false, placeholder: 'Digite o número da OP...', label: 'OP ERP', size: 'middle' },
         { type: 'text', id: 'cliente', required: false, placeholder: 'Digite o nome do cliente...', label: 'Cliente', size: 'middle' },
         { type: 'text', id: 'situacao', required: false, placeholder: 'Digite a situação...', label: 'Situação', size: 'middle' },

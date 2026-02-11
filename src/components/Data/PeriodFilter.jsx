@@ -74,7 +74,6 @@ const PeriodFilter = memo(({ value = defaultValue, onChange }) => {
 
   return (
     <Space size="small" wrap style={{ alignItems: 'center' }}>
-      <CalendarOutlined style={{ color: colors.text.secondary, marginRight: 4 }} />
       {TIPOS.map((tipo) => (
         <Button
           key={tipo}

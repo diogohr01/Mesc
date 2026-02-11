@@ -1,9 +1,8 @@
-import { Button, Col, Form, Input, Layout, message, Modal, Row, Space } from 'antd';
-import { Badge } from 'antd';
+import { Badge, Button, Col, Form, Layout, message, Modal, Row } from 'antd';
 import { debounce } from 'lodash';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AiOutlineClear, AiOutlinePlus, AiOutlineSearch } from 'react-icons/ai';
-import { Card, LoadingSpinner, PaginatedTable, ActionButtons } from '../../../components';
+import { Card, DynamicForm, LoadingSpinner, PaginatedTable, ActionButtons } from '../../../components';
 import { useFilterSearchContext } from '../../../contexts/FilterSearchContext';
 import FerramentasService from '../../../services/ferramentasService';
 
@@ -23,6 +22,23 @@ const List = ({ onAdd, onEdit, onView }) => {
       }, 300),
     []
   );
+
+  const filterFormConfig = useMemo(
+    () => [
+      {
+        columns: 4,
+        questions: [
+          { type: 'text', id: 'codigo', required: false, placeholder: 'Código...', label: 'Código', size: 'middle' },
+          { type: 'text', id: 'descricao', required: false, placeholder: 'Descrição...', label: 'Descrição', size: 'middle' },
+        ],
+      },
+    ],
+    []
+  );
+
+  const handleFilter = useCallback(() => {
+    debouncedReloadTable();
+  }, [debouncedReloadTable]);
 
   useEffect(() => {
     debouncedReloadTable();
@@ -133,40 +149,28 @@ const List = ({ onAdd, onEdit, onView }) => {
                   borderRadius: '6px',
                 }}
               >
-                <Form form={filterForm} layout="vertical" onFinish={() => debouncedReloadTable()} style={{ marginBottom: 0 }}>
-                  <Row gutter={[12, 6]} align="bottom">
-                    <Col xs={24} sm={12} md={6} lg={4}>
-                      <Form.Item name="codigo" label="Código" style={{ marginBottom: '4px' }}>
-                        <Input placeholder="Código..." size="middle" allowClear />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} sm={12} md={6} lg={4}>
-                      <Form.Item name="descricao" label="Descrição" style={{ marginBottom: '4px' }}>
-                        <Input placeholder="Descrição..." size="middle" allowClear />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} sm={12} md={6} lg={4}>
-                      <Form.Item label=" " style={{ marginBottom: '4px' }}>
-                        <Space size="small">
-                          <Button type="primary" htmlType="submit" size="middle" icon={<AiOutlineSearch />} loading={loading}>
-                            Filtrar
-                          </Button>
-                          <Button
-                            size="middle"
-                            icon={<AiOutlineClear />}
-                            onClick={() => {
-                              filterForm.resetFields();
-                              clearSearch();
-                              debouncedReloadTable();
-                            }}
-                          >
-                            Limpar
-                          </Button>
-                        </Space>
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                </Form>
+                <DynamicForm
+                  formConfig={filterFormConfig}
+                  formInstance={filterForm}
+                  submitText="Filtrar"
+                  submitIcon={<AiOutlineSearch />}
+                  submitOnSide={true}
+                  onClose={null}
+                  onSubmit={handleFilter}
+                  secondaryButton={
+                    <Button
+                      icon={<AiOutlineClear />}
+                      onClick={() => {
+                        filterForm.resetFields();
+                        clearSearch();
+                        debouncedReloadTable();
+                      }}
+                      size="middle"
+                    >
+                      Limpar
+                    </Button>
+                  }
+                />
               </div>
 
               <div style={{ padding: '16px 0' }}>

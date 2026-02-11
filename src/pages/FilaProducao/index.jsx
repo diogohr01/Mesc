@@ -3,25 +3,55 @@ import { Button, Col, Layout, message, Progress, Row, Space, Typography } from '
 import { InfoCircleOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { debounce } from 'lodash';
 import dayjs from 'dayjs';
-import { Card, LoadingSpinner, PaginatedTable, ScoreBadge, StatusBadge, StyledScroll } from '../../components';
+import { Card, LoadingSpinner, PaginatedTable, ScoreBadge, StatusBadge } from '../../components';
 import { useFilterSearchContext } from '../../contexts/FilterSearchContext';
 import OrdemProducaoService from '../../services/ordemProducaoService';
+import SequenciamentoService from '../../services/sequenciamentoService';
 import { colors } from '../../styles/colors';
 
 const { Content } = Layout;
 const { Text } = Typography;
 
-const CENARIOS = [
-  { id: 'entrega', nome: 'Foco em Entrega', desc: 'Prioriza prazo de entrega', pesos: { entrega: 40, setup: 15, liga: 15, tempera: 10, produto: 10, produtividade: 10 } },
-  { id: 'produtividade', nome: 'Foco em Produtividade', desc: 'Minimiza setups e trocas', pesos: { entrega: 15, setup: 30, liga: 20, tempera: 15, produto: 10, produtividade: 10 } },
-  { id: 'balanceado', nome: 'Balanceado', desc: 'Equilíbrio entre entrega e produtividade', pesos: { entrega: 25, setup: 20, liga: 15, tempera: 15, produto: 10, produtividade: 15 } },
-];
-
 const FilaProducao = () => {
-  const [cenarioAtivo, setCenarioAtivo] = useState('entrega');
+  const [cenarios, setCenarios] = useState([]);
+  const [cenarioAtivo, setCenarioAtivo] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [loadingCenarios, setLoadingCenarios] = useState(true);
   const tableRef = useRef(null);
   const { searchTerm } = useFilterSearchContext();
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingCenarios(true);
+    SequenciamentoService.getAll({ page: 1, pageSize: 100 })
+      .then((res) => {
+        if (!cancelled && res.success && res.data?.data) {
+          const list = res.data.data;
+          setCenarios(list);
+          if (list.length && cenarioAtivo == null) setCenarioAtivo(list[0].id);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) message.error('Erro ao carregar cenários.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingCenarios(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const cenarioAtivoId = cenarioAtivo ?? (cenarios[0]?.id ?? null);
+  const cenarioSelecionado = useMemo(
+    () => cenarios.find((c) => c.id === cenarioAtivoId) || cenarios[0],
+    [cenarios, cenarioAtivoId]
+  );
+  const pesosDoCenario = useMemo(() => {
+    if (!cenarioSelecionado?.criterios?.length) return {};
+    return cenarioSelecionado.criterios.reduce((acc, cr) => {
+      acc[cr.id] = cr.value ?? 0;
+      return acc;
+    }, {});
+  }, [cenarioSelecionado]);
 
   const debouncedReloadTable = useMemo(
     () => debounce(() => { if (tableRef.current) tableRef.current.reloadTable(); }, 300),
@@ -36,6 +66,7 @@ const FilaProducao = () => {
           page,
           pageSize,
           search: searchTerm?.trim() || undefined,
+          cenarioId: cenarioAtivoId ?? undefined,
         });
         return {
           data: response.data?.data || [],
@@ -49,7 +80,7 @@ const FilaProducao = () => {
         setLoading(false);
       }
     },
-    [searchTerm]
+    [searchTerm, cenarioAtivoId]
   );
 
   useEffect(() => {
@@ -57,10 +88,13 @@ const FilaProducao = () => {
   }, [searchTerm, debouncedReloadTable]);
 
   useEffect(() => {
+    if (cenarioAtivoId != null && tableRef.current) tableRef.current.reloadTable();
+  }, [cenarioAtivoId]);
+
+  useEffect(() => {
     return () => debouncedReloadTable.cancel?.();
   }, [debouncedReloadTable]);
 
-  const cenario = useMemo(() => CENARIOS.find((c) => c.id === cenarioAtivo) || CENARIOS[0], [cenarioAtivo]);
 
   const columns = useMemo(
     () => [
@@ -119,7 +153,7 @@ const FilaProducao = () => {
             <Card
               variant="borderless"
               title="Fila de Produção"
-              subtitle="Sequenciamento por score de prioridade"
+              subtitle="Ordenação por cenário de prioridade"
               icon={<ThunderboltOutlined style={{ color: colors.primary }} />}
             >
               <Space direction="vertical" size="middle" style={{ width: '100%' }}>
@@ -127,40 +161,48 @@ const FilaProducao = () => {
                   <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
                     Cenário de priorização
                   </Text>
-                  <Space wrap>
-                    {CENARIOS.map((c) => (
-                      <Button
-                        key={c.id}
-                        type={cenarioAtivo === c.id ? 'primary' : 'default'}
-                        onClick={() => setCenarioAtivo(c.id)}
-                        style={{ textAlign: 'left', height: 'auto', padding: '8px 12px' }}
-                      >
-                        <div style={{ fontWeight: 600, fontSize: 13 }}>{c.nome}</div>
-                        <div style={{ fontSize: 11, opacity: 0.85 }}>{c.desc}</div>
-                      </Button>
-                    ))}
-                  </Space>
+                  {loadingCenarios ? (
+                    <Text type="secondary">Carregando cenários...</Text>
+                  ) : cenarios.length === 0 ? (
+                    <Text type="secondary">Nenhum cenário cadastrado. Cadastre em PCP → Cenários.</Text>
+                  ) : (
+                    <Space wrap>
+                      {cenarios.map((c) => (
+                        <Button
+                          key={c.id}
+                          type={cenarioAtivoId === c.id ? 'primary' : 'default'}
+                          onClick={() => setCenarioAtivo(c.id)}
+                          style={{ textAlign: 'left', height: 'auto', padding: '8px 12px' }}
+                        >
+                          <div style={{ fontWeight: 600, fontSize: 13 }}>{c.nome}</div>
+                          <div style={{ fontSize: 11, opacity: 0.85 }}>{c.descricao || ''}</div>
+                        </Button>
+                      ))}
+                    </Space>
+                  )}
                 </div>
 
-                <div style={{ padding: '12px 16px', background: '#fafafa', border: '1px solid #f0f0f0', borderRadius: 8 }}>
-                  <Space align="center" style={{ marginBottom: 8 }}>
-                    <InfoCircleOutlined style={{ color: colors.text.secondary }} />
-                    <Text type="secondary" style={{ fontSize: 12, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Pesos do cenário: {cenario.nome}
-                    </Text>
-                  </Space>
-                  <Row gutter={[16, 8]}>
-                    {Object.entries(cenario.pesos).map(([key, val]) => (
-                      <Col key={key} xs={24} sm={12} md={8} lg={6}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <Text type="secondary" style={{ fontSize: 12, minWidth: 90, textTransform: 'capitalize' }}>{key}</Text>
-                          <Progress percent={val} size="small" showInfo={false} style={{ flex: 1, marginBottom: 0 }} />
-                          <Text style={{ fontSize: 12, fontFamily: 'monospace', width: 32 }}>{val}%</Text>
-                        </div>
-                      </Col>
-                    ))}
-                  </Row>
-                </div>
+                {cenarioSelecionado && Object.keys(pesosDoCenario).length > 0 && (
+                  <div style={{ padding: '12px 16px', background: '#fafafa', border: '1px solid #f0f0f0', borderRadius: 8 }}>
+                    <Space align="center" style={{ marginBottom: 8 }}>
+                      <InfoCircleOutlined style={{ color: colors.text.secondary }} />
+                      <Text type="secondary" style={{ fontSize: 12, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Pesos do cenário: {cenarioSelecionado.nome}
+                      </Text>
+                    </Space>
+                    <Row gutter={[16, 8]}>
+                      {(cenarioSelecionado.criterios || []).map((cr) => (
+                        <Col key={cr.id} xs={24} sm={12} md={8} lg={6}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Text type="secondary" style={{ fontSize: 12, minWidth: 90 }}>{cr.label}</Text>
+                            <Progress percent={cr.value ?? 0} size="small" showInfo={false} style={{ flex: 1, marginBottom: 0 }} />
+                            <Text style={{ fontSize: 12, fontFamily: 'monospace', width: 32 }}>{cr.value ?? 0}%</Text>
+                          </div>
+                        </Col>
+                      ))}
+                    </Row>
+                  </div>
+                )}
 
                 <div style={{ paddingTop: 8 }}>
                   <PaginatedTable
