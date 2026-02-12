@@ -1,4 +1,4 @@
-import { Button, Col, Collapse, Divider, Form, Row } from "antd";
+import { Button, Col, Divider, Form, Row } from "antd";
 import dayjs from "dayjs";
 import 'dayjs/locale/pt-br';
 import React, { useCallback, useMemo } from "react";
@@ -34,6 +34,7 @@ import {
     TreeSelectInput
 } from "../inputs";
 import PeriodFilter from "./PeriodFilter";
+import FilterCollapse from "./FilterCollapse";
 
 dayjs.locale("pt-br"); // Define o locale do dayjs para português
 
@@ -531,11 +532,9 @@ const DynamicForm = React.memo(({
 
     if (collapseAsFilter) {
         return (
-            <Collapse defaultActiveKey={defaultFilterCollapseOpen ? ['filtros'] : []}>
-                <Collapse.Panel header="Filtros" key="filtros">
-                    {formContent}
-                </Collapse.Panel>
-            </Collapse>
+            <FilterCollapse defaultOpen={defaultFilterCollapseOpen}>
+                {formContent}
+            </FilterCollapse>
         );
     }
     return formContent;
