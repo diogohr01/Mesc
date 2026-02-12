@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Button, Col, Layout, message, Progress, Row, Slider, Space, Tag, Typography } from 'antd';
+import { Alert, Button, Col, Collapse, Layout, message, Progress, Row, Slider, Space, Tag, Typography } from 'antd';
 import { HomeOutlined, InfoCircleOutlined, TeamOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { debounce } from 'lodash';
 import dayjs from 'dayjs';
@@ -199,65 +199,76 @@ const FilaProducao = () => {
             >
               <Space direction="vertical" size="middle" style={{ width: '100%' }}>
                 {/* Divisão de Capacidade */}
-                <div style={{ padding: '12px 16px', background: '#fafafa', border: '1px solid #f0f0f0', borderRadius: 8 }}>
-                  <Text strong style={{ fontSize: 11, display: 'block', marginBottom: 12 }}>Divisão de Capacidade</Text>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
-                    <Space wrap>
-                      {['todos', 'casa', 'cliente'].map((f) => (
-                        <Button
-                          key={f}
-                          type={filtroTipo === f ? 'primary' : 'default'}
-                          size="medium"
-                          icon={f === 'casa' ? <HomeOutlined /> : f === 'cliente' ? <TeamOutlined /> : null}
-                          onClick={() => setFiltroTipo(f)}
-                        >
-                          {f === 'todos' ? 'Todos' : f === 'casa' ? 'Casa' : 'Cliente'}
-                        </Button>
-                      ))}
-                    </Space>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 100 }}>
-                      <HomeOutlined style={{ color: colors.primary }} />
-                      <Text strong style={{ fontSize: 11 }}>{casaPct}%</Text>
-                      <Text type="secondary" style={{ fontSize: 11 }}>Casa</Text>
-                    </div>
-                    <Slider
-                      min={0}
-                      max={100}
-                      step={5}
-                      value={casaPct}
-                      onChange={handleSliderChange}
-                      style={{ flex: 1, margin: 0 }}
-                    />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 100, justifyContent: 'flex-end' }}>
-                      <Text type="secondary" style={{ fontSize: 11 }}>Cliente</Text>
-                      <Text strong style={{ fontSize: 11, color: '#385E9D' }}>{100 - casaPct}%</Text>
-                      <TeamOutlined style={{ color: '#385E9D' }} />
-                    </div>
-                  </div>
-                  {resumo.total > 0 && (
-                    <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                        <div style={{ flex: 1, height: 8, borderRadius: 4, background: colors.backgroundGray, overflow: 'hidden', display: 'flex' }}>
-                          <div style={{ width: `${casaReal}%`, height: '100%', background: colors.primary, transition: 'width 0.2s' }} />
-                          <div style={{ width: `${clienteReal}%`, height: '100%', background: '#385E9D', transition: 'width 0.2s' }} />
+                <Collapse
+                  defaultActiveKey={['divisao']}
+                  style={{ background: '#fafafa', border: '1px solid #f0f0f0', borderRadius: 8 }}
+                  items={[
+                    {
+                      key: 'divisao',
+                      label: <Text strong style={{ fontSize: 11 }}>Divisão de Capacidade</Text>,
+                      children: (
+                        <div style={{ paddingTop: 4 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
+                            <Space wrap>
+                              {['todos', 'casa', 'cliente'].map((f) => (
+                                <Button
+                                  key={f}
+                                  type={filtroTipo === f ? 'primary' : 'default'}
+                                  size="medium"
+                                  icon={f === 'casa' ? <HomeOutlined /> : f === 'cliente' ? <TeamOutlined /> : null}
+                                  onClick={() => setFiltroTipo(f)}
+                                >
+                                  {f === 'todos' ? 'Todos' : f === 'casa' ? 'Casa' : 'Cliente'}
+                                </Button>
+                              ))}
+                            </Space>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 100 }}>
+                              <HomeOutlined style={{ color: colors.primary }} />
+                              <Text strong style={{ fontSize: 11 }}>{casaPct}%</Text>
+                              <Text type="secondary" style={{ fontSize: 11 }}>Casa</Text>
+                            </div>
+                            <Slider
+                              min={0}
+                              max={100}
+                              step={5}
+                              value={casaPct}
+                              onChange={handleSliderChange}
+                              style={{ flex: 1, margin: 0 }}
+                            />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 100, justifyContent: 'flex-end' }}>
+                              <Text type="secondary" style={{ fontSize: 11 }}>Cliente</Text>
+                              <Text strong style={{ fontSize: 11, color: '#385E9D' }}>{100 - casaPct}%</Text>
+                              <TeamOutlined style={{ color: '#385E9D' }} />
+                            </div>
+                          </div>
+                          {resumo.total > 0 && (
+                            <>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                                <div style={{ flex: 1, height: 8, borderRadius: 4, background: colors.backgroundGray, overflow: 'hidden', display: 'flex' }}>
+                                  <div style={{ width: `${casaReal}%`, height: '100%', background: colors.primary, transition: 'width 0.2s' }} />
+                                  <div style={{ width: `${clienteReal}%`, height: '100%', background: '#385E9D', transition: 'width 0.2s' }} />
+                                </div>
+                                <Text type="secondary" style={{ fontSize: 10, whiteSpace: 'nowrap' }}>
+                                  Real: {casaReal}% / {clienteReal}%
+                                </Text>
+                              </div>
+                              {desvioProporcao && (
+                                <Alert
+                                  type="warning"
+                                  showIcon
+                                  message={`Proporção real (${casaReal}% Casa) difere do alvo (${casaPct}% Casa)`}
+                                  style={{ marginTop: 8 }}
+                                />
+                              )}
+                            </>
+                          )}
                         </div>
-                        <Text type="secondary" style={{ fontSize: 10, whiteSpace: 'nowrap' }}>
-                          Real: {casaReal}% / {clienteReal}%
-                        </Text>
-                      </div>
-                      {desvioProporcao && (
-                        <Alert
-                          type="warning"
-                          showIcon
-                          message={`Proporção real (${casaReal}% Casa) difere do alvo (${casaPct}% Casa)`}
-                          style={{ marginTop: 8 }}
-                        />
-                      )}
-                    </>
-                  )}
-                </div>
+                      ),
+                    },
+                  ]}
+                />
 
                 <div>
                   <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 8 }}>
