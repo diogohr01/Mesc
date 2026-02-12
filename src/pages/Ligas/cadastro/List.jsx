@@ -117,7 +117,7 @@ const List = ({ onAdd, onEdit, onView }) => {
               title="Ligas"
               extra={<Button type="primary" icon={<AiOutlinePlus />} onClick={onAdd} size="middle">Nova Liga</Button>}
             >
-              <div style={{ margin: '12px 0', padding: '12px', backgroundColor: '#fafafa', border: '1px solid #f0f0f0', borderRadius: '6px' }}>
+              <div style={{ margin: '12px 0', backgroundColor: '#fafafa', border: '1px solid #f0f0f0', borderRadius: '6px' }}>
                 <DynamicForm
                   formConfig={filterFormConfig}
                   formInstance={filterForm}

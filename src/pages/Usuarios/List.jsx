@@ -108,9 +108,9 @@ const List = ({ onView }) => {
         <Row gutter={[8, 8]}>
           <Col span={24}>
             <Card variant="borderless" title="Gestão de Usuários">
-              <div style={{ margin: '12px 0', padding: '12px', backgroundColor: '#fafafa', border: '1px solid #f0f0f0', borderRadius: '6px' }}>
+              <div style={{ margin: '12px 0', backgroundColor: '#fafafa', border: '1px solid #f0f0f0', borderRadius: '6px' }}>
                 <DynamicForm
-                  formConfig={filterFormConfig}
+                  formConfig={filterFormConfig} 
                   formInstance={filterForm}
                   collapseAsFilter
                   submitText="Filtrar"

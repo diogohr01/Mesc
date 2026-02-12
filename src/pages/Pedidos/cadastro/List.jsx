@@ -233,7 +233,6 @@ const List = ({ onEdit, onView }) => {
               {/* Filtros sempre visíveis */}
               <div style={{
                 margin: '12px 0',
-                padding: '12px',
                 backgroundColor: '#fafafa',
                 border: '1px solid #f0f0f0',
                 borderRadius: '6px'
