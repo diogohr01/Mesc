@@ -75,17 +75,20 @@ const GanttProducao = () => {
   const [selectedOP, setSelectedOP] = useState(null);
   const [opsData, setOpsData] = useState([]);
   const [recursos, setRecursos] = useState([]);
+  const [loadingBars, setLoadingBars] = useState(false);
   const [manutencoes, setManutencoes] = useState([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [zoomScale, setZoomScale] = useState(1);
   const ganttAreaRef = useRef(null);
 
   useEffect(() => {
+    setLoadingBars(true);
     OrdemProducaoService.getDadosGantt().then((res) => {
       if (res.success && res.data) {
         setOpsData(res.data.opsGantt ? cloneOPs(res.data.opsGantt) : []);
         setRecursos(res.data.recursos || []);
         setManutencoes(res.data.manutencoes || []);
+        setLoadingBars(false);
       }
     });
   }, []);
@@ -134,6 +137,7 @@ const GanttProducao = () => {
   const timeConfig = useGanttTime(zoom, rangeStart, rangeEnd, zoomScale);
 
   const filteredRecursos = useMemo(() => {
+
     if (recursoFilter === 'todos') return recursos;
     return recursos.filter((r) => r.id === recursoFilter);
   }, [recursoFilter, recursos]);
@@ -396,6 +400,7 @@ const GanttProducao = () => {
                 barras={barras}
                 manutencoes={manutencoes}
                 timeConfig={timeConfig}
+                loadingBars={loadingBars}
                 showSetups={showSetups}
                 showExcecoes={showExcecoes}
                 selectedOP={selectedOP}

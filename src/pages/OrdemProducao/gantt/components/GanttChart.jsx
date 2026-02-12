@@ -1,7 +1,7 @@
 import React, { memo, useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import { Tooltip } from 'antd';
 import dayjs from 'dayjs';
-import { StyledScroll } from '../../../../components';
+import { Loading, StyledScroll } from '../../../../components';
 import { getBarPosition, positionToDate } from '../../../../hooks/useGanttTime';
 
 const LANE_HEIGHT = 88;
@@ -273,6 +273,7 @@ function GanttChart({
   timeConfig,
   showSetups,
   showExcecoes,
+  loadingBars,
   selectedOP,
   onSelectOP,
   onMoveOP,
@@ -378,6 +379,11 @@ function GanttChart({
     };
   }, [dragging, timeConfig, onMoveOP]);
 
+
+  if (loadingBars) {
+    return <Loading small useSkeleton message="Carregando barras..." />;
+  }
+  
   return (
     <div
       style={{
