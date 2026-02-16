@@ -1,8 +1,8 @@
 import { Badge, Button, Col, Form, Layout, message, Row } from 'antd';
 import { debounce } from 'lodash';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AiOutlineClear, AiOutlinePlus, AiOutlineSearch } from 'react-icons/ai';
-import { Card, DynamicForm, LoadingSpinner, PaginatedTable, ActionButtons } from '../../../components';
+import { AiOutlineClear, AiOutlinePlus } from 'react-icons/ai';
+import { Card, FilterModalForm, LoadingSpinner, PaginatedTable, ActionButtons } from '../../../components';
 import { useFilterSearchContext } from '../../../contexts/FilterSearchContext';
 import ItensService from '../../../services/itensService';
 
@@ -10,6 +10,7 @@ const { Content } = Layout;
 
 const List = ({ onAdd, onEdit, onView }) => {
   const [loading, setLoading] = useState(false);
+  const [modalFiltrosOpen, setModalFiltrosOpen] = useState(false);
   const [filterForm] = Form.useForm();
   const tableRef = useRef(null);
   const { searchTerm, clearSearch } = useFilterSearchContext();
@@ -143,25 +144,19 @@ const List = ({ onAdd, onEdit, onView }) => {
       <Content>
         <Row gutter={[8, 8]}>
           <Col span={24}>
-            <Card variant="borderless" title="Itens">
-              {/* Filtros sempre visíveis - padrão das outras telas */}
-              <div
-                style={{
-                  margin: '12px 0',
-                  backgroundColor: '#fafafa',
-                  border: '1px solid #f0f0f0',
-                  borderRadius: '6px',
-                }}
-              >
-                <DynamicForm
+            <Card
+              variant="borderless"
+              title="Itens"
+              extra={
+                <FilterModalForm
+                  open={modalFiltrosOpen}
+                  onOpenChange={setModalFiltrosOpen}
                   formConfig={filterFormConfig}
                   formInstance={filterForm}
-                  collapseAsFilter
-                  submitText="Filtrar"
-                  submitIcon={<AiOutlineSearch />}
-                  submitOnSide={true}
-                  onClose={null}
-                  onSubmit={handleFilter}
+                  onSubmit={() => {
+                    handleFilter();
+                    setModalFiltrosOpen(false);
+                  }}
                   secondaryButton={
                     <Button
                       icon={<AiOutlineClear />}
@@ -169,6 +164,7 @@ const List = ({ onAdd, onEdit, onView }) => {
                         filterForm.resetFields();
                         clearSearch();
                         debouncedReloadTable();
+                        setModalFiltrosOpen(false);
                       }}
                       size="middle"
                     >
@@ -176,8 +172,8 @@ const List = ({ onAdd, onEdit, onView }) => {
                     </Button>
                   }
                 />
-              </div>
-
+              }
+            >
               <div style={{ padding: '16px 0' }}>
                 <PaginatedTable
                   ref={tableRef}

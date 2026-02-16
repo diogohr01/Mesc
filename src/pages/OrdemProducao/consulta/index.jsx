@@ -1,7 +1,7 @@
 import { Badge, Button, Col, Form, Layout, message, Row, Space, Typography } from 'antd';
-import { Card, DynamicForm, LoadingSpinner, PaginatedTable } from '../../../components';
+import { Card, FilterModalForm, LoadingSpinner, PaginatedTable } from '../../../components';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AiOutlineBranches, AiOutlineClear, AiOutlineEdit, AiOutlineSearch, AiOutlineUp } from 'react-icons/ai';
+import { AiOutlineBranches, AiOutlineClear, AiOutlineEdit, AiOutlineUp } from 'react-icons/ai';
 import dayjs from 'dayjs';
 import { debounce } from 'lodash';
 import OrdemProducaoService from '../../../services/ordemProducaoService';
@@ -13,6 +13,7 @@ const { Text } = Typography;
 
 const OrdemProducaoConsulta = () => {
   const [loading, setLoading] = useState(false);
+  const [modalFiltrosOpen, setModalFiltrosOpen] = useState(false);
   const [filterForm] = Form.useForm();
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedOrdemId, setSelectedOrdemId] = useState(null);
@@ -199,6 +200,7 @@ const OrdemProducaoConsulta = () => {
     if (tableRef.current) {
       tableRef.current.reloadTable();
     }
+    setModalFiltrosOpen(false);
   }, [filterForm, clearSearch]);
 
   const handleViewDetails = useCallback((record) => {
@@ -431,24 +433,19 @@ const OrdemProducaoConsulta = () => {
       <Content>
         <Row gutter={[8, 8]}>
           <Col span={24}>
-            <Card variant="borderless" title="Consulta de Ordens de Produção">
-              {/* Área de Filtros */}
-              <div style={{
-                margin: '16px 0',
-                padding: '16px',
-                backgroundColor: '#fafafa',
-                border: '1px solid #f0f0f0',
-                borderRadius: '6px'
-              }}>
-                <DynamicForm
+            <Card
+              variant="borderless"
+              title="Consulta de Ordens de Produção"
+              extra={
+                <FilterModalForm
+                  open={modalFiltrosOpen}
+                  onOpenChange={setModalFiltrosOpen}
                   formConfig={filterFormConfig}
                   formInstance={filterForm}
-                  collapseAsFilter
-                  submitText="Filtrar"
-                  submitIcon={<AiOutlineSearch />}
-                  submitOnSide={true}
-                  onClose={null}
-                  onSubmit={handleFilter}
+                  onSubmit={() => {
+                    handleFilter();
+                    setModalFiltrosOpen(false);
+                  }}
                   secondaryButton={
                     <Button
                       icon={<AiOutlineClear />}
@@ -459,8 +456,8 @@ const OrdemProducaoConsulta = () => {
                     </Button>
                   }
                 />
-              </div>
-
+              }
+            >
               {/* Tabela Principal */}
               <div style={{ padding: '16px 0' }}>
                 <PaginatedTable

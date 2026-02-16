@@ -1,14 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Col,
+  DatePicker,
   Progress,
   Row,
+  Space,
+  Button,
   Tag,
   Typography,
 } from 'antd';
 import {
   BarChartOutlined,
   BellOutlined,
+  FilterOutlined,
   CheckCircleOutlined,
   FileTextOutlined,
   RiseOutlined,
@@ -16,6 +20,7 @@ import {
   WarningOutlined,
 } from '@ant-design/icons';
 import { motion } from 'framer-motion';
+import dayjs from 'dayjs';
 import { Link } from 'react-router-dom';
 import { Card as LayoutCard, KpiCard, ScoreBadge, StatusBadge } from '../../components';
 import AlertasService from '../../services/alertasService';
@@ -44,6 +49,7 @@ const RESUMO_STATUS = RESUMO_STATUS_KEYS.map((key) => ({
 const Dashboard = () => {
   const [opsResumo, setOpsResumo] = useState([]);
   const [recursos, setRecursos] = useState([]);
+  const [weekRange, setWeekRange] = useState([dayjs().startOf('week'), dayjs().endOf('week')]);
   const [alertas, setAlertas] = useState([]);
   const [hoveredFilaId, setHoveredFilaId] = useState(null);
   const [hoveredAlertaId, setHoveredAlertaId] = useState(null);
@@ -109,13 +115,28 @@ const Dashboard = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div>
+      <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
         <Title level={4} style={{ margin: 0, color: colors.text.primary }}>
           Dashboard do Planejador
         </Title>
         <Text type="secondary" style={{ fontSize: 13 }}>
           Visão geral do sequenciamento de produção
         </Text>
+        </div>
+
+        <Space size="middle" wrap>
+                  <DatePicker.RangePicker
+                    value={weekRange}
+                    onChange={(dates) => {
+                      if (dates && dates[0] && dates[1]) setWeekRange([dates[0], dates[1]]);
+                    }}
+                    format="DD/MM/YYYY"
+                    placeholder={['Início', 'Fim']}
+                    style={{ width: 240 }}
+                  />
+                
+                </Space>
       </div>
 
       {/* KPIs - 5 cards na mesma linha */}
@@ -175,7 +196,7 @@ const Dashboard = () => {
             <LayoutCard
               header={
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Title level={5} style={{ margin: 0 }}>Fila Prioritária</Title>
+                  <Title level={5} style={{ margin: 0 }}>Top OPs urgentes</Title>
                   <Link to="/ordem-producao/cadastro" style={{ fontSize: 9, color: colors.primary }}>
                     Ver tudo →
                   </Link>

@@ -1,14 +1,15 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Button, Col, DatePicker, Form, Layout, message, Modal, Row, Space, Typography } from 'antd';
-import { AppstoreOutlined, EditOutlined, FilterOutlined, HolderOutlined } from '@ant-design/icons';
+import { Button, Col, DatePicker, Form, Layout, message, Row, Space, Typography } from 'antd';
+import { AppstoreOutlined, EditOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
 import 'dayjs/locale/pt-br';
 
 dayjs.extend(isoWeek);
 dayjs.locale('pt-br');
-import { AiOutlineClear, AiOutlineSearch } from 'react-icons/ai';
-import { Card, DynamicForm, ScoreBadge, StyledScroll } from '../../components';
+import { AiOutlineClear } from 'react-icons/ai';
+import { Card, FilterModalForm, ScoreBadge, StyledScroll } from '../../components';
+import { getUrgencyLevel, urgencyColors } from '../../helpers/urgency';
 import OrdemProducaoService from '../../services/ordemProducaoService';
 import { statusLabels } from '../../constants/ordemProducaoStatus';
 import { colors } from '../../styles/colors';
@@ -48,8 +49,6 @@ const getSemanaAtual = () => [
 const KanbanProducao = () => {
   const [ops, setOps] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [draggedOp, setDraggedOp] = useState(null);
-  const [overColumn, setOverColumn] = useState(null);
   const [modalFiltrosOpen, setModalFiltrosOpen] = useState(false);
   const [filterForm] = Form.useForm();
   const [weekRange, setWeekRange] = useState(() => getSemanaAtual());
@@ -86,42 +85,6 @@ const KanbanProducao = () => {
     setModalFiltrosOpen(false);
   }, [filterForm, loadKanban]);
 
-  const handleDragStart = (e, op) => {
-    setDraggedOp(op);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', String(op.id));
-  };
-
-  const handleDragOver = (e, status) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setOverColumn(status);
-  };
-
-  const handleDragLeave = () => {
-    setOverColumn(null);
-  };
-
-  const handleDrop = (e, targetStatus) => {
-    e.preventDefault();
-    setOverColumn(null);
-    if (!draggedOp || draggedOp.status === targetStatus) {
-      setDraggedOp(null);
-      return;
-    }
-    setOps((prev) =>
-      prev.map((op) => (op.id === draggedOp.id ? { ...op, status: targetStatus } : op))
-    );
-    OrdemProducaoService.alterarStatus(draggedOp.id, targetStatus).catch(() => {});
-    message.success(`${draggedOp.codigo} movida para ${statusLabels[targetStatus]}`);
-    setDraggedOp(null);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedOp(null);
-    setOverColumn(null);
-  };
-
   return (
     <Layout>
       <Content>
@@ -130,7 +93,7 @@ const KanbanProducao = () => {
             <Card
               variant="borderless"
               title="Kanban de Produção"
-              subtitle="Arraste os cards entre colunas para alterar o status"
+              subtitle="Visão por status (apenas visual)"
               icon={<AppstoreOutlined style={{ color: colors.primary }} />}
               extra={
                 <Space size="middle" wrap>
@@ -143,13 +106,18 @@ const KanbanProducao = () => {
                     placeholder={['Início', 'Fim']}
                     style={{ width: 240 }}
                   />
-                  <Button
-                    type="default"
-                    icon={<FilterOutlined />}
-                    onClick={() => setModalFiltrosOpen(true)}
-                  >
-                    Filtrar
-                  </Button>
+                  <FilterModalForm
+                    open={modalFiltrosOpen}
+                    onOpenChange={setModalFiltrosOpen}
+                    formConfig={filterFormConfig}
+                    formInstance={filterForm}
+                    onSubmit={handleFilter}
+                    secondaryButton={
+                      <Button icon={<AiOutlineClear />} onClick={handleLimparFiltros} size="middle">
+                        Limpar
+                      </Button>
+                    }
+                  />
                 </Space>
               }
               loading={loading}
@@ -168,15 +136,11 @@ const KanbanProducao = () => {
               >
                 {KANBAN_STATUSES.map((status) => {
                   const colOps = getOPsByStatus(status);
-                  const isOver = overColumn === status;
                   const borderColor = COLUMN_BORDER_COLORS[status] || colors.borderColor;
                   return (
                     <div
                       key={status}
                       className="kanban-column"
-                      onDragOver={(e) => handleDragOver(e, status)}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, status)}
                       style={{
                         flex: '1 1 0',
                         minWidth: 240,
@@ -185,8 +149,7 @@ const KanbanProducao = () => {
                         border: `1px solid ${colors.borderColor}`,
                         borderTopWidth: 3,
                         borderTopColor: borderColor,
-                        background: isOver ? 'rgba(24, 144, 255, 0.04)' : '#fafafa',
-                        boxShadow: isOver ? '0 0 0 2px rgba(24, 144, 255, 0.2)' : undefined,
+                        background: '#fafafa',
                         transition: 'all 0.2s',
                       }}
                     >
@@ -212,53 +175,17 @@ const KanbanProducao = () => {
                             key={op.id}
                             op={op}
                             index={i}
-                            isDragging={draggedOp?.id === op.id}
-                            onDragStart={handleDragStart}
-                            onDragEnd={handleDragEnd}
+                            isDragging={false}
+                            onDragStart={() => {}}
+                            onDragEnd={() => {}}
                           />
                         ))}
-                        {colOps.length === 0 && isOver && (
-                          <div
-                            style={{
-                              border: '2px dashed rgba(24, 144, 255, 0.3)',
-                              borderRadius: 6,
-                              height: 80,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
-                          >
-                            <Text type="secondary" style={{ fontSize: 11 }}>Soltar aqui</Text>
-                          </div>
-                        )}
                       </div>
                     </div>
                   );
                 })}
               </StyledScroll>
             </Card>
-            <Modal
-              title="Filtrar"
-              open={modalFiltrosOpen}
-              onCancel={() => setModalFiltrosOpen(false)}
-              footer={null}
-              width={800}
-              destroyOnClose
-            >
-              <DynamicForm
-                formConfig={filterFormConfig}
-                formInstance={filterForm}
-                submitText="Aplicar"
-                submitIcon={<AiOutlineSearch />}
-                onSubmit={handleFilter}
-                onClose={() => setModalFiltrosOpen(false)}
-                secondaryButton={
-                  <Button icon={<AiOutlineClear />} onClick={handleLimparFiltros} size="middle">
-                    Limpar
-                  </Button>
-                }
-              />
-            </Modal>
           </Col>
         </Row>
       </Content>
@@ -267,21 +194,16 @@ const KanbanProducao = () => {
 };
 
 function KanbanCard({ op, index, isDragging, onDragStart, onDragEnd }) {
-  const isLate =
-    op.dataEntrega &&
-    new Date(op.dataEntrega) < new Date() &&
-    op.status !== 'concluida' &&
-    op.status !== 'cancelada';
+  const urgencyLevel = getUrgencyLevel(op.dataEntrega, op.status);
+  const urgencyColor = urgencyColors[urgencyLevel];
+  const borderLeft = urgencyLevel === 'critical' ? '3px solid #ff4d4f' : urgencyLevel === 'warning' ? '3px solid #faad14' : undefined;
 
   return (
     <div
-      draggable
-      onDragStart={(e) => onDragStart(e, op)}
-      onDragEnd={onDragEnd}
       style={{
         borderRadius: 6,
         border: `1px solid ${colors.borderColor}`,
-        borderLeft: isLate ? '3px solid #ff4d4f' : undefined,
+        borderLeft: borderLeft,
         padding: 12,
         background: colors.white,
         cursor: 'grab',
@@ -292,10 +214,7 @@ function KanbanCard({ op, index, isDragging, onDragStart, onDragEnd }) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <HolderOutlined style={{ fontSize: 13, color: colors.text.secondary }} />
-          <Text strong style={{ fontSize: 11, fontFamily: 'monospace' }}>{op.codigo || '-'}</Text>
-        </div>
+        <Text strong style={{ fontSize: 11, fontFamily: 'monospace' }}>{op.codigo || '-'}</Text>
         <ScoreBadge score={op.score ?? 0} size="sm" />
       </div>
       <Text ellipsis style={{ fontSize: 11, lineHeight: 1.3, color: colors.text.primary }}>
@@ -312,8 +231,8 @@ function KanbanCard({ op, index, isDragging, onDragStart, onDragEnd }) {
           style={{
             fontSize: 9,
             fontFamily: 'monospace',
-            color: isLate ? '#ff4d4f' : colors.text.secondary,
-            fontWeight: isLate ? 600 : 400,
+            color: urgencyColor || colors.text.secondary,
+            fontWeight: urgencyLevel === 'critical' ? 600 : 400,
           }}
         >
           {op.dataEntrega ? dayjs(op.dataEntrega).format('DD/MM/YYYY') : '-'}

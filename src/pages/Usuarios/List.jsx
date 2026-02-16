@@ -1,8 +1,8 @@
 import { Button, Col, Form, Layout, message, Row, Space, Tag } from 'antd';
 import { debounce } from 'lodash';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AiOutlineClear, AiOutlineSearch } from 'react-icons/ai';
-import { Card, DynamicForm, LoadingSpinner, PaginatedTable, ActionButtons } from '../../components';
+import { AiOutlineClear } from 'react-icons/ai';
+import { Card, FilterModalForm, LoadingSpinner, PaginatedTable, ActionButtons } from '../../components';
 import { useFilterSearchContext } from '../../contexts/FilterSearchContext';
 import UsuariosService from '../../services/usuariosService';
 
@@ -10,6 +10,7 @@ const { Content } = Layout;
 
 const List = ({ onView }) => {
   const [loading, setLoading] = useState(false);
+  const [modalFiltrosOpen, setModalFiltrosOpen] = useState(false);
   const [filterForm] = Form.useForm();
   const tableRef = useRef(null);
   const { searchTerm, clearSearch } = useFilterSearchContext();
@@ -107,17 +108,19 @@ const List = ({ onView }) => {
       <Content>
         <Row gutter={[8, 8]}>
           <Col span={24}>
-            <Card variant="borderless" title="Gestão de Usuários">
-              <div style={{ margin: '12px 0', backgroundColor: '#fafafa', border: '1px solid #f0f0f0', borderRadius: '6px' }}>
-                <DynamicForm
-                  formConfig={filterFormConfig} 
+            <Card
+              variant="borderless"
+              title="Gestão de Usuários"
+              extra={
+                <FilterModalForm
+                  open={modalFiltrosOpen}
+                  onOpenChange={setModalFiltrosOpen}
+                  formConfig={filterFormConfig}
                   formInstance={filterForm}
-                  collapseAsFilter
-                  submitText="Filtrar"
-                  submitIcon={<AiOutlineSearch />}
-                  submitOnSide={true}
-                  onClose={null}
-                  onSubmit={handleFilter}
+                  onSubmit={() => {
+                    handleFilter();
+                    setModalFiltrosOpen(false);
+                  }}
                   secondaryButton={
                     <Button
                       icon={<AiOutlineClear />}
@@ -125,6 +128,7 @@ const List = ({ onView }) => {
                         filterForm.resetFields();
                         clearSearch();
                         debouncedReloadTable();
+                        setModalFiltrosOpen(false);
                       }}
                       size="middle"
                     >
@@ -132,7 +136,8 @@ const List = ({ onView }) => {
                     </Button>
                   }
                 />
-              </div>
+              }
+            >
               <div style={{ padding: '16px 0' }}>
                 <PaginatedTable
                   ref={tableRef}

@@ -6,7 +6,7 @@ const { Text } = Typography;
 
 const DEFAULT_HEADER_STYLE = {
   padding: '16px 24px',
-  borderBottom: '1px solid #f0f0f0',
+  borderBottom: 'none',
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
@@ -51,6 +51,7 @@ const Card = memo(({
     header: hasHeader
       ? { ...DEFAULT_HEADER_STYLE, ...(stylesProp?.header || {}) }
       : (stylesProp?.header || {}),
+    body: { paddingTop: 12, ...(stylesProp?.body || {}) },
   };
 
   const titleNode =

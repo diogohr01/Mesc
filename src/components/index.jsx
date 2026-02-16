@@ -3,7 +3,7 @@
 // Layout Components
 export * from './Layout';
 
-// UI Components  
+// UI Components
 export * from './UI';
 
 // Data Components
@@ -14,3 +14,6 @@ export * from './inputs';
 
 // Dashboard Components
 export * from './Dashboard';
+
+// Indicators
+export { default as CapacidadeIndicator } from './indicators/CapacidadeIndicator';

@@ -49,8 +49,9 @@ const ExcecoesCadastro = preloadComponent(() => import('../pages/Excecoes/cadast
 // Dashboard
 const Dashboard = preloadComponent(() => import('../pages/Dashboard'));
 
-// Configurações (apenas TOTVS)
+// Configurações
 const Configuracoes = preloadComponent(() => import('../pages/Configuracoes'));
+const MonitoramentoIntegracao = preloadComponent(() => import('../pages/Configuracoes/MonitoramentoIntegracao'));
 
 // Recursos Produtivos
 const RecursosProdutivos = preloadComponent(() => import('../pages/RecursosProdutivos'));
@@ -71,12 +72,10 @@ export const defaultRoutes = [
         roles: [roles.roleAdmin],
         element: PcpRedirect,
         children: [
-            { key: '/ordem-producao/cadastro', icon: <GradientizeIcon gradientId="menu-op" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Ordem de Produção', element: OrdemProducaoCadastro, roles: [roles.roleAdmin] },
-            { key: '/ordem-producao/gantt', icon: <GradientizeIcon gradientId="menu-gantt" fillGradient><AiOutlineSchedule /></GradientizeIcon>, label: 'Gantt', element: GanttProducao, roles: [roles.roleAdmin] },
-            { key: '/fila-producao', icon: <GradientizeIcon gradientId="menu-fila" fillGradient><AiOutlineUnorderedList /></GradientizeIcon>, label: 'Fila de Produção', element: FilaProducao, roles: [roles.roleAdmin] },
+            { key: '/ordem-producao/cadastro', icon: <GradientizeIcon gradientId="menu-op" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Ordens de Produção', element: OrdemProducaoCadastro, roles: [roles.roleAdmin] },
+            { key: '/fila-producao', icon: <GradientizeIcon gradientId="menu-fila" fillGradient><AiOutlineUnorderedList /></GradientizeIcon>, label: 'Sequenciamento', element: FilaProducao, roles: [roles.roleAdmin] },
             { key: '/kanban-producao', icon: <GradientizeIcon gradientId="menu-kanban" fillGradient><AiOutlineAppstore /></GradientizeIcon>, label: 'Kanban', element: KanbanProducao, roles: [roles.roleAdmin] },
-            { key: '/pedidos/cadastro', icon: <GradientizeIcon gradientId="menu-pedidos" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Pedidos', element: PedidosCadastro, roles: [roles.roleAdmin] },
-            { key: '/recursos-produtivos', icon: <GradientizeIcon gradientId="menu-recursos" fillGradient><AiOutlineTool /></GradientizeIcon>, label: 'Recursos Produtivos', element: RecursosProdutivos, roles: [roles.roleAdmin] },
+            { key: '/ordem-producao/gantt', icon: <GradientizeIcon gradientId="menu-gantt" fillGradient><AiOutlineSchedule /></GradientizeIcon>, label: 'Gantt', element: GanttProducao, roles: [roles.roleAdmin] },
         ],
     },
    
@@ -88,13 +87,13 @@ export const defaultRoutes = [
         element: CadastrosRedirect,
         children: [
             { key: '/itens/cadastro', icon: <GradientizeIcon gradientId="menu-itens" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Itens', element: ItensCadastro, roles: [roles.roleAdmin] },
+            { key: '/recursos-produtivos', icon: <GradientizeIcon gradientId="menu-recursos" fillGradient><AiOutlineTool /></GradientizeIcon>, label: 'Recursos', element: RecursosProdutivos, roles: [roles.roleAdmin] },
             { key: '/ligas/cadastro', icon: <GradientizeIcon gradientId="menu-ligas" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Ligas', element: LigasCadastro, roles: [roles.roleAdmin] },
             { key: '/perfis/cadastro', icon: <GradientizeIcon gradientId="menu-perfis" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Perfis', element: PerfisCadastro, roles: [roles.roleAdmin] },
             { key: '/ferramentas/cadastro', icon: <GradientizeIcon gradientId="menu-ferramentas" fillGradient><AiOutlineTool /></GradientizeIcon>, label: 'Ferramentas', element: FerramentasCadastro, roles: [roles.roleAdmin] },
             { key: '/clientes/cadastro', icon: <GradientizeIcon gradientId="menu-clientes" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Clientes', element: ClientesCadastro, roles: [roles.roleAdmin] },
+            { key: '/pedidos/cadastro', icon: <GradientizeIcon gradientId="menu-pedidos" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Pedidos', element: PedidosCadastro, roles: [roles.roleAdmin] },
             { key: '/sequenciamento/cadastro', icon: <GradientizeIcon gradientId="menu-sequenciamento" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Cenários', element: SequenciamentoCadastro, roles: [roles.roleAdmin] },
-            { key: '/cadastros/tipo-excecoes', icon: <GradientizeIcon gradientId="menu-tipo-excecoes" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Tipo de Exceções', element: TipoExcecoesCadastro, roles: [roles.roleAdmin] },
-            { key: '/cadastros/excecoes', icon: <GradientizeIcon gradientId="menu-excecoes" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Exceções', element: ExcecoesCadastro, roles: [roles.roleAdmin] },
         ],
     },
     {
@@ -104,7 +103,11 @@ export const defaultRoutes = [
         roles: [roles.roleAdmin],
         element: ConfiguracoesRedirect,
         children: [
+            { key: '/configuracoes/excecoes', icon: <GradientizeIcon gradientId="menu-excecoes" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Exceções de Calendário', element: ExcecoesCadastro, roles: [roles.roleAdmin] },
+            { key: '/configuracoes/tipo-excecoes', icon: <GradientizeIcon gradientId="menu-tipo-excecoes" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Tipo de Exceções', element: TipoExcecoesCadastro, roles: [roles.roleAdmin] },
+            { key: '/configuracoes/monitoramento-integracao', icon: <GradientizeIcon gradientId="menu-monitor" fillGradient><AiOutlineSetting /></GradientizeIcon>, label: 'Monitoramento de Integração', element: MonitoramentoIntegracao, roles: [roles.roleAdmin] },
             { key: '/configuracoes/totvs', icon: <GradientizeIcon gradientId="menu-totvs" fillGradient><AiOutlineSetting /></GradientizeIcon>, label: 'TOTVS', element: Configuracoes, roles: [roles.roleAdmin] },
+
         ],
     },
 ];

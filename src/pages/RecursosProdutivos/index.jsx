@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Col, Row, Typography } from 'antd';
 import { CheckCircleOutlined, ToolOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import { Card } from '../../components';
 import { useFilterSearchContext } from '../../contexts/FilterSearchContext';
 import RecursosProdutivosService from '../../services/recursosProdutivosService';
@@ -114,6 +115,19 @@ function RecursoCard({ recurso }) {
       <Text strong style={{ fontSize: 15 }}>
         {capacidadeStr}
       </Text>
+      {(recurso.previsaoRetorno || recurso.previsao_retorno) && (
+        <>
+          <Text
+            type="secondary"
+            style={{ display: 'block', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 12, marginBottom: 4 }}
+          >
+            Previsão de retorno
+          </Text>
+          <Text style={{ fontSize: 13 }}>
+            {dayjs(recurso.previsaoRetorno || recurso.previsao_retorno).format('DD/MM/YYYY HH:mm')}
+          </Text>
+        </>
+      )}
     </Card>
   );
 }

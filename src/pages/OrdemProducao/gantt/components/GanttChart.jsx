@@ -637,8 +637,8 @@ function GanttChart({
                         key={m.id}
                         title={
                           <div>
-                            <p style={{ fontWeight: 600, color: '#ff4d4f', margin: '0 0 4px 0' }}>
-                              {m.tipo === 'manutencao' ? 'Manutenção' : 'Parada'}
+                            <p style={{ fontWeight: 600, color: m.tipo === 'excecao' ? '#faad14' : '#ff4d4f', margin: '0 0 4px 0' }}>
+                              {m.tipo === 'excecao' ? 'Exceção de calendário' : m.tipo === 'manutencao' ? 'Manutenção' : 'Parada'}
                             </p>
                             <p style={{ margin: 0, fontSize: 11 }}>{m.descricao}</p>
                             <p style={{ margin: '4px 0 0 0', fontSize: 11, fontFamily: 'monospace' }}>
@@ -657,7 +657,7 @@ function GanttChart({
                             borderRadius: 2,
                             opacity: 0.3,
                             zIndex: 1,
-                            backgroundColor: m.tipo === 'manutencao' ? 'hsl(0, 72%, 48%)' : 'hsl(38, 92%, 50%)',
+                            backgroundColor: m.tipo === 'excecao' ? 'hsl(38, 92%, 50%)' : m.tipo === 'manutencao' ? 'hsl(0, 72%, 48%)' : 'hsl(38, 92%, 50%)',
                             backgroundImage:
                               'repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(0,0,0,0.2) 3px, rgba(0,0,0,0.2) 6px)',
                           }}

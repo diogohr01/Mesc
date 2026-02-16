@@ -1,8 +1,8 @@
-import { Button, Col, Form, Layout, message, Modal, Row } from 'antd';
+import { Button, Col, Form, Layout, message, Modal, Row, Space } from 'antd';
 import { debounce } from 'lodash';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AiOutlineClear, AiOutlinePlus, AiOutlineSearch } from 'react-icons/ai';
-import { Card, DynamicForm, LoadingSpinner, PaginatedTable, ActionButtons } from '../../../components';
+import { AiOutlineClear, AiOutlinePlus } from 'react-icons/ai';
+import { Card, FilterModalForm, LoadingSpinner, PaginatedTable, ActionButtons } from '../../../components';
 import { useFilterSearchContext } from '../../../contexts/FilterSearchContext';
 import LigasService from '../../../services/ligasService';
 
@@ -11,6 +11,7 @@ const { Content } = Layout;
 
 const List = ({ onAdd, onEdit, onView }) => {
   const [loading, setLoading] = useState(false);
+  const [modalFiltrosOpen, setModalFiltrosOpen] = useState(false);
   const [filterForm] = Form.useForm();
   const tableRef = useRef(null);
   const { searchTerm, clearSearch } = useFilterSearchContext();
@@ -115,33 +116,36 @@ const List = ({ onAdd, onEdit, onView }) => {
             <Card
               variant="borderless"
               title="Ligas"
-              extra={<Button type="primary" icon={<AiOutlinePlus />} onClick={onAdd} size="middle">Nova Liga</Button>}
+              extra={
+                <Space>
+                  <Button type="primary" icon={<AiOutlinePlus />} onClick={onAdd} size="middle">Nova Liga</Button>
+                  <FilterModalForm
+                    open={modalFiltrosOpen}
+                    onOpenChange={setModalFiltrosOpen}
+                    formConfig={filterFormConfig}
+                    formInstance={filterForm}
+                    onSubmit={() => {
+                      handleFilter();
+                      setModalFiltrosOpen(false);
+                    }}
+                    secondaryButton={
+                      <Button
+                        icon={<AiOutlineClear />}
+                        onClick={() => {
+                          filterForm.resetFields();
+                          clearSearch();
+                          debouncedReloadTable();
+                          setModalFiltrosOpen(false);
+                        }}
+                        size="middle"
+                      >
+                        Limpar
+                      </Button>
+                    }
+                  />
+                </Space>
+              }
             >
-              <div style={{ margin: '12px 0', backgroundColor: '#fafafa', border: '1px solid #f0f0f0', borderRadius: '6px' }}>
-                <DynamicForm
-                  formConfig={filterFormConfig}
-                  formInstance={filterForm}
-                  collapseAsFilter
-                  submitText="Filtrar"
-                  submitIcon={<AiOutlineSearch />}
-                  submitOnSide={true}
-                  onClose={null}
-                  onSubmit={handleFilter}
-                  secondaryButton={
-                    <Button
-                      icon={<AiOutlineClear />}
-                      onClick={() => {
-                        filterForm.resetFields();
-                        clearSearch();
-                        debouncedReloadTable();
-                      }}
-                      size="middle"
-                    >
-                      Limpar
-                    </Button>
-                  }
-                />
-              </div>
               <div style={{ padding: '16px 0' }}>
                 <PaginatedTable ref={tableRef} disabled={loading} fetchData={fetchData} initialPageSize={10} columns={columns} loadingIcon={<LoadingSpinner />} rowKey="id" />
               </div>

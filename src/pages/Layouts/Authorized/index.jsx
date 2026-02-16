@@ -66,7 +66,13 @@ const AuthorizedLayout = ({ children, userName }) => {
     const location = useLocation();
     const [openKeys, setOpenKeys] = useState([]);
     const [routes] = useState(defaultRoutes); // Estado inicial com rotas dinâmicas
-    const [collapsed, setCollapsed] = useState(false); // Estado para controlar o collapse
+    const [collapsed, setCollapsed] = useState(() => {
+        try {
+            return localStorage.getItem('sidebarCollapsed') === 'true';
+        } catch {
+            return false;
+        }
+    });
     const [openConfirmModal, setOpenConfirmModal] = useState(false); // Estado para controlar a visibilidade do modal de confirmação
 
     // Efeito para determinar quais submenus devem estar abertos com base na rota atual
@@ -102,9 +108,17 @@ const AuthorizedLayout = ({ children, userName }) => {
         setOpenKeys(keys);
     };
 
-    // Função para alternar o estado de colapso
+    // Função para alternar o estado de colapso (persistido em localStorage)
     const toggleCollapsed = () => {
-        setCollapsed(!collapsed);
+        setCollapsed((prev) => {
+            const next = !prev;
+            try {
+                localStorage.setItem('sidebarCollapsed', String(next));
+            } catch (e) {
+                console.warn('localStorage unavailable', e);
+            }
+            return next;
+        });
     };
 
     // Função para lidar com cliques no menu e verificar se é a mesma rota
@@ -240,7 +254,14 @@ const AuthorizedLayout = ({ children, userName }) => {
                 <div style={{ position: 'relative', flexShrink: 0, overflow: 'visible' }}>
                     <Sider
                         collapsed={collapsed}
-                        onCollapse={(value) => setCollapsed(value)}
+                        onCollapse={(value) => {
+                            setCollapsed(value);
+                            try {
+                                localStorage.setItem('sidebarCollapsed', String(value));
+                            } catch (e) {
+                                console.warn('localStorage unavailable', e);
+                            }
+                        }}
                         width={230}
                         collapsedWidth={80}
                         trigger={null}

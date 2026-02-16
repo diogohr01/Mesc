@@ -2,8 +2,8 @@ import { Button, Col, Form, Layout, message, Modal, Row, Space, Tooltip, Typogra
 import dayjs from 'dayjs';
 import { debounce } from 'lodash';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AiFillDelete, AiFillEdit, AiOutlineClear, AiOutlinePlus, AiOutlineSearch } from 'react-icons/ai';
-import { Card, DynamicForm, LoadingSpinner, PaginatedTable } from '../../../components';
+import { AiFillDelete, AiFillEdit, AiOutlineClear, AiOutlinePlus } from 'react-icons/ai';
+import { Card, FilterModalForm, LoadingSpinner, PaginatedTable } from '../../../components';
 import Api from '../../../services/api';
 import { colors } from '../../../styles/colors';
 
@@ -13,6 +13,7 @@ const { Text } = Typography;
 
 const List = ({ onAdd, onEdit }) => {
   const [loading, setLoading] = useState(false);
+  const [modalFiltrosOpen, setModalFiltrosOpen] = useState(false);
   const [filterForm] = Form.useForm(); // Formulário para filtros
   const filterFormConfig = useMemo(() => [
     {
@@ -189,30 +190,25 @@ const List = ({ onAdd, onEdit }) => {
             <Card
               variant="borderless"
               title="Lista de Registros"
-              extra={<Button type="primary" icon={<AiOutlinePlus />} onClick={onAdd} disabled={loading} size="middle">Adicionar Registro</Button>}
-            >
-                {/* Filtros sempre visíveis */}
-                <div style={{
-                  margin: '12px 0',
-                  backgroundColor: '#fafafa',
-                  border: '1px solid #f0f0f0',
-                  borderRadius: '6px'
-                }}>
-                  <DynamicForm
+              extra={
+                <Space>
+                  <Button type="primary" icon={<AiOutlinePlus />} onClick={onAdd} disabled={loading} size="middle">Adicionar Registro</Button>
+                  <FilterModalForm
+                    open={modalFiltrosOpen}
+                    onOpenChange={setModalFiltrosOpen}
                     formConfig={filterFormConfig}
                     formInstance={filterForm}
-                    collapseAsFilter
-                    submitText="Filtrar"
-                    submitIcon={<AiOutlineSearch />}
-                    submitOnSide={true}
-                    onClose={null}
-                    onSubmit={handleFilter}
+                    onSubmit={() => {
+                      handleFilter();
+                      setModalFiltrosOpen(false);
+                    }}
                     secondaryButton={
                       <Button
                         icon={<AiOutlineClear />}
                         onClick={() => {
                           filterForm.resetFields();
                           debouncedReloadTable();
+                          setModalFiltrosOpen(false);
                         }}
                         size="middle"
                       >
@@ -220,8 +216,9 @@ const List = ({ onAdd, onEdit }) => {
                       </Button>
                     }
                   />
-                </div>
-
+                </Space>
+              }
+            >
               <div style={{ padding: '16px 0' }}>
                 <PaginatedTable
                   ref={tableRef}

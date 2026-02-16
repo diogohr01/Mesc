@@ -21,6 +21,7 @@ import { Layout } from 'antd';
 const { Content } = Layout;
 import OrdemProducaoService from '../../../services/ordemProducaoService';
 import SequenciamentoService from '../../../services/sequenciamentoService';
+import ExcecoesService from '../../../services/excecoesService';
 import { statusLabels } from '../../../constants/ordemProducaoStatus';
 import { StyledScroll } from '../../../components';
 import GanttChart from './components/GanttChart';
@@ -75,6 +76,7 @@ const GanttProducao = () => {
   const [recursos, setRecursos] = useState([]);
   const [loadingBars, setLoadingBars] = useState(false);
   const [manutencoes, setManutencoes] = useState([]);
+  const [excecoesCalendario, setExcecoesCalendario] = useState([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [zoomScale, setZoomScale] = useState(1);
   const [modalSequenciarOpen, setModalSequenciarOpen] = useState(false);
@@ -102,6 +104,12 @@ const GanttProducao = () => {
         setManutencoes(res.data.manutencoes || []);
         setLoadingBars(false);
       }
+    });
+  }, []);
+
+  useEffect(() => {
+    ExcecoesService.getAll({ page: 1, pageSize: 500 }).then((res) => {
+      if (res.success && res.data?.data) setExcecoesCalendario(res.data.data);
     });
   }, []);
 
@@ -149,10 +157,24 @@ const GanttProducao = () => {
   const timeConfig = useGanttTime(zoom, rangeStart, rangeEnd, zoomScale);
 
   const filteredRecursos = useMemo(() => {
-
     if (recursoFilter === 'todos') return recursos;
     return recursos.filter((r) => r.id === recursoFilter);
   }, [recursoFilter, recursos]);
+
+  const manutencoesComExcecoes = useMemo(() => {
+    const exExpanded = (excecoesCalendario || []).flatMap((ex) => {
+      const ids = ex.recursoIds?.length ? ex.recursoIds : recursos.map((r) => r.id);
+      return ids.map((rid) => ({
+        id: `ex-${ex.id}-${rid}`,
+        recursoId: rid,
+        dataInicio: ex.dataInicio,
+        dataFim: ex.dataFim,
+        descricao: ex.descricao,
+        tipo: 'excecao',
+      }));
+    });
+    return [...(manutencoes || []), ...exExpanded];
+  }, [manutencoes, excecoesCalendario, recursos]);
 
   const barras = useMemo(() => {
     return opsData.flatMap((op) =>
@@ -423,7 +445,7 @@ const GanttProducao = () => {
               <GanttChart
                 recursos={filteredRecursos}
                 barras={barras}
-                manutencoes={manutencoes}
+                manutencoes={manutencoesComExcecoes}
                 timeConfig={timeConfig}
                 loadingBars={loadingBars}
                 showSetups={showSetups}
