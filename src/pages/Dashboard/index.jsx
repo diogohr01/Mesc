@@ -270,7 +270,7 @@ const Dashboard = () => {
               header={
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <Title level={5} style={{ margin: 0 }}>Top OPs urgentes</Title>
-                  <Link to="/ordem-producao/cadastro" style={{ fontSize: 9, color: colors.primary }}>
+                  <Link to="/ordem-producao/cadastro" style={{ fontSize: 12, color: colors.primary }}>
                     Ver tudo →
                   </Link>
                 </div>
@@ -382,7 +382,7 @@ const Dashboard = () => {
               header={
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <Title level={5} style={{ margin: 0 }}>Status dos Recursos</Title>
-                  <Link to="/recursos-produtivos" style={{ fontSize: 9, color: colors.primary }}>
+                  <Link to="/recursos-produtivos" style={{ fontSize: 12, color: colors.primary }}>
                     Gerenciar →
                   </Link>
                 </div>
@@ -447,11 +447,14 @@ const Dashboard = () => {
                           style={{
                             display: 'flex',
                             alignItems: 'center',
+                            background:  colors.white  ,
                             gap: 8,
+                            borderRadius: 8,
+                            padding: 8,
                             justifyContent: 'space-between',
                           }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0}}>
                             <span
                               style={{
                                 width: 8,
