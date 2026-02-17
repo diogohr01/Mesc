@@ -30,7 +30,7 @@ const List = ({ onAdd, onEdit, onView }) => {
   const filterFormConfig = useMemo(
     () => [
       {
-        columns: 4,
+        columns: 3,
         questions: [
           { type: 'text', id: 'nome', required: false, placeholder: 'Digite o nome...', label: 'Nome', size: 'middle' },
           { type: 'text', id: 'codigoEMS', required: false, placeholder: 'Digite o código...', label: 'Código', size: 'middle' },
