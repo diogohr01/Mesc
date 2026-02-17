@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Col, Form, Layout, message, Row, Slider, Space, Table, Tag, Typography } from 'antd';
-import { ThunderboltOutlined, UnorderedListOutlined, LockOutlined, LeftOutlined, RightOutlined, HolderOutlined, DeleteOutlined } from '@ant-design/icons';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Button, Col, Form, Layout, message, Row, Slider, Space, Tag, Typography } from 'antd';
+import { ThunderboltOutlined, LockOutlined, LeftOutlined, RightOutlined, HolderOutlined, DeleteOutlined } from '@ant-design/icons';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br';
 import { AiOutlineClear } from 'react-icons/ai';
-import { CapacidadeIndicator, Card, FilterModalForm, LoadingSpinner } from '../../components';
+import { CapacidadeIndicator, Card, FilterModalForm, LoadingSpinner, PaginatedTable } from '../../components';
 import { useFilterSearchContext } from '../../contexts/FilterSearchContext';
 import { useFilaGanttFilterContext } from '../../contexts/FilaGanttFilterContext';
 import { getUrgencyLevel, urgencyBarColors, urgencyColors } from '../../helpers/urgency';
@@ -51,6 +51,7 @@ const FilaProducao = () => {
   const [modalSequenciarOpen, setModalSequenciarOpen] = useState(false);
   const [modalConfirmarOpen, setModalConfirmarOpen] = useState(false);
   const [modalGerarOPsOpen, setModalGerarOPsOpen] = useState(false);
+  const tableDisponiveisRef = useRef(null);
   const { searchTerm } = useFilterSearchContext();
   const { setCenarioId: setContextCenarioId, setFiltroTipo: setContextFiltroTipo } = useFilaGanttFilterContext();
   const [filterForm] = Form.useForm();
@@ -193,6 +194,13 @@ const FilaProducao = () => {
     },
     [dateKey]
   );
+
+  const handleRemoverTodos = useCallback(() => {
+    setSequenciasPorDia((prev) => {
+      const seq = getOrCreateSeq(prev, dateKey);
+      return { ...prev, [dateKey]: { ...seq, ops: [] } };
+    });
+  }, [dateKey]);
 
   const handleReorderDia = useCallback(
     (result) => {
@@ -348,9 +356,30 @@ const FilaProducao = () => {
     });
   }, [opsDisponiveis, selectedRowKeys]);
 
-  const onRowDisponiveis = useCallback((record) => ({
-    style: urgencyBarColors[getUrgencyLevel(record.dataEntrega, record.status)],
-  }), []);
+  const fetchDataDisponiveis = useCallback(async (page, pageSize) => {
+    const start = (page - 1) * pageSize;
+    const data = opsDisponiveis.slice(start, start + pageSize);
+    return { data, total: opsDisponiveis.length };
+  }, [opsDisponiveis]);
+
+  useEffect(() => {
+    tableDisponiveisRef.current?.reloadTable?.();
+  }, [opsDisponiveis]);
+
+  const onRowDisponiveis = useCallback((record) => {
+    const id = record.id;
+    return {
+      style: {
+        cursor: 'pointer',
+        ...urgencyBarColors[getUrgencyLevel(record.dataEntrega, record.status)],
+      },
+      onClick: () => {
+        setSelectedRowKeys((prev) =>
+          prev.includes(id) ? prev.filter((k) => k !== id) : [...prev, id]
+        );
+      },
+    };
+  }, []);
 
   const rowSelection = {
     selectedRowKeys,
@@ -452,23 +481,27 @@ const FilaProducao = () => {
                 </Row>
                 <Row gutter={16}>
                   <Col xs={24} lg={12}>
-                    <Card title="OPs Disponíveis" size="small" >
-                      <Table
-                        size="small"
-                        rowKey="id"
-                        loading={loadingFila}
-                        dataSource={opsDisponiveis}
-                        columns={columnsDisponiveis}
-                        rowSelection={rowSelection}
-                        onRow={onRowDisponiveis}
-                        scroll={{ x: 'max-content' }}
-                        pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `Total: ${t}` }}
-                      />
-                      <div style={{ marginTop: 8 }}>
+                    <Card
+                      title="OPs Disponíveis"
+                      size="small"
+                      extra={
                         <Button type="primary" onClick={handleAdicionarAoDia} disabled={selectedRowKeys.length === 0}>
                           Adicionar ao Dia
                         </Button>
-                      </div>
+                      }
+                    >
+                      <PaginatedTable
+                        ref={tableDisponiveisRef}
+                        fetchData={fetchDataDisponiveis}
+                        initialPageSize={10}
+                        columns={columnsDisponiveis}
+                        rowKey="id"
+                        loadingIcon={<LoadingSpinner />}
+                        disabled={loadingFila}
+                        scroll={{ x: 'max-content' }}
+                        onRow={onRowDisponiveis}
+                        rowSelection={rowSelection}
+                      />
                       {selectedOPsComPerda.length > 0 && (
                         <div style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
                           {selectedOPsComPerda.map((op) => {
@@ -489,7 +522,22 @@ const FilaProducao = () => {
                     <Card
                       title={`Sequência do Dia — ${diaSequenciamento.format('DD/MM/YYYY')}`}
                       size="small"
-                      extra={confirmada && <Tag icon={<LockOutlined />}>Confirmada</Tag>}
+                      extra={
+                        <Space>
+                          {!confirmada && opsDoDia.length > 0 && (
+                            <Button
+                              type="text"
+                              danger
+                              size="small"
+                              icon={<DeleteOutlined />}
+                              onClick={handleRemoverTodos}
+                            >
+                              Remover todos
+                            </Button>
+                          )}
+                          {confirmada && <Tag icon={<LockOutlined />}>Confirmada</Tag>}
+                        </Space>
+                      }
                     >
                       {opsDoDia.length === 0 ? (
                         <Text type="secondary">Nenhuma OP no dia. Selecione à esquerda e use "Adicionar ao Dia".</Text>

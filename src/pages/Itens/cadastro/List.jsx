@@ -87,12 +87,25 @@ const List = ({ onAdd, onEdit, onView }) => {
         width: 120,
         sorter: true,
       },
+      
       {
         title: 'Descrição',
         dataIndex: 'descricao',
         key: 'descricao',
         width: 300,
         sorter: true,
+      },
+      {
+        title: '% Perda',
+        dataIndex: 'percentual_perda',
+        key: 'percentual_perda',
+        width: 100,
+        sorter: true,
+        align: 'right',
+        render: (v, record) => {
+          const val = record?.percentual_perda ?? record?.percentualPerda ?? v;
+          return val != null && val !== '' ? Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-';
+        },
       },
       {
         title: 'Unidade',

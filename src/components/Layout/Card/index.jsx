@@ -51,7 +51,7 @@ const Card = memo(({
     header: hasHeader
       ? { ...DEFAULT_HEADER_STYLE, ...(stylesProp?.header || {}) }
       : (stylesProp?.header || {}),
-    body: { paddingTop: 12, ...(stylesProp?.body || {}) },
+    body: { paddingTop: 0, ...(stylesProp?.body || {}) },
   };
 
   const titleNode =

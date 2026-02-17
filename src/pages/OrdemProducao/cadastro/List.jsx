@@ -21,11 +21,13 @@ const SITUACOES = [
   { key: 'Liberada', label: 'Liberada' },
   { key: 'Programada', label: 'Programada' },
   { key: 'Encerrada', label: 'Encerrada' },
+  { key: 'Cancelada', label: 'Cancelada' },
 ];
 
 function getStatusCalculado(record, filhas = []) {
   const situacao = record.situacao;
   if (situacao === 'Encerrada') return { label: 'Concluída', color: 'success' };
+  if (situacao === 'Cancelada') return { label: 'Cancelada', color: 'error' };
   if (situacao === 'Programada') return { label: 'Programada', color: 'processing' };
   const filhasList = filhas.length ? filhas : record.filhas || [];
   const hasProgramada = filhasList.some((f) => f.situacao === 'Programada' || f.situacao === 'Encerrada');
@@ -334,7 +336,7 @@ const List = ({ onAdd, onEdit, onView }) => {
       key: 'situacao',
       width: 130,
       render: (situacao) => {
-        const colorMap = { 'Em cadastro': 'default', 'Liberada': 'processing', 'Programada': 'warning', 'Encerrada': 'success' };
+        const colorMap = { 'Em cadastro': 'default', 'Liberada': 'processing', 'Programada': 'warning', 'Encerrada': 'success', 'Cancelada': 'error' };
         return <Badge status={colorMap[situacao] || 'default'} text={situacao} />;
       },
     },
@@ -527,7 +529,7 @@ const List = ({ onAdd, onEdit, onView }) => {
     { title: 'Nº Pedido', dataIndex: 'numeroPedidoCliente', key: 'numeroPedidoCliente', width: 120, render: (val, r) => val || (r.pedidoId ? `Pedido #${r.pedidoId}` : '-') },
     { title: 'Cliente', dataIndex: ['cliente', 'nome'], key: 'cliente', width: 250 },
     { title: 'Entrega', key: 'dataEntrega', width: 120, render: (_, r) => { const d = r.dataEntrega ?? r.itens?.[0]?.dataEntrega; return d ? dayjs(d).format('DD/MM/YYYY') : '-'; } },
-    { title: 'Situação', dataIndex: 'situacao', key: 'situacao', width: 150, render: (situacao) => { const colorMap = { 'Em cadastro': 'default', 'Liberada': 'processing', 'Programada': 'warning', 'Encerrada': 'success' }; return <Badge status={colorMap[situacao] || 'default'} text={situacao} />; } },
+    { title: 'Situação', dataIndex: 'situacao', key: 'situacao', width: 150, render: (situacao) => { const colorMap = { 'Em cadastro': 'default', 'Liberada': 'processing', 'Programada': 'warning', 'Encerrada': 'success', 'Cancelada': 'error' }; return <Badge status={colorMap[situacao] || 'default'} text={situacao} />; } },
     { title: 'Qtd Total (peças)', dataIndex: 'itens', key: 'quantidadeTotal', width: 150, align: 'right', render: (itens) => (itens && Array.isArray(itens) ? itens.reduce((sum, i) => sum + (parseFloat(i.quantidadePecas) || 0), 0).toLocaleString('pt-BR') : '0') },
     { title: 'Ações', key: 'actions', width: 150, fixed: 'right', render: (_, record) => (<ActionButtons onView={() => handleView(record)} onEdit={() => handleEdit(record)} showCopy={false} showActivate={false} showDeactivate={false} showDelete={false} size="small" />) },
   ], [handleView, handleEdit]);
