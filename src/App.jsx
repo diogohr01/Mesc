@@ -30,7 +30,7 @@ function App() {
                         headerBg: colors.background,
                         headerColor: colors.text.primary,
                         headerSplitColor: colors.backgroundGray,
-                        borderColor: '#e0e0e0',
+                       // borderColor: '#e0e0e0',
                         rowHoverBg: colors.background,
                         cellPaddingBlock: 6,
                         cellPaddingInline: 10,
