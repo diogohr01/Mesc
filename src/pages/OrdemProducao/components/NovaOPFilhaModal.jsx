@@ -39,6 +39,7 @@ const NovaOPFilhaModal = ({ open, onClose, opPaiId, clientesOptions = [], onSucc
               { label: 'Liberada', value: 'Liberada' },
               { label: 'Programada', value: 'Programada' },
               { label: 'Encerrada', value: 'Encerrada' },
+              { label: 'Cancelada', value: 'Cancelada' },
             ],
           },
           {

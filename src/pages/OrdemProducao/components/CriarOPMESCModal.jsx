@@ -81,6 +81,7 @@ const CriarOPMESCModal = ({ open, onClose, opPaiId, opPaiRecord, onSuccess }) =>
               { label: 'Liberada', value: 'Liberada' },
               { label: 'Programada', value: 'Programada' },
               { label: 'Encerrada', value: 'Encerrada' },
+              { label: 'Cancelada', value: 'Cancelada' },
             ],
           },
           {

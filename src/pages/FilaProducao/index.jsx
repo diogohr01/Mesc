@@ -526,9 +526,7 @@ const FilaProducao = () => {
                         <Space>
                           {!confirmada && opsDoDia.length > 0 && (
                             <Button
-                              type="text"
                               danger
-                              size="small"
                               icon={<DeleteOutlined />}
                               onClick={handleRemoverTodos}
                             >

@@ -183,6 +183,79 @@ const Dashboard = () => {
           />
         </Col>
       </Row>
+      <Row gutter={[24, 24]}>
+      <Col xs={24} lg={24}>
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            style={{ height: '100%' }}
+          >
+            <LayoutCard
+              header={
+                <Title level={5} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <BarChartOutlined style={{ color: colors.primary }} />
+                  Capacidade Diária
+                </Title>
+              }
+              style={{ height: '100%', marginBottom: 0 }}
+            >
+              <div style={{ padding: ' 0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0 }}>
+                  <Text style={{ fontSize: 22, fontWeight: 700, fontFamily: 'monospace' }}>
+                    {programadoHoje.toFixed(1)}{' '}
+                    <Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>/ {CAPACIDADE_TOTAL} ton</Text>
+                  </Text>
+                  <Tag
+                    color={
+                      capacidadePct > 90 ? 'error' : capacidadePct > 70 ? 'warning' : 'success'
+                    }
+                    style={{ margin: 0 }}
+                  >
+                    {capacidadePct}%
+                  </Tag>
+                </div>
+                <div
+                  style={{
+                    height: 12,
+                    borderRadius: 6,
+                    background: colors.backgroundGray,
+                    overflow: 'hidden',
+                    display: 'flex',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${Math.round((casaHoje / CAPACIDADE_TOTAL) * 100)}%`,
+                      height: '100%',
+                      background: colors.primary,
+                      transition: 'width 0.3s',
+                    }}
+                  />
+                  <div
+                    style={{
+                      width: `${Math.round((clienteHoje / CAPACIDADE_TOTAL) * 100)}%`,
+                      height: '100%',
+                      background: '#385E9D',
+                      transition: 'width 0.3s',
+                    }}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: 16, marginTop: 12, fontSize: 9 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 12, height: 8, borderRadius: 2, background: colors.primary }} />
+                    <Text type="secondary">Casa: {casaHoje.toFixed(1)} ton</Text>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 12, height: 8, borderRadius: 2, background: '#385E9D' }} />
+                    <Text type="secondary">Cliente: {clienteHoje.toFixed(1)} ton</Text>
+                  </div>
+                </div>
+              </div>
+            </LayoutCard>
+          </motion.div>
+        </Col>
+      </Row>
 
       <Row gutter={[24, 24]}>
         {/* Fila prioritária */}
@@ -283,7 +356,7 @@ const Dashboard = () => {
                     }}
                   >
                     <Text style={{ fontSize: 9, display: 'block', lineHeight: 1.5 }}>{alerta.msg}</Text>
-                    <Text type="secondary" style={{ fontSize: 9, marginTop: 4, display: 'block' }}>{alerta.tempo} atrás</Text>
+                    <Text type="secondary" style={{ fontSize: 13, marginTop: 4, display: 'block' }}>{alerta.tempo} atrás</Text>
                   </div>
                 ))}
               </div>
@@ -292,82 +365,13 @@ const Dashboard = () => {
         </Col>
       </Row>
 
+    
       <Row gutter={[24, 24]}>
         {/* Capacidade Diária */}
-        <Col xs={24} lg={12}>
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            style={{ height: '100%' }}
-          >
-            <LayoutCard
-              header={
-                <Title level={5} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <BarChartOutlined style={{ color: colors.primary }} />
-                  Capacidade Diária
-                </Title>
-              }
-              style={{ height: '100%' }}
-            >
-              <div style={{ padding: '8px 0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <Text style={{ fontSize: 22, fontWeight: 700, fontFamily: 'monospace' }}>
-                    {programadoHoje.toFixed(1)}{' '}
-                    <Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>/ {CAPACIDADE_TOTAL} ton</Text>
-                  </Text>
-                  <Tag
-                    color={
-                      capacidadePct > 90 ? 'error' : capacidadePct > 70 ? 'warning' : 'success'
-                    }
-                    style={{ margin: 0 }}
-                  >
-                    {capacidadePct}%
-                  </Tag>
-                </div>
-                <div
-                  style={{
-                    height: 12,
-                    borderRadius: 6,
-                    background: colors.backgroundGray,
-                    overflow: 'hidden',
-                    display: 'flex',
-                  }}
-                >
-                  <div
-                    style={{
-                      width: `${Math.round((casaHoje / CAPACIDADE_TOTAL) * 100)}%`,
-                      height: '100%',
-                      background: colors.primary,
-                      transition: 'width 0.3s',
-                    }}
-                  />
-                  <div
-                    style={{
-                      width: `${Math.round((clienteHoje / CAPACIDADE_TOTAL) * 100)}%`,
-                      height: '100%',
-                      background: '#385E9D',
-                      transition: 'width 0.3s',
-                    }}
-                  />
-                </div>
-                <div style={{ display: 'flex', gap: 16, marginTop: 12, fontSize: 9 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ width: 12, height: 8, borderRadius: 2, background: colors.primary }} />
-                    <Text type="secondary">Casa: {casaHoje.toFixed(1)} ton</Text>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ width: 12, height: 8, borderRadius: 2, background: '#385E9D' }} />
-                    <Text type="secondary">Cliente: {clienteHoje.toFixed(1)} ton</Text>
-                  </div>
-                </div>
-              </div>
-            </LayoutCard>
-          </motion.div>
-        </Col>
+      
 
         {/* Status dos Recursos */}
-        <Col xs={24} lg={12}>
+        <Col xs={24} lg={24}>
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -385,31 +389,34 @@ const Dashboard = () => {
               }
               style={{ height: '100%' }}
             >
-              <div style={{ marginBottom: 24 }}>
+              <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
                 {recursos.map((r) => (
-                  <div key={r.nome} style={{ marginBottom: 16 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <Text style={{ fontSize: 13 }}>{r.nome}</Text>
-                      <Text
-                        style={{
-                          fontSize: 9,
-                          fontWeight: 500,
-                          color: r.status === 'operando' ? '#52c41a' : '#ff4d4f',
-                        }}
-                      >
-                        {r.status === 'operando' ? `${r.carga}% carga` : 'Em manutenção'}
-                      </Text>
+                  <Col xs={24} sm={12} md={8} flex="1 1 0" key={r.nome} style={{ minWidth: 0 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                        <Text style={{ fontSize: 13 }} ellipsis>{r.nome}</Text>
+                        <Text
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 500,
+                            color: r.status === 'operando' ? '#52c41a' : '#ff4d4f',
+                            flexShrink: 0,
+                            marginLeft: 8,
+                          }}
+                        >
+                          {r.status === 'operando' ? `${r.carga}% carga` : 'Em manutenção'}
+                        </Text>
+                      </div>
+                      <Progress
+                        percent={r.status === 'operando' ? r.carga : 100}
+                        showInfo={false}
+                        strokeColor={r.status === 'operando' ? (r.carga > 80 ? colors.primary : '#d46b08') : '#ff4d4f'}
+                        trailColor="#f0f0f0"
+                      />
                     </div>
-                    <Progress
-                      percent={r.status === 'operando' ? r.carga : 100}
-                      showInfo={false}
-                      strokeColor={r.status === 'operando' ? (r.carga > 80 ? colors.primary : '#d46b08') : '#ff4d4f'}
-                      trailColor="#f0f0f0"
-                      size="small"
-                    />
-                  </div>
+                  </Col>
                 ))}
-              </div>
+              </Row>
 
               <div
                 style={{
@@ -422,7 +429,7 @@ const Dashboard = () => {
                   strong
                   style={{
                     display: 'block',
-                    fontSize: 9,
+                    fontSize: 10,
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
                     color: colors.text.secondary,
@@ -431,25 +438,34 @@ const Dashboard = () => {
                 >
                   Resumo por Status
                 </Text>
-                <Row gutter={[16, 8]}>
+                <Row gutter={[24, 8]} align="middle">
                   {RESUMO_STATUS.map((s) => {
                     const count = opsResumo.filter((o) => o.status === s.key).length;
                     return (
-                      <Col span={12} key={s.key}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span
-                            style={{
-                              width: 8,
-                              height: 8,
-                              borderRadius: '50%',
-                              backgroundColor: s.color,
-                              flexShrink: 0,
-                            }}
-                          />
-                          <Text type="secondary" style={{ fontSize: 9 }}>
-                            {s.label}
-                          </Text>
-                          <Text strong style={{ marginLeft: 'auto', fontFamily: 'monospace', fontSize: 9 }}>
+                      <Col flex="1 1 0" key={s.key} style={{ minWidth: 0 }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            justifyContent: 'space-between',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                            <span
+                              style={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: '50%',
+                                backgroundColor: s.color,
+                                flexShrink: 0,
+                              }}
+                            />
+                            <Text type="secondary" style={{ fontSize: 12 }} ellipsis>
+                              {s.label}
+                            </Text>
+                          </div>
+                          <Text strong style={{ fontFamily: 'monospace', fontSize: 12, flexShrink: 0, minWidth: 24, textAlign: 'right' }}>
                             {count}
                           </Text>
                         </div>
