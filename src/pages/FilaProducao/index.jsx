@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Col, Form, Layout, message, Row, Select, Space, Tag, Typography } from 'antd';
-import { ThunderboltOutlined, LockOutlined, LeftOutlined, RightOutlined, HolderOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Button, Col, Form, Input, Layout, message, Modal, Row, Space, Tag, Tooltip, Typography } from 'antd';
+import { ThunderboltOutlined, LockOutlined, LeftOutlined, RightOutlined, HolderOutlined, DeleteOutlined, InfoCircleOutlined, HomeOutlined, TeamOutlined } from '@ant-design/icons';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br';
@@ -9,6 +9,8 @@ import { CapacidadeIndicator, Card, FilterModalForm, LoadingSpinner, PaginatedTa
 import { useFilterSearchContext } from '../../contexts/FilterSearchContext';
 import { useFilaGanttFilterContext } from '../../contexts/FilaGanttFilterContext';
 import { getUrgencyLevel, urgencyBarColors, urgencyColors } from '../../helpers/urgency';
+import StatusBadge from '../../components/Dashboard/StatusBadge';
+import { statusRowTint } from '../../constants/ordemProducaoStatus';
 import OrdemProducaoService from '../../services/ordemProducaoService';
 import SequenciamentoService from '../../services/sequenciamentoService';
 import { colors } from '../../styles/colors';
@@ -35,11 +37,37 @@ function getOrCreateSeq(sequenciasPorDia, dateKey) {
   return sequenciasPorDia[dateKey];
 }
 
+function buildSequenciamentoPayload(dateKey, sequenciasPorDia, capacidadeTon = 30) {
+  const seq = sequenciasPorDia[dateKey];
+  if (!seq) {
+    return { data: dateKey, confirmada: false, capacidade: { casaPct: 70, clientePct: 30, casaCap: capacidadeTon * 0.7, clienteCap: capacidadeTon * 0.3 }, sequencia: [] };
+  }
+  const casaPct = seq.casaPct ?? 70;
+  const clientePct = 100 - casaPct;
+  const casaCap = (capacidadeTon * casaPct) / 100;
+  const clienteCap = (capacidadeTon * clientePct) / 100;
+  const ops = seq.ops || [];
+  const sequencia = ops.map((op, index) => ({
+    idOP: op.id,
+    ordem: index + 1,
+    tipo: op.tipo || 'cliente',
+    quantidade: op.quantidade,
+    ferramenta: op.recurso || op.ferramenta || '',
+  }));
+  return {
+    data: dateKey,
+    confirmada: !!seq.confirmada,
+    capacidade: { casaPct, clientePct, casaCap, clienteCap },
+    sequencia,
+  };
+}
+
 const FilaProducao = () => {
   const [cenarios, setCenarios] = useState([]);
   const [cenarioAtivo, setCenarioAtivo] = useState(null);
   const [loadingCenarios, setLoadingCenarios] = useState(true);
-  const [filtroTipo, setFiltroTipo] = useState('todos');
+  const [filtroTipo, setFiltroTipo] = useState('casa');
+  const [filtroListaOPs, setFiltroListaOPs] = useState('disponiveis'); // 'disponiveis' | 'selecionadas'
   const [filtroLiga, setFiltroLiga] = useState(undefined);
   const [filtroTempera, setFiltroTempera] = useState(undefined);
   const [allFilaData, setAllFilaData] = useState([]);
@@ -51,6 +79,8 @@ const FilaProducao = () => {
   const [modalSequenciarOpen, setModalSequenciarOpen] = useState(false);
   const [modalConfirmarOpen, setModalConfirmarOpen] = useState(false);
   const [modalGerarOPsOpen, setModalGerarOPsOpen] = useState(false);
+  const [justificativaModal, setJustificativaModal] = useState(null);
+  const [justificativaTexto, setJustificativaTexto] = useState('');
   const tableDisponiveisRef = useRef(null);
   const { searchTerm } = useFilterSearchContext();
   const { setCenarioId: setContextCenarioId, setFiltroTipo: setContextFiltroTipo } = useFilaGanttFilterContext();
@@ -60,7 +90,7 @@ const FilaProducao = () => {
   const dateKey = getDateKey(diaSequenciamento);
   const currentSeq = getOrCreateSeq(sequenciasPorDia, dateKey);
   const casaPct = currentSeq.casaPct;
-  const confirmada = currentSeq.confirmada;
+  const confirmada = currentSeq.confirmada; // pós-confirmação: só visualização (sem adicionar, reordenar, remover ou editar)
 
   useEffect(() => {
     filterForm.setFieldsValue({
@@ -106,7 +136,7 @@ const FilaProducao = () => {
         pageSize: FILA_PAGE_SIZE,
         search: searchTerm?.trim() || undefined,
         cenarioId: cenarioAtivoId ?? undefined,
-        filtroTipo: filtroTipo !== 'todos' ? filtroTipo : undefined,
+        filtroTipo: filtroTipo === 'casa' || filtroTipo === 'cliente' ? filtroTipo : undefined,
       });
       const data = response.data?.data || [];
       setAllFilaData(data);
@@ -175,9 +205,10 @@ const FilaProducao = () => {
     }
     const toAdd = opsDisponiveis.filter((op) => selectedRowKeys.includes(op.id));
     if (toAdd.length === 0) return;
+    const toAddWithFlag = toAdd.map((op) => ({ ...op, jaSequenciada: true }));
     setSequenciasPorDia((prev) => {
       const seq = getOrCreateSeq(prev, dateKey);
-      const newOps = [...(seq.ops || []), ...toAdd];
+      const newOps = [...(seq.ops || []), ...toAddWithFlag];
       return { ...prev, [dateKey]: { ...seq, ops: newOps } };
     });
     setSelectedRowKeys([]);
@@ -204,20 +235,76 @@ const FilaProducao = () => {
   const handleReorderDia = useCallback(
     (result) => {
       if (!result.destination) return;
+      const sourceIndex = result.source.index;
+      const destIndex = result.destination.index;
       const ops = [...currentSeq.ops];
-      const [removed] = ops.splice(result.source.index, 1);
-      ops.splice(result.destination.index, 0, removed);
+      const [removed] = ops.splice(sourceIndex, 1);
+      ops.splice(destIndex, 0, removed);
+      const movedDataEntrega = removed.dataEntrega ? new Date(removed.dataEntrega).getTime() : 0;
+      let precisaJustificativa = false;
+      if (destIndex > sourceIndex) {
+        for (let j = 0; j < destIndex; j++) {
+          const otherDataEntrega = ops[j].dataEntrega ? new Date(ops[j].dataEntrega).getTime() : 0;
+          if (otherDataEntrega > movedDataEntrega) {
+            precisaJustificativa = true;
+            break;
+          }
+        }
+      }
+      if (precisaJustificativa) {
+        setJustificativaModal({ op: removed, fromIndex: sourceIndex + 1, toIndex: destIndex + 1 });
+        setJustificativaTexto('');
+      }
       setSequenciasPorDia((prev) => ({ ...prev, [dateKey]: { ...currentSeq, ops } }));
     },
     [currentSeq, dateKey]
   );
 
+  const handleReorderDiaTab = useCallback(
+    (result) => {
+      if (!result.destination) return;
+      const sourceIndex = result.source.index;
+      const destIndex = result.destination.index;
+      const fullOpsCurrent = currentSeq.ops || [];
+      const otherOps = fullOpsCurrent.filter((op) => (op.tipo || 'cliente') !== filtroTipo);
+      const tabOps = fullOpsCurrent.filter((op) => (op.tipo || 'cliente') === filtroTipo);
+      const [removed] = tabOps.splice(sourceIndex, 1);
+      tabOps.splice(destIndex, 0, removed);
+      const movedDataEntrega = removed.dataEntrega ? new Date(removed.dataEntrega).getTime() : 0;
+      let precisaJustificativa = false;
+      if (destIndex > sourceIndex) {
+        for (let j = 0; j < destIndex; j++) {
+          const otherDataEntrega = tabOps[j].dataEntrega ? new Date(tabOps[j].dataEntrega).getTime() : 0;
+          if (otherDataEntrega > movedDataEntrega) {
+            precisaJustificativa = true;
+            break;
+          }
+        }
+      }
+      if (precisaJustificativa) {
+        setJustificativaModal({ op: removed, fromIndex: sourceIndex + 1, toIndex: destIndex + 1 });
+        setJustificativaTexto('');
+      }
+      const fullOps = filtroTipo === 'casa' ? [...tabOps, ...otherOps] : [...otherOps, ...tabOps];
+      setSequenciasPorDia((prev) => ({ ...prev, [dateKey]: { ...currentSeq, ops: fullOps } }));
+    },
+    [currentSeq, dateKey, filtroTipo]
+  );
+
   const handleConfirmarSequencia = useCallback(() => {
     setSequenciasPorDia((prev) => {
       const seq = getOrCreateSeq(prev, dateKey);
-      const totalTon = (seq.ops || []).reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
+      const opsSeq = seq.ops || [];
+      const casaTonSeq = opsSeq.filter((op) => op.tipo === 'casa').reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
+      const clienteTonSeq = opsSeq.filter((op) => op.tipo !== 'casa').reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
+      const casaCap = (CAPACIDADE_TON * (seq.casaPct || 70)) / 100;
+      const clienteCap = (CAPACIDADE_TON * (100 - (seq.casaPct || 70))) / 100;
+      if (casaTonSeq > casaCap || clienteTonSeq > clienteCap) {
+        message.warning('Capacidade excedida — excedente será rolado para o próximo dia');
+      }
+      const totalTon = opsSeq.reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
       message.success(
-        `Sequência do dia ${diaSequenciamento.format('DD/MM/YYYY')} confirmada. ${(seq.ops || []).length} OPs, ${totalTon.toFixed(1)} ton.`
+        `Sequência do dia ${diaSequenciamento.format('DD/MM/YYYY')} confirmada. ${opsSeq.length} OPs, ${totalTon.toFixed(1)} ton.`
       );
       return { ...prev, [dateKey]: { ...seq, confirmada: true } };
     });
@@ -289,6 +376,20 @@ const FilaProducao = () => {
 
   const columnsDisponiveis = useMemo(
     () => [
+      {
+        title: '',
+        key: 'contingencia',
+        width: 56,
+        render: (_, record) =>
+          record.contingencia ? (
+            <Tooltip title="OP criada manualmente (contingência)">
+              <Space size={4}>
+                <InfoCircleOutlined style={{ color: '#faad14' }} />
+                <Tag color="orange" style={{ margin: 0 }}>Manual</Tag>
+              </Space>
+            </Tooltip>
+          ) : null,
+      },
       { title: 'Código', dataIndex: 'codigo', key: 'codigo', width: 90, render: (v) => <Text strong style={{ fontFamily: 'monospace' }}>{v || '-'}</Text> },
       { title: 'Produto', dataIndex: 'produto', key: 'produto', width: 200, ellipsis: true },
       { title: 'Liga', dataIndex: 'liga', key: 'liga', width: 80, ellipsis: true },
@@ -341,6 +442,13 @@ const FilaProducao = () => {
           return <span style={{ color: color || undefined }}>{v ? dayjs(v).format('DD/MM/YYYY') : '-'}</span>;
         },
       },
+      {
+        title: 'Status',
+        dataIndex: 'status',
+        key: 'status',
+        width: 140,
+        render: (status) => <StatusBadge status={status} />,
+      },
     ],
     []
   );
@@ -353,22 +461,30 @@ const FilaProducao = () => {
     });
   }, [opsDisponiveis, selectedRowKeys]);
 
+  const opsParaTabela = useMemo(() => {
+    if (filtroListaOPs === 'selecionadas') {
+      return opsDisponiveis.filter((op) => selectedRowKeys.includes(op.id));
+    }
+    return opsDisponiveis;
+  }, [filtroListaOPs, opsDisponiveis, selectedRowKeys]);
+
   const fetchDataDisponiveis = useCallback(async (page, pageSize) => {
     const start = (page - 1) * pageSize;
-    const data = opsDisponiveis.slice(start, start + pageSize);
-    return { data, total: opsDisponiveis.length };
-  }, [opsDisponiveis]);
+    const data = opsParaTabela.slice(start, start + pageSize);
+    return { data, total: opsParaTabela.length };
+  }, [opsParaTabela]);
 
   useEffect(() => {
     tableDisponiveisRef.current?.reloadTable?.();
-  }, [opsDisponiveis]);
+  }, [opsParaTabela]);
 
   const onRowDisponiveis = useCallback((record) => {
     const id = record.id;
+    const statusTint = statusRowTint[record.status] || { backgroundColor: 'transparent', borderLeft: '4px solid transparent' };
     return {
       style: {
         cursor: 'pointer',
-        ...urgencyBarColors[getUrgencyLevel(record.dataEntrega, record.status)],
+        ...statusTint,
       },
       onClick: () => {
         setSelectedRowKeys((prev) =>
@@ -392,18 +508,21 @@ const FilaProducao = () => {
         </Text>
         <Button type="text" icon={<RightOutlined />} onClick={handleNextDay} />
       </Space>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <Select
-          value={filtroTipo}
-          options={[
-            { value: 'todos', label: 'Todos' },
-            { value: 'casa', label: 'Casa' },
-            { value: 'cliente', label: 'Cliente' },
-          ]}
-          onChange={setFiltroTipo}
-          style={{ width: 120 }}
-          size="middle"
-        />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <Button
+          type={filtroTipo === 'casa' ? 'primary' : 'default'}
+          icon={<HomeOutlined />}
+          onClick={() => setFiltroTipo('casa')}
+        >
+          Casa (18 Ton)
+        </Button>
+        <Button
+          type={filtroTipo === 'cliente' ? 'primary' : 'default'}
+          icon={<TeamOutlined />}
+          onClick={() => setFiltroTipo('cliente')}
+        >
+          Cliente (12 Ton)
+        </Button>
         {confirmada && (
           <Tag icon={<LockOutlined />} color="default">
             Confirmada
@@ -435,7 +554,7 @@ const FilaProducao = () => {
           <Button
             icon={<AiOutlineClear />}
             onClick={() => {
-              setFiltroTipo('todos');
+              setFiltroTipo('casa');
               setFiltroLiga(undefined);
               setFiltroTempera(undefined);
               filterForm.resetFields();
@@ -452,6 +571,10 @@ const FilaProducao = () => {
   );
 
   const opsDoDia = currentSeq.ops || [];
+  const seqDiaAtiva = useMemo(
+    () => opsDoDia.filter((op) => (op.tipo || 'cliente') === filtroTipo),
+    [opsDoDia, filtroTipo]
+  );
 
   return (
     <Layout>
@@ -476,17 +599,130 @@ const FilaProducao = () => {
                     />
                   </Col>
                 </Row>
+                {seqDiaAtiva.length > 0 && (
                 <Row gutter={16}>
-                  <Col xs={24} lg={12}>
+                  <Col span={24}>
                     <Card
-                      title="OPs Disponíveis"
+                      title={
+                        <span style={{ fontSize: 12, fontWeight: 600 }}>
+                          Sequência — {diaSequenciamento.format('DD/MM')} • {filtroTipo === 'casa' ? 'Casa' : 'Cliente'}
+                          <Text type="secondary" style={{ marginLeft: 6, fontSize: 12 }}>({seqDiaAtiva.length} OPs)</Text>
+                        </span>
+                      }
                       size="small"
+                      bodyStyle={{ padding: '8px 12px' }}
                       extra={
-                        <Button type="primary" onClick={handleAdicionarAoDia} disabled={selectedRowKeys.length === 0}>
-                          Adicionar ao Dia
-                        </Button>
+                        <Space size="small">
+                          {!confirmada && (
+                            <Button danger size="small" icon={<DeleteOutlined />} onClick={handleRemoverTodos}>
+                              Remover todos
+                            </Button>
+                          )}
+                          {confirmada && <Tag icon={<LockOutlined />}>Confirmada</Tag>}
+                        </Space>
                       }
                     >
+                      <DragDropContext onDragEnd={handleReorderDiaTab}>
+                        <Droppable droppableId="sequencia-dia-tab" isDropDisabled={confirmada}>
+                          {(provided) => (
+                            <div ref={provided.innerRef} {...provided.droppableProps} style={{ minHeight: 60 }}>
+                              {seqDiaAtiva.map((op, index) => (
+                                <Draggable key={op.id} draggableId={String(op.id)} index={index} isDragDisabled={confirmada || seqDiaAtiva.length === 1}>
+                                  {(prov, snap) => (
+                                    <div
+                                      ref={prov.innerRef}
+                                      {...prov.draggableProps}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 6,
+                                        padding: '4px 6px',
+                                        marginBottom: 2,
+                                        borderRadius: 4,
+                                        border: '1px solid #f0f0f0',
+                                        backgroundColor: snap.isDragging ? '#fafafa' : '#fff',
+                                        fontSize: 12,
+                                        ...prov.draggableProps.style,
+                                      }}
+                                    >
+                                      {seqDiaAtiva.length > 1 && (
+                                        <span {...prov.dragHandleProps} style={{ cursor: confirmada ? 'default' : 'grab' }}>
+                                          <HolderOutlined style={{ color: '#999', fontSize: 12 }} />
+                                        </span>
+                                      )}
+                                      {seqDiaAtiva.length === 1 && <span style={{ width: 16, display: 'inline-block' }} />}
+                                      <span style={{ width: 20, fontSize: 11, color: '#666' }}>{index + 1}.</span>
+                                      <Text strong style={{ fontFamily: 'monospace', width: 72, fontSize: 12 }}>{op.codigo || '-'}</Text>
+                                      {op.contingencia && (
+                                        <Tooltip title="OP criada manualmente (contingência)">
+                                          <Tag color="orange" style={{ margin: 0, fontSize: 10 }}>Manual</Tag>
+                                        </Tooltip>
+                                      )}
+                                      <Text ellipsis style={{ flex: 1, fontSize: 12 }}>{op.produto || '-'}</Text>
+                                      <Text type="secondary" style={{ fontSize: 11 }}>{op.liga || '-'} / {op.tempera || '-'}</Text>
+                                      <Text style={{ fontSize: 11 }}>{(Number(op.quantidade) || 0).toLocaleString('pt-BR')} kg</Text>
+                                      <span style={{ fontSize: 11, color: urgencyColors[getUrgencyLevel(op.dataEntrega, op.status)] }}>
+                                        {op.dataEntrega ? dayjs(op.dataEntrega).format('DD/MM') : '-'}
+                                      </span>
+                                      {!confirmada && (
+                                        <Button
+                                          type="text"
+                                          danger
+                                          size="small"
+                                          icon={<DeleteOutlined />}
+                                          onClick={() => handleRemoverDoDia(op.id)}
+                                          style={{ padding: '0 4px' }}
+                                        />
+                                      )}
+                                    </div>
+                                  )}
+                                </Draggable>
+                              ))}
+                              {provided.placeholder}
+                            </div>
+                          )}
+                        </Droppable>
+                      </DragDropContext>
+                      <div style={{ marginTop: 8, paddingTop: 6, borderTop: '1px solid #f0f0f0' }}>
+                        <Text type="secondary" style={{ fontSize: 11 }}>Follow-up: </Text>
+                        <Space size="small">
+                          <Tag style={{ margin: 0, fontSize: 10 }}>Prensa</Tag>
+                          <Tag style={{ margin: 0, fontSize: 10 }}>Corte</Tag>
+                          <Tag style={{ margin: 0, fontSize: 10 }}>Forno</Tag>
+                          <Tag style={{ margin: 0, fontSize: 10 }}>Embalagem</Tag>
+                        </Space>
+                      </div>
+                    </Card>
+                  </Col>
+                </Row>
+                )}
+                <Row gutter={16}>
+                  <Col span={24}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                        <Space size="middle">
+                          <span style={{ fontWeight: 600, fontSize: 14 }}>OPs Disponíveis</span>
+                          <Space size="small">
+                            <Button
+                              type={filtroListaOPs === 'disponiveis' ? 'primary' : 'default'}
+                              size="small"
+                              onClick={() => setFiltroListaOPs('disponiveis')}
+                            >
+                              Disponíveis ({opsDisponiveis.length})
+                            </Button>
+                            <Button
+                              type={filtroListaOPs === 'selecionadas' ? 'primary' : 'default'}
+                              size="small"
+                              onClick={() => setFiltroListaOPs('selecionadas')}
+                            >
+                              Selecionadas ({selectedRowKeys.length})
+                            </Button>
+                          </Space>
+                        </Space>
+                        <Button type="primary" onClick={handleAdicionarAoDia} disabled={selectedRowKeys.length === 0 || confirmada}>
+                          Adicionar ao Dia
+                        </Button>
+                      </div>
                       <PaginatedTable
                         ref={tableDisponiveisRef}
                         fetchData={fetchDataDisponiveis}
@@ -513,95 +749,7 @@ const FilaProducao = () => {
                           })}
                         </div>
                       )}
-                    </Card>
-                  </Col>
-                  <Col xs={24} lg={12}>
-                    <Card
-                      title={`Sequência do Dia — ${diaSequenciamento.format('DD/MM/YYYY')}`}
-                      size="small"
-                      extra={
-                        <Space>
-                          {!confirmada && opsDoDia.length > 0 && (
-                            <Button
-                              danger
-                              icon={<DeleteOutlined />}
-                              onClick={handleRemoverTodos}
-                            >
-                              Remover todos
-                            </Button>
-                          )}
-                          {confirmada && <Tag icon={<LockOutlined />}>Confirmada</Tag>}
-                        </Space>
-                      }
-                    >
-                      {opsDoDia.length === 0 ? (
-                        <Text type="secondary">Nenhuma OP no dia. Selecione à esquerda e use "Adicionar ao Dia".</Text>
-                      ) : (
-                        <DragDropContext onDragEnd={handleReorderDia}>
-                          <Droppable droppableId="sequencia-dia" isDropDisabled={confirmada}>
-                            {(provided) => (
-                              <div ref={provided.innerRef} {...provided.droppableProps} style={{ minHeight: 120 }}>
-                                {opsDoDia.map((op, index) => (
-                                  <Draggable key={op.id} draggableId={String(op.id)} index={index} isDragDisabled={confirmada}>
-                                    {(prov, snap) => (
-                                      <div
-                                        ref={prov.innerRef}
-                                        {...prov.draggableProps}
-                                        style={{
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          gap: 8,
-                                          padding: '6px 8px',
-                                          marginBottom: 4,
-                                          borderRadius: 6,
-                                          border: '1px solid #f0f0f0',
-                                          backgroundColor: snap.isDragging ? '#fafafa' : '#fff',
-                                          ...prov.draggableProps.style,
-                                        }}
-                                      >
-                                        <span {...prov.dragHandleProps} style={{ cursor: confirmada ? 'default' : 'grab' }}>
-                                          <HolderOutlined style={{ color: '#999' }} />
-                                        </span>
-                                        <span style={{ width: 24, fontSize: 12, color: '#666' }}>{index + 1}.</span>
-                                        <Text strong style={{ fontFamily: 'monospace', width: 80 }}>{op.codigo || '-'}</Text>
-                                        <Text ellipsis style={{ flex: 1, fontSize: 12 }}>{op.produto || '-'}</Text>
-                                        <Tag color={op.tipo === 'casa' ? 'blue' : 'default'} style={{ margin: 0 }}>
-                                          {op.tipo === 'casa' ? 'CASA' : 'CLIENTE'}
-                                        </Tag>
-                                        <Text type="secondary" style={{ fontSize: 12 }}>{op.liga || '-'} / {op.tempera || '-'}</Text>
-                                        <Text style={{ fontSize: 12 }}>{(Number(op.quantidade) || 0).toLocaleString('pt-BR')} kg</Text>
-                                        <span style={{ color: urgencyColors[getUrgencyLevel(op.dataEntrega, op.status)] }}>
-                                          {op.dataEntrega ? dayjs(op.dataEntrega).format('DD/MM') : '-'}
-                                        </span>
-                                        {!confirmada && (
-                                          <Button
-                                            type="text"
-                                            danger
-                                            size="small"
-                                            icon={<DeleteOutlined />}
-                                            onClick={() => handleRemoverDoDia(op.id)}
-                                          />
-                                        )}
-                                      </div>
-                                    )}
-                                  </Draggable>
-                                ))}
-                                {provided.placeholder}
-                              </div>
-                            )}
-                          </Droppable>
-                        </DragDropContext>
-                      )}
-                      <div style={{ marginTop: 12, paddingTop: 8, borderTop: '1px solid #f0f0f0' }}>
-                        <Text type="secondary" style={{ fontSize: 12 }}>Follow-up: </Text>
-                        <Space size="small">
-                          <Tag>Prensa</Tag>
-                          <Tag>Corte</Tag>
-                          <Tag>Forno</Tag>
-                          <Tag>Embalagem</Tag>
-                        </Space>
-                      </div>
-                    </Card>
+                    </div>
                   </Col>
                 </Row>
               </Space>
@@ -624,7 +772,7 @@ const FilaProducao = () => {
               page,
               pageSize,
               cenarioId: cenarioAtivoId ?? undefined,
-              filtroTipo: filtroTipo !== 'todos' ? filtroTipo : undefined,
+              filtroTipo: filtroTipo === 'casa' || filtroTipo === 'cliente' ? filtroTipo : undefined,
             });
             return { data: res.data?.data || [], total: res.data?.pagination?.totalRecords || 0 };
           }}
@@ -632,6 +780,33 @@ const FilaProducao = () => {
         />
         <ModalConfirmarOP open={modalConfirmarOpen} onClose={() => setModalConfirmarOpen(false)} />
         <ModalGerarOPs open={modalGerarOPsOpen} onClose={() => setModalGerarOPsOpen(false)} />
+        <Modal
+          title="Justificativa — alteração de prioridade"
+          open={!!justificativaModal}
+          onCancel={() => setJustificativaModal(null)}
+          onOk={() => {
+            message.info(justificativaTexto ? `Justificativa registrada: ${justificativaTexto}` : 'Justificativa registrada.');
+            setJustificativaModal(null);
+            setJustificativaTexto('');
+          }}
+          okText="Registrar"
+          cancelText="Cancelar"
+        >
+          {justificativaModal && (
+            <>
+              <p style={{ marginBottom: 8 }}>
+                A OP <Text strong>{justificativaModal.op.codigo}</Text> (entrega mais próxima) foi movida da posição {justificativaModal.fromIndex} para {justificativaModal.toIndex}.
+              </p>
+              <p style={{ marginBottom: 8, fontSize: 12, color: '#666' }}>Informe a justificativa (opcional):</p>
+              <Input.TextArea
+                rows={3}
+                value={justificativaTexto}
+                onChange={(e) => setJustificativaTexto(e.target.value)}
+                placeholder="Justificativa para alteração de prioridade..."
+              />
+            </>
+          )}
+        </Modal>
       </Content>
     </Layout>
   );

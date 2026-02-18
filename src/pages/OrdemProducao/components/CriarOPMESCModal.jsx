@@ -1,4 +1,4 @@
-import { Form, message, Modal, Typography } from 'antd';
+import { Form, message, Modal, Tag, Typography } from 'antd';
 import { DynamicForm } from '../../../components';
 import dayjs from 'dayjs';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -58,6 +58,27 @@ const CriarOPMESCModal = ({ open, onClose, opPaiId, opPaiRecord, onSuccess }) =>
         title: isManual ? 'Criar OP Manual (sem pai Totvs)' : 'Criar OP MESC',
         columns: 2,
         questions: [
+          ...(isManual
+            ? [
+                {
+                  type: 'select',
+                  id: 'tipo',
+                  required: true,
+                  placeholder: 'Selecione o tipo',
+                  label: 'Tipo',
+                  options: [
+                    { label: 'Casa', value: 'casa' },
+                    { label: 'Cliente', value: 'cliente' },
+                  ],
+                },
+                {
+                  type: 'checkbox',
+                  id: 'contingencia',
+                  required: false,
+                  label: 'Marcar OP como Contingência',
+                },
+              ]
+            : []),
           { type: 'text', id: 'numeroOPERP', required: true, placeholder: 'Número da OP do ERP', label: 'Número da OP (EMS/TOTVS)' },
           { type: 'date', id: 'dataOP', required: true, placeholder: 'Data', label: 'Data do Registro', format: 'DD/MM/YYYY' },
           {
@@ -134,6 +155,10 @@ const CriarOPMESCModal = ({ open, onClose, opPaiId, opPaiRecord, onSuccess }) =>
           informacoesComplementares: {},
           ativo: true,
           ferramentaId: values.ferramentaId,
+          ...(isManual && {
+            tipo: values.tipo || 'cliente',
+            contingencia: !!values.contingencia,
+          }),
         };
         const response = await OrdemProducaoService.upsert(ordemData);
         if (response.success) {
@@ -161,6 +186,12 @@ const CriarOPMESCModal = ({ open, onClose, opPaiId, opPaiRecord, onSuccess }) =>
       width={720}
       destroyOnClose
     >
+      {isManual && (
+        <div style={{ marginBottom: 12 }}>
+          <Tag color="blue">OP Manual</Tag>
+          <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>Sem vínculo com OP Totvs</Text>
+        </div>
+      )}
       {!isManual && saldo != null && (
         <div style={{ marginBottom: 16, padding: 12, background: '#fafafa', borderRadius: 8 }}>
           <Text strong>Saldo disponível: {saldo.toLocaleString('pt-BR')} peças</Text>

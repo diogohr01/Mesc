@@ -20,11 +20,18 @@ function getColorByPercent(percent) {
 const CapacidadeIndicator = ({
   utilizadoTon = 0,
   capacidadeTon = CAPACIDADE_DEFAULT,
+  filtroTipo = 'casa',
   casaTon = 0,
   clienteTon = 0,
   showProgress = true,
 }) => {
-  const total = Number(utilizadoTon) || 0;
+
+  const filtrarPorTipo = (tipo) => {
+    if (tipo === 'casa') return casaTon;
+    if (tipo === 'cliente') return clienteTon;
+    return utilizadoTon;
+  };
+    const total = Number(filtrarPorTipo(filtroTipo)) || 0;
   const capacidade = Number(capacidadeTon) || CAPACIDADE_DEFAULT;
   const casa = Number(casaTon) || 0;
   const cliente = Number(clienteTon) || 0;

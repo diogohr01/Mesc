@@ -1,4 +1,4 @@
-import { Badge, Button, Col, Form, Layout, message, Modal, Row, Space, Table, Tabs, Tag, Typography } from 'antd';
+import { Badge, Button, Col, Form, Layout, message, Modal, Row, Space, Table, Tabs, Tag, Tooltip, Typography } from 'antd';
 import { DownloadOutlined, PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { debounce } from 'lodash';
@@ -26,12 +26,20 @@ const SITUACOES = [
 
 function getStatusCalculado(record, filhas = []) {
   const situacao = record.situacao;
-  if (situacao === 'Encerrada') return { label: 'Concluída', color: 'success' };
   if (situacao === 'Cancelada') return { label: 'Cancelada', color: 'error' };
-  if (situacao === 'Programada') return { label: 'Programada', color: 'processing' };
-  const filhasList = filhas.length ? filhas : record.filhas || [];
-  const hasProgramada = filhasList.some((f) => f.situacao === 'Programada' || f.situacao === 'Encerrada');
-  if (hasProgramada) return { label: 'Parcial', color: 'warning' };
+  const itens = record.itens || [];
+  const quantidadeTotal = itens.reduce((sum, i) => sum + (parseFloat(i.quantidadePecas) || 0), 0);
+  let quantidadeProgramada = record.qtdProgramada != null ? Number(record.qtdProgramada) : 0;
+  let quantidadeProduzida = record.qtdProduzida != null ? Number(record.qtdProduzida) : 0;
+  if (quantidadeProgramada === 0 && quantidadeProduzida === 0 && filhas.length > 0) {
+    quantidadeProgramada = filhas.reduce((sum, f) => {
+      const itensF = f.itens || [];
+      return sum + itensF.reduce((s, i) => s + (parseFloat(i.quantidadePecas) || 0), 0);
+    }, 0);
+  }
+  if (quantidadeProduzida >= quantidadeTotal && quantidadeTotal > 0) return { label: 'Concluída', color: 'success' };
+  if (quantidadeProgramada >= quantidadeTotal) return { label: 'Programada', color: 'processing' };
+  if (quantidadeProgramada > 0) return { label: 'Parcial', color: 'warning' };
   return { label: 'Não Programada', color: 'default' };
 }
 
@@ -304,6 +312,22 @@ const List = ({ onAdd, onEdit, onView }) => {
     }
   }, []);
 
+  const fetchDataFilhasExpandido = useCallback((opPaiId) => async (page, pageSize, sorterField, sortOrder) => {
+    const response = await OrdemProducaoService.getAll({
+      opPaiId,
+      page,
+      pageSize,
+      sorterField,
+      sortOrder,
+    });
+    return {
+      data: response?.data?.data || [],
+      total: response?.data?.pagination?.totalRecords || 0,
+    };
+  }, []);
+
+  const expandidoRefs = useRef({});
+
   const columnsFilhas = useMemo(() => [
     { title: 'Código OP MESC', dataIndex: 'codigo', key: 'codigo', width: 130, render: (v) => v || '-' },
     {
@@ -341,12 +365,33 @@ const List = ({ onAdd, onEdit, onView }) => {
       },
     },
     {
+      title: 'Seq.',
+      key: 'sequenciamento',
+      width: 120,
+      render: (_, record) => {
+        const jaSequenciada = record.jaSequenciada;
+        const disponivel = record.disponivelParaSequenciamento;
+        if (!jaSequenciada && !disponivel) return '-';
+        return (
+          <Space size={4} wrap>
+            {jaSequenciada && <Tag color="success">Sequenciada</Tag>}
+            {disponivel && !jaSequenciada && <Tag color="blue">Disponível p/ seq.</Tag>}
+          </Space>
+        );
+      },
+    },
+    {
       title: '',
       key: 'problema',
       width: 32,
       render: (_, record) => {
-        const hasProblema = record.ferramentaIndisponivel || record.alerta;
-        return hasProblema ? <span style={{ color: '#ff4d4f' }} title="Indicador de problema">&#9888;</span> : null;
+        const hasProblema = record.ferramentaIndisponivel || record.alerta || record.statusDetalhado === 'falha';
+        const tooltipTitle = record.statusDetalhado === 'falha' ? 'Ferramenta quebrada ou perda excessiva' : 'Indicador de problema';
+        return hasProblema ? (
+          <Tooltip title={tooltipTitle}>
+            <span style={{ color: '#ff4d4f' }}>&#9888;</span>
+          </Tooltip>
+        ) : null;
       },
     },
     {
@@ -378,42 +423,27 @@ const List = ({ onAdd, onEdit, onView }) => {
       onExpand: (expanded, record) => {
         if (expanded) fetchFilhas(record.id);
       },
-      expandedRowRender: (record) => {
-        const filhas = filhasMap[record.id] || [];
-        const loadingF = loadingFilhas[record.id];
-        if (loadingF) {
-          return (
-            <div style={{ marginLeft: 24, padding: '16px', textAlign: 'center', background: '#fafafa', borderRadius: 6, border: '1px solid #f0f0f0' }}>
-              <Typography.Text type="secondary">Carregando OP Filhas...</Typography.Text>
-            </div>
-          );
-        }
-        return (
-          <div style={{ marginLeft: 24, padding: 12, background: '#fafafa', borderRadius: 6, border: '1px solid #f0f0f0' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
-              <Text strong style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em', color: colors.text.secondary }}>OPs MESC (filhas)</Text>
-              <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => { setModalCriarOPPai(record); setModalCriarOPOpen(true); }}>
-                Criar OP MESC
-              </Button>
-            </div>
-            {!filhas.length ? (
-              <Typography.Text type="secondary">Nenhuma OP Filha vinculada.</Typography.Text>
-            ) : (
-            <Table
-              dataSource={filhas}
-              columns={columnsFilhas}
-              rowKey="id"
-              pagination={false}
-              size="small"
-              bordered
-              scroll={{ x: 'max-content' }}
-            />
-            )}
+      expandedRowRender: (record) => (
+        <div style={{ marginLeft: 24, padding: 12, background: '#fafafa', borderRadius: 6, border: '1px solid #f0f0f0', fontSize: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
+            <Text strong style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em', color: colors.text.secondary }}>OPs MESC (filhas)</Text>
+            <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => { setModalCriarOPPai(record); setModalCriarOPOpen(true); }}>
+              Criar OP MESC
+            </Button>
           </div>
-        );
-      },
+          <PaginatedTable
+            ref={(r) => { if (r) expandidoRefs.current[record.id] = r; }}
+            fetchData={fetchDataFilhasExpandido(record.id)}
+            initialPageSize={5}
+            columns={columnsFilhas}
+            rowKey="id"
+            loadingIcon={<LoadingSpinner />}
+            scroll={{ x: 'max-content' }}
+          />
+        </div>
+      ),
     }),
-    [filhasMap, loadingFilhas, fetchFilhas, columnsFilhas]
+    [fetchFilhas, fetchDataFilhasExpandido, columnsFilhas]
   );
 
   const columns = useMemo(() => [
@@ -451,7 +481,7 @@ const List = ({ onAdd, onEdit, onView }) => {
       title: 'Qtd Programada',
       dataIndex: 'qtdProgramada',
       key: 'qtdProgramada',
-      width: 120,
+      width: 80,
       align: 'right',
       render: (v) => (v != null ? Number(v).toLocaleString('pt-BR') : '-'),
     },
@@ -459,7 +489,7 @@ const List = ({ onAdd, onEdit, onView }) => {
       title: 'Qtd Produzida',
       dataIndex: 'qtdProduzida',
       key: 'qtdProduzida',
-      width: 120,
+      width: 80,
       align: 'right',
       render: (v) => (v != null ? Number(v).toLocaleString('pt-BR') : '-'),
     },
@@ -472,8 +502,8 @@ const List = ({ onAdd, onEdit, onView }) => {
         const itens = record.itens || [];
         const total = itens.reduce((sum, i) => sum + (parseFloat(i.quantidadePecas) || 0), 0);
         const programada = record.qtdProgramada != null ? Number(record.qtdProgramada) : 0;
-        const saldo = total - programada;
-        return <Text strong={saldo > 0}>{saldo >= 0 ? saldo.toLocaleString('pt-BR') : '-'}</Text>;
+        const saldo = Math.max(0, total - programada);
+        return <Text strong={saldo > 0}>{saldo.toLocaleString('pt-BR')}</Text>;
       },
     },
     {
@@ -497,28 +527,7 @@ const List = ({ onAdd, onEdit, onView }) => {
         return <Tag color={color}>{label}</Tag>;
       },
     },
-    {
-      title: 'Ações',
-      key: 'actions',
-      width: 150,
-      fixed: 'right',
-      render: (_, record) => (
-        <ActionButtons
-          onView={() => handleView(record)}
-          onEdit={() => handleEdit(record)}
-          onCopy={() => handleCopy(record)}
-          onActivate={() => handleAtivarDesativar(record)}
-          onDeactivate={() => handleAtivarDesativar(record)}
-          onDelete={undefined}
-          showCopy={false}
-          showActivate={false}
-          showDeactivate={false}
-          showDelete={false}
-          isActive={record.ativo}
-          size="small"
-        />
-      ),
-    },
+    
   ], [handleEdit, handleView, handleCopy, handleAtivarDesativar, filhasMap]);
 
   // Colunas para a aba OPs Filhas (lista paginada, com Recurso, sem expandível)
@@ -530,6 +539,22 @@ const List = ({ onAdd, onEdit, onView }) => {
     { title: 'Cliente', dataIndex: ['cliente', 'nome'], key: 'cliente', width: 250 },
     { title: 'Entrega', key: 'dataEntrega', width: 120, render: (_, r) => { const d = r.dataEntrega ?? r.itens?.[0]?.dataEntrega; return d ? dayjs(d).format('DD/MM/YYYY') : '-'; } },
     { title: 'Situação', dataIndex: 'situacao', key: 'situacao', width: 150, render: (situacao) => { const colorMap = { 'Em cadastro': 'default', 'Liberada': 'processing', 'Programada': 'warning', 'Encerrada': 'success', 'Cancelada': 'error' }; return <Badge status={colorMap[situacao] || 'default'} text={situacao} />; } },
+    {
+      title: 'Seq.',
+      key: 'sequenciamento',
+      width: 120,
+      render: (_, record) => {
+        const jaSequenciada = record.jaSequenciada;
+        const disponivel = record.disponivelParaSequenciamento;
+        if (!jaSequenciada && !disponivel) return '-';
+        return (
+          <Space size={4} wrap>
+            {jaSequenciada && <Tag color="success">Sequenciada</Tag>}
+            {disponivel && !jaSequenciada && <Tag color="blue">Disponível p/ seq.</Tag>}
+          </Space>
+        );
+      },
+    },
     { title: 'Qtd Total (peças)', dataIndex: 'itens', key: 'quantidadeTotal', width: 150, align: 'right', render: (itens) => (itens && Array.isArray(itens) ? itens.reduce((sum, i) => sum + (parseFloat(i.quantidadePecas) || 0), 0).toLocaleString('pt-BR') : '0') },
     { title: 'Ações', key: 'actions', width: 150, fixed: 'right', render: (_, record) => (<ActionButtons onView={() => handleView(record)} onEdit={() => handleEdit(record)} showCopy={false} showActivate={false} showDeactivate={false} showDelete={false} size="small" />) },
   ], [handleView, handleEdit]);
@@ -644,6 +669,8 @@ const List = ({ onAdd, onEdit, onView }) => {
           onSuccess={() => {
             if (tableRef.current) tableRef.current.reloadTable();
             if (tableFilhasRef.current) tableFilhasRef.current.reloadTable();
+            const opPaiId = modalCriarOPPai?.id;
+            if (opPaiId && expandidoRefs.current[opPaiId]?.reloadTable) expandidoRefs.current[opPaiId].reloadTable();
             setModalCriarOPOpen(false);
             setModalCriarOPPai(null);
           }}

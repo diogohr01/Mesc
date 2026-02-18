@@ -13,7 +13,7 @@ function App() {
             locale={ptBR}
             theme={{
                 token: {
-                    fontSize: 13,
+                    fontSize: 11,
                     colorPrimary: colors.primary,
                     colorPrimaryBg: colors.background,
                     colorText: colors.text.primary,
@@ -33,7 +33,8 @@ function App() {
                        // borderColor: '#e0e0e0',
                         rowHoverBg: colors.background,
                         cellPaddingBlock: 6,
-                        cellPaddingInline: 10,
+                        cellFontSize: 9,
+                        cellPaddingInline: 8,
                     },
                 },
                 hashed: false,

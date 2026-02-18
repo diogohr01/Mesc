@@ -165,7 +165,9 @@
           "np": 1120,
           "npr": 91.55
         }
-      ]
+      ],
+      "disponivelParaSequenciamento": true,
+      "jaSequenciada": false
     },
     {
       "id": 4,
@@ -231,7 +233,9 @@
           "np": 380,
           "npr": 90
         }
-      ]
+      ],
+      "disponivelParaSequenciamento": false,
+      "jaSequenciada": true
     },
     {
       "id": 5,

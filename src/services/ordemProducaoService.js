@@ -405,8 +405,9 @@ const OrdemProducaoService = {
                     dataEntrega,
                     dataInicio,
                     horaPrevista,
-                    recurso: f.recurso || '',
+                    recurso: f.recurso || f.ferramenta?.descricao || '',
                     tipo,
+                    contingencia: f.contingencia || false,
                 };
             });
 
