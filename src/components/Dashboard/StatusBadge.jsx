@@ -4,7 +4,7 @@ import { statusLabels, statusColors } from '../../constants/ordemProducaoStatus'
 
 /**
  * Badge de status da OP com label e cor consistentes.
- * @param {string} status - Chave do status (rascunho, sequenciada, confirmada, em_producao, concluida, cancelada)
+ * @param {string} status - Chave do status (OPStatus: nao_programada, programada, na_prensa, no_forno, na_embalagem, concluida, cancelada, aguardando_ferramenta)
  */
 const StatusBadge = memo(({ status }) => {
   const label = statusLabels[status] ?? status;

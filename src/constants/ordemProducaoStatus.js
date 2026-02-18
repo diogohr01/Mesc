@@ -1,25 +1,40 @@
 /**
- * Labels e cores de status para Ordem de Produção (sequenciamento).
+ * Labels e cores de status para Ordem de Produção (OPStatus e OPStatusDetalhado).
  * Usado por Dashboard, Gantt, StatusBadge e demais componentes.
  */
 
+/** OPStatus — status principal da OP MESC */
 export const statusLabels = {
-  rascunho: 'Rascunho',
-  sequenciada: 'Sequenciada',
-  aguardando_confirmacao: 'Aguardando Confirmação',
-  confirmada: 'Confirmada',
-  em_producao: 'Em Produção',
+  nao_programada: 'Não Programada',
+  programada: 'Programada',
+  na_prensa: 'Na Prensa',
+  no_forno: 'No Forno',
+  na_embalagem: 'Na Embalagem',
   concluida: 'Concluída',
   cancelada: 'Cancelada',
+  aguardando_ferramenta: 'Aguard. Ferramenta',
 };
 
-/** Cores para Tag do Ant Design (success, processing, warning, error, default) ou uso em estilo */
+/** Cores para Tag do Ant Design (success, processing, warning, error, default) */
 export const statusColors = {
-  rascunho: 'default',
-  sequenciada: 'processing',
-  aguardando_confirmacao: 'gold',
-  confirmada: 'blue',
-  em_producao: 'orange',
+  nao_programada: 'default',
+  programada: 'processing',
+  na_prensa: 'blue',
+  no_forno: 'orange',
+  na_embalagem: 'cyan',
   concluida: 'success',
   cancelada: 'default',
+  aguardando_ferramenta: 'error',
+};
+
+/** OPStatusDetalhado — etapa detalhada (opcional) */
+export const statusDetalhadoLabels = {
+  programada: 'Programada',
+  na_prensa: 'Na Prensa',
+  no_corte: 'No Corte',
+  no_forno: 'No Forno',
+  esfriando: 'Esfriando',
+  na_embalagem: 'Na Embalagem',
+  concluida: 'Concluída',
+  falha: 'Falha',
 };

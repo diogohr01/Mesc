@@ -54,12 +54,14 @@ const SCALE_STEP = 0.2;
 
 const statuses = [
   'todos',
-  'rascunho',
-  'sequenciada',
-  'aguardando_confirmacao',
-  'confirmada',
-  'em_producao',
+  'nao_programada',
+  'programada',
+  'na_prensa',
+  'no_forno',
+  'na_embalagem',
   'concluida',
+  'cancelada',
+  'aguardando_ferramenta',
 ];
 
 const GanttProducao = () => {
@@ -181,7 +183,7 @@ const GanttProducao = () => {
       op.filhas
         .filter((f) => {
           if (filtroTipoContext && filtroTipoContext !== 'todos' && f.tipo !== filtroTipoContext) return false;
-          if (onlyConfirmadas && f.status !== 'confirmada' && f.status !== 'em_producao')
+          if (onlyConfirmadas && f.status !== 'programada' && !['na_prensa', 'no_forno', 'na_embalagem'].includes(f.status))
             return false;
           if (statusFilter !== 'todos' && f.status !== statusFilter) return false;
           if (recursoFilter !== 'todos') {

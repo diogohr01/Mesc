@@ -28,11 +28,11 @@ function getBarColor(filha, pai) {
       return { bg: 'hsl(38, 92%, 50%)', label: 'Risco' };
     }
   }
-  if (filha.status === 'confirmada' || filha.status === 'em_producao') {
-    return { bg: 'hsl(142, 71%, 40%)', label: 'No prazo' };
+  if (['na_prensa', 'no_forno', 'na_embalagem'].includes(filha.status)) {
+    return { bg: 'hsl(142, 71%, 40%)', label: 'Em produção' };
   }
-  if (filha.status === 'sequenciada') return { bg: 'hsl(210, 100%, 52%)', label: 'Sequenciada' };
-  return { bg: 'hsl(220, 10%, 40%)', label: 'Rascunho' };
+  if (filha.status === 'programada') return { bg: 'hsl(210, 100%, 52%)', label: 'Programada' };
+  return { bg: 'hsl(220, 10%, 40%)', label: 'Não programada' };
 }
 
 const GanttBar = memo(function GanttBar({

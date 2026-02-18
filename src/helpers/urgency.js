@@ -1,7 +1,7 @@
 /**
  * Nível de urgência com base na data de entrega e status.
  * @param {string|Date} dataEntrega - Data de entrega da OP
- * @param {string} status - Status da OP (ex.: em_producao, concluida)
+ * @param {string} status - Status da OP (ex.: na_prensa, concluida)
  * @returns {'critical'|'warning'|'ok'}
  */
 export function getUrgencyLevel(dataEntrega, status) {

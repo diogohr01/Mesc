@@ -12,11 +12,13 @@ import {
 import {
   BarChartOutlined,
   BellOutlined,
-  FilterOutlined,
   CheckCircleOutlined,
   FileTextOutlined,
+  FireOutlined,
+  HomeOutlined,
   RiseOutlined,
   ToolOutlined,
+  UserOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
 import { motion } from 'framer-motion';
@@ -27,6 +29,7 @@ import AlertasService from '../../services/alertasService';
 import OrdemProducaoService from '../../services/ordemProducaoService';
 import RecursosProdutivosService from '../../services/recursosProdutivosService';
 import { statusLabels } from '../../constants/ordemProducaoStatus';
+import { getUrgencyLevel, urgencyColors } from '../../helpers/urgency';
 import { colors } from '../../styles/colors';
 
 const { Title, Text } = Typography;
@@ -39,11 +42,23 @@ const ALERTA_STYLES = {
 
 const CAPACIDADE_TOTAL = 30;
 
-const RESUMO_STATUS_KEYS = ['rascunho', 'sequenciada', 'confirmada', 'em_producao'];
+const STATUS_EM_PRODUCAO = ['na_prensa', 'no_forno', 'na_embalagem'];
+
+const RESUMO_STATUS_KEYS = ['nao_programada', 'programada', 'na_prensa', 'no_forno', 'na_embalagem', 'concluida', 'cancelada', 'aguardando_ferramenta'];
+const RESUMO_STATUS_COLORS = {
+  nao_programada: '#8c8c8c',
+  programada: '#1890ff',
+  na_prensa: '#385E9D',
+  no_forno: '#d46b08',
+  na_embalagem: '#597ef7',
+  concluida: '#52c41a',
+  cancelada: '#8c8c8c',
+  aguardando_ferramenta: '#ff4d4f',
+};
 const RESUMO_STATUS = RESUMO_STATUS_KEYS.map((key) => ({
   key,
   label: statusLabels[key] || key,
-  color: key === 'rascunho' ? '#8c8c8c' : key === 'sequenciada' ? '#1890ff' : key === 'confirmada' ? '#385E9D' : '#d46b08',
+  color: RESUMO_STATUS_COLORS[key] || '#8c8c8c',
 }));
 
 const Dashboard = () => {
@@ -73,7 +88,7 @@ const Dashboard = () => {
   }, []);
 
   const totalOPs = opsResumo.length;
-  const emProducao = opsResumo.filter((op) => op.status === 'em_producao').length;
+  const emProducao = opsResumo.filter((op) => STATUS_EM_PRODUCAO.includes(op.status)).length;
   const hoje = new Date();
   const atrasadas = opsResumo.filter(
     (op) =>
@@ -91,13 +106,13 @@ const Dashboard = () => {
     () =>
       opsResumo
         .filter((op) => op.status !== 'concluida' && op.status !== 'cancelada')
-        .sort((a, b) => (b.score || 0) - (a.score || 0))
-        .slice(0, 5),
+        .sort((a, b) => (new Date(a.dataEntrega || 0)).getTime() - (new Date(b.dataEntrega || 0)).getTime())
+        .slice(0, 8),
     [opsResumo]
   );
 
   const opsEmProducao = useMemo(
-    () => opsResumo.filter((op) => op.status === 'em_producao'),
+    () => opsResumo.filter((op) => STATUS_EM_PRODUCAO.includes(op.status)),
     [opsResumo]
   );
   const programadoHoje = useMemo(
@@ -110,6 +125,18 @@ const Dashboard = () => {
   );
   const clienteHoje = programadoHoje - casaHoje;
   const capacidadePct = Math.min(Math.round((programadoHoje / CAPACIDADE_TOTAL) * 100), 100);
+
+  const opsForno = useMemo(
+    () =>
+      opsResumo.filter(
+        (op) => op.status === 'no_forno' || op.statusDetalhado === 'no_forno'
+      ),
+    [opsResumo]
+  );
+  const pesoForno = useMemo(
+    () => opsForno.reduce((acc, op) => acc + (op.quantidadeKg || 0) / 1000, 0),
+    [opsForno]
+  );
 
   const alertasUrgentesCount = alertas.filter((a) => a.tipo === 'urgente').length;
 
@@ -184,7 +211,8 @@ const Dashboard = () => {
         </Col>
       </Row>
       <Row gutter={[24, 24]}>
-      <Col xs={24} lg={24}>
+        {/* Capacidade Diária */}
+        <Col xs={24} lg={16}>
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -255,6 +283,73 @@ const Dashboard = () => {
             </LayoutCard>
           </motion.div>
         </Col>
+
+        {/* Status do Forno */}
+        <Col xs={24} lg={8}>
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.22 }}
+            style={{ height: '100%' }}
+          >
+            <LayoutCard
+              header={
+                <Title level={5} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <FireOutlined style={{ color: '#faad14' }} />
+                  Status do Forno
+                </Title>
+              }
+              style={{ height: '100%' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <Tag
+                  color={
+                    opsForno.length === 0
+                      ? 'default'
+                      : pesoForno > 25
+                        ? 'error'
+                        : 'warning'
+                  }
+                  style={{ margin: 0 }}
+                >
+                  {opsForno.length === 0 ? 'Vazio' : pesoForno > 25 ? 'Cheio' : 'Parcial'}
+                </Tag>
+              </div>
+              <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 12 }}>
+                <Text strong style={{ fontFamily: 'monospace', color: colors.text.primary }}>{opsForno.length}</Text> OPs •{' '}
+                <Text strong style={{ fontFamily: 'monospace', color: colors.text.primary }}>{pesoForno.toFixed(1)} ton</Text>
+              </Text>
+              <div style={{ maxHeight: 140, overflowY: 'auto' }}>
+                {opsForno.length === 0 ? (
+                  <Text type="secondary" style={{ fontSize: 12 }}>Nenhuma OP no forno</Text>
+                ) : (
+                  opsForno.map((op) => (
+                    <div
+                      key={op.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 8,
+                        padding: '6px 8px',
+                        marginBottom: 4,
+                        background: colors.backgroundGray,
+                        borderRadius: 6,
+                        border: '1px solid #f0f0f0',
+                        fontSize: 11,
+                      }}
+                    >
+                      <Text strong style={{ fontFamily: 'monospace', fontSize: 11 }}>{op.codigo}</Text>
+                      <Text type="secondary" style={{ flex: 1, fontSize: 10 }} ellipsis>{op.produto}</Text>
+                      <Tag style={{ margin: 0, fontSize: 10 }}>{op.tempera || '-'}</Tag>
+                      <Text style={{ fontFamily: 'monospace', fontSize: 11 }}>{(op.quantidadeKg / 1000).toFixed(1)}t</Text>
+                    </div>
+                  ))
+                )}
+              </div>
+            </LayoutCard>
+          </motion.div>
+        </Col>
       </Row>
 
       <Row gutter={[24, 24]}>
@@ -297,16 +392,35 @@ const Dashboard = () => {
                       <Text type="secondary" style={{ width: 20, fontFamily: 'monospace', fontSize: 9 }}>
                         {i + 1}
                       </Text>
+                      {op.tipo === 'casa' ? (
+                        <HomeOutlined style={{ color: colors.primary, fontSize: 14 }} />
+                      ) : (
+                        <UserOutlined style={{ color: '#385E9D', fontSize: 14 }} />
+                      )}
                       <div>
-                        <Text strong style={{ display: 'block', fontSize: 13 }}>
-                          {op.codigo}
-                        </Text>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Text strong style={{ fontSize: 13 }}>
+                            {op.codigo}
+                          </Text>
+                          {op.statusDetalhado === 'falha' && (
+                            <WarningOutlined style={{ color: '#ff4d4f', fontSize: 14 }} />
+                          )}
+                        </span>
                         <Text type="secondary" style={{ fontSize: 9 }}>
                           {op.produto} • {op.cliente}
                         </Text>
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontFamily: 'monospace',
+                          color: urgencyColors[getUrgencyLevel(op.dataEntrega, op.status)] || colors.text.secondary,
+                        }}
+                      >
+                        {op.dataEntrega ? dayjs(op.dataEntrega).format('DD/MM') : '-'}
+                      </Text>
                       <StatusBadge status={op.status} />
                       <ScoreBadge score={op.score} />
                     </div>
@@ -348,9 +462,8 @@ const Dashboard = () => {
                     onMouseEnter={() => setHoveredAlertaId(alerta.id)}
                     onMouseLeave={() => setHoveredAlertaId(null)}
                     style={{
+                      ...(ALERTA_STYLES[alerta.tipo] || { borderLeft: `4px solid ${colors.primary}`, backgroundColor: colors.white }),
                       padding: '12px 16px',
-                      borderLeft: `4px solid ${colors.primary}`,
-                      backgroundColor: colors.white,
                       borderBottom: idx < alertas.length - 1 ? '1px solid #f0f0f0' : 'none',
                       transition: 'background-color 0.2s',
                     }}
@@ -366,11 +479,11 @@ const Dashboard = () => {
       </Row>
 
     
+      {/*
       <Row gutter={[24, 24]}>
-        {/* Capacidade Diária */}
-      
+        // Capacidade Diária 
 
-        {/* Status dos Recursos */}
+        // Status dos Recursos 
         <Col xs={24} lg={24}>
           <motion.div
             initial={{ opacity: 0, y: 8 }}
@@ -481,6 +594,7 @@ const Dashboard = () => {
           </motion.div>
         </Col>
       </Row>
+      */}
     </div>
   );
 };

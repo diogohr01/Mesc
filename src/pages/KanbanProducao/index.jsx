@@ -30,15 +30,17 @@ const filterFormConfig = [
 const { Content } = Layout;
 const { Text } = Typography;
 
-const KANBAN_STATUSES = ['rascunho', 'sequenciada', 'aguardando_confirmacao', 'confirmada', 'em_producao', 'concluida'];
+const KANBAN_STATUSES = ['nao_programada', 'programada', 'na_prensa', 'no_forno', 'na_embalagem', 'concluida', 'cancelada', 'aguardando_ferramenta'];
 
 const COLUMN_BORDER_COLORS = {
-  rascunho: '#8c8c8c',
-  sequenciada: '#1890ff',
-  aguardando_confirmacao: '#faad14',
-  confirmada: '#1890ff',
-  em_producao: '#fa8c16',
+  nao_programada: '#8c8c8c',
+  programada: '#1890ff',
+  na_prensa: '#385E9D',
+  no_forno: '#d46b08',
+  na_embalagem: '#597ef7',
   concluida: '#52c41a',
+  cancelada: '#8c8c8c',
+  aguardando_ferramenta: '#ff4d4f',
 };
 
 const getSemanaAtual = () => [

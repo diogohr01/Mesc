@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Col, Form, Layout, message, Row, Slider, Space, Tag, Typography } from 'antd';
+import { Button, Col, Form, Layout, message, Row, Select, Space, Tag, Typography } from 'antd';
 import { ThunderboltOutlined, LockOutlined, LeftOutlined, RightOutlined, HolderOutlined, DeleteOutlined } from '@ant-design/icons';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import dayjs from 'dayjs';
@@ -65,11 +65,10 @@ const FilaProducao = () => {
   useEffect(() => {
     filterForm.setFieldsValue({
       diaSequenciamento: diaSequenciamento,
-      filtroTipo,
       filtroLiga: filtroLiga ?? undefined,
       filtroTempera: filtroTempera ?? undefined,
     });
-  }, [diaSequenciamento, filtroTipo, filtroLiga, filtroTempera, filterForm]);
+  }, [diaSequenciamento, filtroLiga, filtroTempera, filterForm]);
 
   useEffect(() => {
     setContextCenarioId(cenarioAtivoId);
@@ -267,10 +266,9 @@ const FilaProducao = () => {
     () => [
       { columns: 1, questions: [{ type: 'period', id: 'period', noLabel: false, label: 'Período', size: 'middle' }] },
       {
-        columns: 4,
+        columns: 3,
         questions: [
           { type: 'date', id: 'diaSequenciamento', required: false, label: 'Dia do sequenciamento', size: 'middle', format: 'DD/MM/YYYY' },
-          { type: 'select', id: 'filtroTipo', required: false, label: 'Tipo', size: 'middle', options: [{ value: 'todos', label: 'Todos' }, { value: 'casa', label: 'Casa' }, { value: 'cliente', label: 'Cliente' }] },
           { type: 'select', id: 'filtroLiga', required: false, label: 'Liga', size: 'middle', options: [{ value: '', label: 'Todos' }, ...(opcoesLiga || [])] },
           { type: 'select', id: 'filtroTempera', required: false, label: 'Têmpera', size: 'middle', options: [{ value: '', label: 'Todos' }, ...(opcoesTempera || [])] },
         ],
@@ -281,10 +279,9 @@ const FilaProducao = () => {
 
   const handleFilter = useCallback(
     (values) => {
-      if (values.diaSequenciamento) setDiaSequenciamento(dayjs(values.diaSequenciamento));
-      if (values.filtroTipo !== undefined) setFiltroTipo(values.filtroTipo);
-      if (values.filtroLiga !== undefined) setFiltroLiga(values.filtroLiga === '' ? undefined : values.filtroLiga);
-      if (values.filtroTempera !== undefined) setFiltroTempera(values.filtroTempera === '' ? undefined : values.filtroTempera);
+      if (values?.diaSequenciamento) setDiaSequenciamento(dayjs(values.diaSequenciamento));
+      if (values?.filtroLiga !== undefined) setFiltroLiga(values.filtroLiga === '' ? undefined : values.filtroLiga);
+      if (values?.filtroTempera !== undefined) setFiltroTempera(values.filtroTempera === '' ? undefined : values.filtroTempera);
       loadAllFila();
     },
     [loadAllFila]
@@ -396,17 +393,17 @@ const FilaProducao = () => {
         <Button type="text" icon={<RightOutlined />} onClick={handleNextDay} />
       </Space>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <Text type="secondary" style={{ fontSize: 12 }}>Casa {casaPct}%</Text>
-        <Slider
-          min={0}
-          max={100}
-          step={5}
-          value={casaPct}
-          onChange={handleSliderChange}
-          disabled={confirmada}
-          style={{ width: 160, margin: 0 }}
+        <Select
+          value={filtroTipo}
+          options={[
+            { value: 'todos', label: 'Todos' },
+            { value: 'casa', label: 'Casa' },
+            { value: 'cliente', label: 'Cliente' },
+          ]}
+          onChange={setFiltroTipo}
+          style={{ width: 120 }}
+          size="middle"
         />
-        <Text type="secondary" style={{ fontSize: 12 }}>Cliente {100 - casaPct}%</Text>
         {confirmada && (
           <Tag icon={<LockOutlined />} color="default">
             Confirmada
@@ -431,7 +428,7 @@ const FilaProducao = () => {
         formConfig={filterFormConfig}
         formInstance={filterForm}
         onSubmit={() => {
-          handleFilter();
+          handleFilter(filterForm.getFieldsValue());
           setModalFiltrosOpen(false);
         }}
         secondaryButton={

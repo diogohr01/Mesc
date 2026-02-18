@@ -337,13 +337,15 @@ const OrdemProducaoService = {
             opsResumo.push({
                 id: f.id,
                 codigo: f.numeroOPERP || `${pai ? pai.numeroOPERP : ''}-${f.id}`,
-                status: f.status || 'rascunho',
+                status: f.status || 'nao_programada',
                 dataEntrega,
                 score: f.score != null ? f.score : 0,
                 produto,
                 cliente: (f.cliente && f.cliente.nome) || '',
                 quantidadeKg,
                 tipo: f.tipo === 'casa' ? 'casa' : 'cliente',
+                statusDetalhado: f.statusDetalhado || null,
+                tempera: (pai && pai.tempera) || f.tempera || '',
             });
         });
         pais.forEach((p) => {
@@ -354,13 +356,15 @@ const OrdemProducaoService = {
                 opsResumo.push({
                     id: p.id,
                     codigo: p.numeroOPERP || '',
-                    status: (p.situacao === 'Em cadastro' ? 'rascunho' : 'sequenciada') || 'rascunho',
+                    status: (p.situacao === 'Em cadastro' ? 'nao_programada' : 'programada') || 'nao_programada',
                     dataEntrega,
                     score: 0,
                     produto: p.produto || (p.itens && p.itens[0] && p.itens[0].descricaoItem) || '',
                     cliente: (p.cliente && p.cliente.nome) || '',
                     quantidadeKg,
                     tipo: p.tipo === 'casa' ? 'casa' : 'cliente',
+                    statusDetalhado: p.statusDetalhado || null,
+                    tempera: p.tempera || '',
                 });
             }
         });
@@ -391,7 +395,7 @@ const OrdemProducaoService = {
                 return {
                     id: f.id,
                     codigo: f.numeroOPERP || '',
-                    status: f.status || 'rascunho',
+                    status: f.status || 'nao_programada',
                     score: f.score != null ? f.score : 0,
                     produto,
                     cliente: (f.cliente && f.cliente.nome) || (pai && pai.cliente && pai.cliente.nome) || '',
@@ -457,7 +461,7 @@ const OrdemProducaoService = {
                 return {
                     id: f.id,
                     codigo: f.numeroOPERP || '',
-                    status: f.status || 'rascunho',
+                    status: f.status || 'nao_programada',
                     score: f.score != null ? f.score : 0,
                     produto,
                     cliente: clienteNome,
@@ -542,7 +546,7 @@ const OrdemProducaoService = {
                         dataFim: f.dataFim || f.dataOP,
                         dataEntrega,
                         recurso: f.recurso || '',
-                        status: f.status || 'rascunho',
+                        status: f.status || 'nao_programada',
                         quantidade: (f.itens && f.itens[0] && f.itens[0].quantidadePecas) || 0,
                         score: f.score != null ? f.score : 0,
                         setupMinutos: f.setupMinutos != null ? f.setupMinutos : 0,
