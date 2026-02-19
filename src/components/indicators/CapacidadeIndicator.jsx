@@ -1,5 +1,6 @@
 import React from 'react';
-import { Progress, Space, Typography } from 'antd';
+import { Progress, Typography } from 'antd';
+import { InfoCircleOutlined } from '@ant-design/icons';
 import { colors } from '../../styles/colors';
 
 const { Text } = Typography;
@@ -18,50 +19,67 @@ function getColorByPercent(percent) {
 }
 
 const CapacidadeIndicator = ({
-  utilizadoTon = 0,
-  capacidadeTon = CAPACIDADE_DEFAULT,
   filtroTipo = 'casa',
   casaTon = 0,
   clienteTon = 0,
+  casaCap = 18,
+  clienteCap = 12,
   showProgress = true,
 }) => {
-
-  const filtrarPorTipo = (tipo) => {
-    if (tipo === 'casa') return casaTon;
-    if (tipo === 'cliente') return clienteTon;
-    return utilizadoTon;
-  };
-    const total = Number(filtrarPorTipo(filtroTipo)) || 0;
-  const capacidade = Number(capacidadeTon) || CAPACIDADE_DEFAULT;
   const casa = Number(casaTon) || 0;
   const cliente = Number(clienteTon) || 0;
-  const percent = capacidade > 0 ? Math.min(Math.round((total / capacidade) * 100), 999) : 0;
-  const barPercent = Math.min(percent, 100);
-  const color = getColorByPercent(percent);
+  const capCasa = Number(casaCap) || 18;
+  const capCliente = Number(clienteCap) || 12;
+
+  const mainTon = filtroTipo === 'casa' ? casa : cliente;
+  const mainCap = filtroTipo === 'casa' ? capCasa : capCliente;
+  const mainLabel = filtroTipo === 'casa' ? 'Casa' : 'Cliente';
+
+  const otherTon = filtroTipo === 'casa' ? cliente : casa;
+  const otherCap = filtroTipo === 'casa' ? capCliente : capCasa;
+  const otherLabel = filtroTipo === 'casa' ? 'Cliente' : 'Casa';
+
+  const mainPercent = mainCap > 0 ? Math.min(Math.round((mainTon / mainCap) * 100), 999) : 0;
+  const otherPercent = otherCap > 0 ? Math.min(Math.round((otherTon / otherCap) * 100), 999) : 0;
+  const barPercent = Math.min(mainPercent, 100);
+  const color = getColorByPercent(mainPercent);
 
   return (
-    <Space size="middle" wrap style={{ alignItems: 'center' }}>
-      <Text strong style={{ fontSize: 15, fontFamily: 'monospace' }}>
-        {total.toFixed(1)} / {capacidade} ton
-      </Text>
-      <Text type="secondary" style={{ fontSize: 13 }}>
-        {percent}% utilizada
-      </Text>
-      <Text type="secondary" style={{ fontSize: 13 }}>
-        Casa: {casa.toFixed(1)} | Cliente: {cliente.toFixed(1)}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <Text strong style={{ fontSize: 13, fontFamily: 'monospace' }}>
+        {mainLabel}: {mainTon.toFixed(1)} / {mainCap} ton
       </Text>
       {showProgress && (
-        <div style={{ minWidth: 120, maxWidth: 200 }}>
-          <Progress
-            percent={barPercent}
-            showInfo={false}
-            strokeColor={color}
-            trailColor={colors.backgroundGray || '#f0f0f0'}
-            size="small"
-          />
-        </div>
+        <>
+          <div style={{ flex: 1 }}>
+            <Progress
+              percent={barPercent}
+              showInfo={false}
+              strokeColor={color}
+              trailColor={colors.backgroundGray || '#f0f0f0'}
+              size="small"
+            />
+          </div>
+          <Text style={{ fontSize: 13, minWidth: 36 }}>{mainPercent}%</Text>
+        </>
       )}
-    </Space>
+      <div
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '4px 10px',
+          background: colors.backgroundGray || '#f0f0f0',
+          borderRadius: 4,
+          fontSize: 12,
+        }}
+      >
+        <InfoCircleOutlined style={{ color: colors.text.secondary }} />
+        <Text type="secondary" style={{ fontSize: 12, margin: 0 }}>
+          {otherLabel}: {otherTon.toFixed(1)}/{otherCap} ton ({otherPercent}%)
+        </Text>
+      </div>
+    </div>
   );
 };
 

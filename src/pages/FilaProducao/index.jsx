@@ -571,7 +571,7 @@ const FilaProducao = () => {
               <Space direction="vertical" size="middle" style={{ width: '100%' }}>
                 <Row gutter={16}>
                   <Col span={24}>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
         <Button
           type={filtroTipo === 'casa' ? 'primary' : 'default'}
           icon={<HomeOutlined />}
