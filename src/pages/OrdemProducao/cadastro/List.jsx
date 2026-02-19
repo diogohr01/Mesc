@@ -89,7 +89,7 @@ const List = ({ onAdd, onEdit, onView }) => {
     []
   );
 
-  // Lista mostra apenas OP Pai; OP Filhas aparecem ao expandir a linha
+  // Lista mostra OPs Totvs; OPs MESC ao expandir a linha
   const fetchData = useCallback(
     async (page, pageSize, sorterField, sortOrder) => {
       setLoading(true);
@@ -307,7 +307,7 @@ const List = ({ onAdd, onEdit, onView }) => {
       const data = response?.data?.data || [];
       setFilhasMap((prev) => ({ ...prev, [opPaiId]: data }));
     } catch (error) {
-      console.error('Erro ao buscar OP Filhas:', error);
+      console.error('Erro ao buscar OPs MESC:', error);
       setFilhasMap((prev) => ({ ...prev, [opPaiId]: [] }));
     } finally {
       setLoadingFilhas((prev) => ({ ...prev, [opPaiId]: false }));
@@ -428,7 +428,7 @@ const List = ({ onAdd, onEdit, onView }) => {
       expandedRowRender: (record) => (
         <div style={{ marginLeft: 24, padding: 12, background: '#fafafa', borderRadius: 6, border: '1px solid #f0f0f0', fontSize: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
-            <Text strong style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em', color: colors.text.secondary }}>OPs MESC (filhas)</Text>
+            <Text strong style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em', color: colors.text.secondary }}>OPs MESC</Text>
             <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => { setModalCriarOPPai(record); setModalCriarOPOpen(true); }}>
               Criar OP MESC
             </Button>
@@ -563,7 +563,7 @@ const List = ({ onAdd, onEdit, onView }) => {
     
   ], [handleEdit, handleView, handleCopy, handleAtivarDesativar, filhasMap]);
 
-  // Colunas para a aba OPs Filhas (lista paginada, com Recurso, sem expandível)
+  // Colunas para a aba OPs MESC (lista paginada, com Recurso, sem expandível)
   const columnsFilhasList = useMemo(() => [
     { title: 'OP ERP', dataIndex: 'numeroOPERP', key: 'numeroOPERP', width: 120 },
     { title: 'Data', dataIndex: 'dataOP', key: 'dataOP', width: 120, render: (date) => (date ? dayjs(date).format('DD/MM/YYYY') : '-'), sorter: true },
@@ -622,7 +622,7 @@ const List = ({ onAdd, onEdit, onView }) => {
             <Card
               variant="borderless"
               title="Ordens de Produção"
-              subtitle="Gestão de OPs Totvs (pai) e OPs MESC (filhas)"
+              subtitle="Gestão de OPs Totvs e OPs MESC"
               extra={
                 <Space>
                   <Button icon={<PlusOutlined />} onClick={() => { setModalCriarOPPai(null); setModalCriarOPOpen(true); }}>
@@ -670,7 +670,7 @@ const List = ({ onAdd, onEdit, onView }) => {
               <Tabs activeKey={activeTab} onChange={setActiveTab} items={[
                 {
                   key: 'pai',
-                  label: 'OPs Pai',
+                  label: 'OPs Totvs',
                   children: (
                     <div style={{ padding: '16px 0' }}>
                       <PaginatedTable
@@ -689,7 +689,7 @@ const List = ({ onAdd, onEdit, onView }) => {
                 },
                 {
                   key: 'filhas',
-                  label: 'OPs Filhas',
+                  label: 'OPs MESC',
                   children: (
                     <div style={{ padding: '16px 0' }}>
                       <PaginatedTable

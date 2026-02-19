@@ -247,7 +247,7 @@ const View = ({ record, onEdit, onCancel, onCopy, onAtivarDesativar }) => {
                     formInstance={form}
                   />
 
-                  {/* Grid Ferramentas da OP (apenas nas OP Filhas) */}
+                  {/* Grid Ferramentas da OP (apenas nas OPs MESC) */}
                   {ordemData?.tipoOp === 'FILHA' && (
                     <div style={{ marginTop: 24 }}>
                       <Title level={4} style={{ marginBottom: 16 }}>Ferramentas da OP</Title>

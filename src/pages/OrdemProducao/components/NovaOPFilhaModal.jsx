@@ -10,7 +10,7 @@ const NovaOPFilhaModal = ({ open, onClose, opPaiId, clientesOptions = [], onSucc
   const formConfig = useMemo(
     () => [
       {
-        title: 'Nova OP Filha',
+        title: 'Nova OP MESC',
         columns: 2,
         questions: [
           {
@@ -86,10 +86,10 @@ const NovaOPFilhaModal = ({ open, onClose, opPaiId, clientesOptions = [], onSucc
             opPai = resPai.data.data;
           }
         } catch (e) {
-          console.warn('Não foi possível carregar OP Pai:', e);
+          console.warn('Não foi possível carregar OP Totvs:', e);
         }
         if (!opPai) {
-          message.error('Não foi possível carregar dados da OP Pai.');
+          message.error('Não foi possível carregar dados da OP Totvs.');
           return;
         }
         const itensPai = opPai.itens || [];
@@ -114,14 +114,14 @@ const NovaOPFilhaModal = ({ open, onClose, opPaiId, clientesOptions = [], onSucc
         };
         const response = await OrdemProducaoService.upsert(ordemData);
         if (response.success) {
-          message.success('OP Filha cadastrada com sucesso!');
+          message.success('OP MESC cadastrada com sucesso!');
           onSuccess?.();
           onClose?.();
         } else {
-          message.error(response.message || 'Erro ao cadastrar OP Filha.');
+          message.error(response.message || 'Erro ao cadastrar OP MESC.');
         }
       } catch (error) {
-        message.error('Erro ao cadastrar OP Filha.');
+        message.error('Erro ao cadastrar OP MESC.');
         console.error(error);
       }
     },
@@ -130,7 +130,7 @@ const NovaOPFilhaModal = ({ open, onClose, opPaiId, clientesOptions = [], onSucc
 
   return (
     <Modal
-      title="Nova OP Filha"
+      title="Nova OP MESC"
       open={open}
       onCancel={onClose}
       footer={null}
@@ -142,7 +142,7 @@ const NovaOPFilhaModal = ({ open, onClose, opPaiId, clientesOptions = [], onSucc
         formInstance={form}
         onSubmit={handleSubmit}
         onClose={onClose}
-        submitText="Cadastrar OP Filha"
+        submitText="Cadastrar OP MESC"
         submitOnSide={true}
       />
     </Modal>

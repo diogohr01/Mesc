@@ -13,7 +13,7 @@ import NovaOPFilhaModal from '../components/NovaOPFilhaModal';
 
 const { Content } = Layout;
 
-// Nova OP pela tela é sempre OP Filha; OP Pai só é criada via Pedidos "Cadastrar OP".
+// Nova OP pela tela é sempre OP MESC; OP Totvs só é criada via Pedidos "Cadastrar OP".
 const AddEdit = ({ editingRecord, onCancel, onSave, onEdit, onView }) => {
   const [loading, setLoading] = useState(false);
   const [loadingBuscarOP, setLoadingBuscarOP] = useState(false);
@@ -48,7 +48,7 @@ const AddEdit = ({ editingRecord, onCancel, onSave, onEdit, onView }) => {
     loadClientes();
   }, []);
 
-  // Carregar OPs Pai para dropdown (nova OP Filha ou edição de OP Filha)
+  // Carregar OPs Totvs para dropdown (nova OP MESC ou edição de OP MESC)
   useEffect(() => {
     const loadOpsPai = async () => {
       try {
@@ -65,7 +65,7 @@ const AddEdit = ({ editingRecord, onCancel, onSave, onEdit, onView }) => {
           setOpsPaiOptions(options);
         }
       } catch (error) {
-        console.error('Erro ao carregar OPs Pai:', error);
+        console.error('Erro ao carregar OPs Totvs:', error);
       }
     };
     loadOpsPai();
@@ -84,8 +84,8 @@ const AddEdit = ({ editingRecord, onCancel, onSave, onEdit, onView }) => {
               type: 'select',
               id: 'opPaiId',
               required: true,
-              placeholder: 'Selecione a OP Pai',
-              label: 'OP Pai',
+              placeholder: 'Selecione a OP Totvs',
+              label: 'OP Totvs',
               options: opsPaiOptions,
               showSearch: true,
               disabled: opPaiDisabled,
@@ -400,7 +400,7 @@ const AddEdit = ({ editingRecord, onCancel, onSave, onEdit, onView }) => {
     }
   }, [editingRecord, fetchRecordData, form]);
 
-  // Carregar OP Filhas quando estiver editando um OP Pai
+  // Carregar OPs MESC quando estiver editando uma OP Totvs
   const fetchOpFilhas = useCallback(async () => {
     if (!editingRecord?.id || editingRecord?.tipoOp !== 'PAI') return;
     setLoadingOpFilhas(true);
@@ -412,7 +412,7 @@ const AddEdit = ({ editingRecord, onCancel, onSave, onEdit, onView }) => {
       });
       setOpFilhasList(response?.data?.data || []);
     } catch (error) {
-      console.error('Erro ao carregar OP Filhas:', error);
+      console.error('Erro ao carregar OPs MESC:', error);
       setOpFilhasList([]);
     } finally {
       setLoadingOpFilhas(false);
@@ -431,10 +431,10 @@ const AddEdit = ({ editingRecord, onCancel, onSave, onEdit, onView }) => {
     async (record) => {
       try {
         await OrdemProducaoService.delete(record.id);
-        message.success('OP Filha excluída com sucesso!');
+        message.success('OP MESC excluída com sucesso!');
         fetchOpFilhas();
       } catch (error) {
-        message.error('Erro ao excluir OP Filha.');
+        message.error('Erro ao excluir OP MESC.');
         console.error(error);
       }
     },
@@ -644,7 +644,7 @@ const AddEdit = ({ editingRecord, onCancel, onSave, onEdit, onView }) => {
           <Col span={24}>
             <Card
               variant="borderless"
-              title={editingRecord ? 'Editar Ordem de Produção' : 'Nova OP Filha'}
+              title={editingRecord ? 'Editar Ordem de Produção' : 'Nova OP MESC'}
               extra={<Button type="default" icon={<AiOutlineArrowLeft />} onClick={onCancel} disabled={loading} size="middle">Voltar</Button>}
             >
               {loading ? <Loading /> : (
@@ -663,11 +663,11 @@ const AddEdit = ({ editingRecord, onCancel, onSave, onEdit, onView }) => {
                       onClose={onCancel}
                     />
 
-                    {/* OP Filhas (somente quando editando OP Pai) */}
+                    {/* OPs MESC (somente quando editando OP Totvs) */}
                     {editingRecord?.tipoOp === 'PAI' && editingRecord?.id && (
                       <Card
                         size="small"
-                        title="OP Filhas"
+                        title="OPs MESC"
                         style={{ marginTop: 24, marginBottom: 24 }}
                         extra={
                           <Button
@@ -676,15 +676,15 @@ const AddEdit = ({ editingRecord, onCancel, onSave, onEdit, onView }) => {
                             onClick={() => setModalNovaFilhaOpen(true)}
                             size="middle"
                           >
-                            Nova OP Filha
+                            Nova OP MESC
                           </Button>
                         }
                       >
                         {loadingOpFilhas ? (
-                          <div style={{ padding: 24, textAlign: 'center' }}>Carregando OP Filhas...</div>
+                          <div style={{ padding: 24, textAlign: 'center' }}>Carregando OPs MESC...</div>
                         ) : opFilhasList.length === 0 ? (
                           <div style={{ padding: 16, background: '#fafafa', borderRadius: 6, color: '#666' }}>
-                            Nenhuma OP Filha cadastrada. Clique em &quot;Nova OP Filha&quot; para cadastrar.
+                            Nenhuma OP MESC cadastrada. Clique em &quot;Nova OP MESC&quot; para cadastrar.
                           </div>
                         ) : (
                           <Table
@@ -700,7 +700,7 @@ const AddEdit = ({ editingRecord, onCancel, onSave, onEdit, onView }) => {
                       </Card>
                     )}
 
-                    {/* Grid Ferramentas da OP (apenas nas OP Filhas) */}
+                    {/* Grid Ferramentas da OP (apenas nas OPs MESC) */}
                     {(editingRecord?.tipoOp === 'FILHA' || !editingRecord) && (
                       <div style={{ marginTop: 24, marginBottom: 24 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -752,7 +752,7 @@ const AddEdit = ({ editingRecord, onCancel, onSave, onEdit, onView }) => {
                       ) : editingRecord?.tipoOp === 'FILHA' && editingRecord?.id ? (
                         <>
                           <p style={{ marginBottom: 12, color: '#666', fontSize: '13px' }}>
-                            Itens herdados da OP Pai. Edite apenas a quantidade a trabalhar.
+                            Itens herdados da OP Totvs. Edite apenas a quantidade a trabalhar.
                           </p>
                           <Table
                             dataSource={itens}

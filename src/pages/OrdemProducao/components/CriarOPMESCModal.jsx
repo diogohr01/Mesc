@@ -147,7 +147,7 @@ const CriarOPMESCModal = ({ open, onClose, opPaiId, opPaiRecord, onSuccess }) =>
     async (values) => {
       const id = opPaiId ?? opPaiRecord?.id;
       if (!isManual && !id) {
-        message.error('OP Pai não informada.');
+        message.error('OP Totvs não informada.');
         return;
       }
       try {
@@ -233,7 +233,7 @@ const CriarOPMESCModal = ({ open, onClose, opPaiId, opPaiRecord, onSuccess }) =>
       )}
       {!isManual && itemMatch && (itemMatch.percentual_perda > 0 || itemMatch.percentualPerda > 0) && quantidadeAProduzir > 0 && (() => {
         const perdaPct = itemMatch.percentual_perda ?? itemMatch.percentualPerda ?? 0;
-        const qtdIdeal = Math.ceil(Number(quantidadeAProduzir) * (1 + perdaPct / 100));
+        const qtdSugerida = Math.ceil(Number(quantidadeAProduzir) / (1 - perdaPct / 100));
         return (
           <Alert
             type="info"
@@ -241,7 +241,7 @@ const CriarOPMESCModal = ({ open, onClose, opPaiId, opPaiRecord, onSuccess }) =>
             message="Item com perda cadastrada"
             description={
               <span>
-                O item tem <Text strong>{perdaPct}% de perda</Text> cadastrada. Quantidade solicitada: <Text strong>{Number(quantidadeAProduzir).toLocaleString('pt-BR')}</Text>. Quantidade ideal a produzir: <Text strong>{qtdIdeal.toLocaleString('pt-BR')}</Text> peças.
+                O item tem <Text strong>{perdaPct}% de perda</Text> cadastrada. Quantidade desejada: <Text strong>{Number(quantidadeAProduzir).toLocaleString('pt-BR')}</Text>. Quantidade sugerida a produzir: <Text strong>{qtdSugerida.toLocaleString('pt-BR')}</Text> peças.
               </span>
             }
             style={{ marginBottom: 16 }}

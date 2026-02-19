@@ -35,7 +35,7 @@ const FerramentaOPFilhaModal = ({ open, onClose, ordemData, onSuccess }) => {
   const formConfig = useMemo(
     () => [
       {
-        title: 'Configuração da Ferramenta da OP Filha',
+        title: 'Configuração da Ferramenta da OP MESC',
         columns: 2,
         questions: [
           { type: 'select', id: 'codigoFerramenta', label: 'Cód. da Ferramenta', required: false, placeholder: 'Selecione a ferramenta', options: ferramentasOptions, showSearch: true },
@@ -85,7 +85,7 @@ const FerramentaOPFilhaModal = ({ open, onClose, ordemData, onSuccess }) => {
   const handleSubmit = useCallback(
     async (values) => {
       if (!ordemData?.id) {
-        message.error('OP Filha não identificada.');
+        message.error('OP MESC não identificada.');
         return;
       }
       setSaving(true);
@@ -145,7 +145,7 @@ const FerramentaOPFilhaModal = ({ open, onClose, ordemData, onSuccess }) => {
 
   return (
     <Modal
-      title="Configurar ferramenta da OP Filha"
+      title="Configurar ferramenta da OP MESC"
       open={open}
       onCancel={onClose}
       footer={null}

@@ -99,7 +99,7 @@ const GanttBar = memo(function GanttBar({
         </span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', fontSize: 10 }}>
-        <span style={{ color: '#8c8c8c' }}>OP Pai:</span>
+        <span style={{ color: '#8c8c8c' }}>OP Totvs:</span>
         <span style={{ fontFamily: 'monospace' }}>{pai.codigo}</span>
         <span style={{ color: '#8c8c8c' }}>Produto:</span>
         <span>{pai.produto}</span>

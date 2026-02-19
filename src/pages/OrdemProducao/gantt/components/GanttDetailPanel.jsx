@@ -168,7 +168,7 @@ function GanttDetailPanel({ filha, pai, onClose, onUpdate }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <InfoRow icon={AppstoreOutlined} label="Produto" value={pai.produto} />
         <InfoRow icon={UserOutlined} label="Cliente" value={pai.cliente} />
-        <InfoRow icon={AppstoreOutlined} label="OP Pai" value={pai.codigo} mono />
+        <InfoRow icon={AppstoreOutlined} label="OP Totvs" value={pai.codigo} mono />
         <InfoRow icon={ThunderboltOutlined} label="Liga / Têmpera" value={`${pai.liga} / ${pai.tempera}`} mono />
         <InfoRow icon={ThunderboltOutlined} label="Recurso" value={filha.recurso} />
 

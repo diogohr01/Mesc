@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Col, Form, Input, Layout, message, Modal, Row, Space, Tag, Tooltip, Typography } from 'antd';
+import { Button, Col, Form, Input, Layout, message, Modal, Row, Space, Tag, Tabs, Tooltip, Typography } from 'antd';
 import { ThunderboltOutlined, LockOutlined, LeftOutlined, RightOutlined, HolderOutlined, DeleteOutlined, InfoCircleOutlined, HomeOutlined, TeamOutlined } from '@ant-design/icons';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import dayjs from 'dayjs';
@@ -17,6 +17,7 @@ import { colors } from '../../styles/colors';
 import ModalSequenciarOP from './Modals/ModalSequenciarOP';
 import ModalConfirmarOP from './Modals/ModalConfirmarOP';
 import ModalGerarOPs from './Modals/ModalGerarOPs';
+import CriarOPMESCModal from '../OrdemProducao/components/CriarOPMESCModal';
 
 dayjs.locale('pt-br');
 
@@ -77,11 +78,16 @@ const FilaProducao = () => {
   const [diaSequenciamento, setDiaSequenciamento] = useState(() => dayjs());
   const [modalFiltrosOpen, setModalFiltrosOpen] = useState(false);
   const [modalSequenciarOpen, setModalSequenciarOpen] = useState(false);
+  const [modalDisponiveisOpen, setModalDisponiveisOpen] = useState(false);
+  const [tabDisponiveis, setTabDisponiveis] = useState('mesc'); // 'mesc' | 'totvs'
+  const [modalCriarOPMESCPai, setModalCriarOPMESCPai] = useState(null); // record OP Totvs para Criar OP MESC
+  const [viewMode, setViewMode] = useState('dia'); // 'dia' | 'semana'
   const [modalConfirmarOpen, setModalConfirmarOpen] = useState(false);
   const [modalGerarOPsOpen, setModalGerarOPsOpen] = useState(false);
   const [justificativaModal, setJustificativaModal] = useState(null);
   const [justificativaTexto, setJustificativaTexto] = useState('');
   const tableDisponiveisRef = useRef(null);
+  const tableTotvsRef = useRef(null);
   const { searchTerm } = useFilterSearchContext();
   const { setCenarioId: setContextCenarioId, setFiltroTipo: setContextFiltroTipo } = useFilaGanttFilterContext();
   const [filterForm] = Form.useForm();
@@ -212,6 +218,7 @@ const FilaProducao = () => {
       return { ...prev, [dateKey]: { ...seq, ops: newOps } };
     });
     setSelectedRowKeys([]);
+    setModalDisponiveisOpen(false);
   }, [selectedRowKeys, opsDisponiveis, dateKey]);
 
   const handleRemoverDoDia = useCallback(
@@ -320,6 +327,14 @@ const FilaProducao = () => {
     setDiaSequenciamento(next);
   }, [diaSequenciamento]);
 
+  const handlePrevWeek = useCallback(() => {
+    setDiaSequenciamento(dayjs(diaSequenciamento).subtract(1, 'week'));
+  }, [diaSequenciamento]);
+
+  const handleNextWeek = useCallback(() => {
+    setDiaSequenciamento(dayjs(diaSequenciamento).add(1, 'week'));
+  }, [diaSequenciamento]);
+
   const handleSliderChange = useCallback(
     (value) => {
       const v = Array.isArray(value) ? value[0] : value;
@@ -348,6 +363,52 @@ const FilaProducao = () => {
     const ops = (currentSeq.ops || []).filter((op) => op.tipo !== 'casa');
     return ops.reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
   }, [currentSeq.ops]);
+
+  const selectedOpsTon = useMemo(() => {
+    const selected = opsDisponiveis.filter((op) => selectedRowKeys.includes(op.id));
+    const casa = selected.filter((op) => (op.tipo || 'cliente') === 'casa').reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
+    const cliente = selected.filter((op) => (op.tipo || 'cliente') !== 'casa').reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
+    return { casaTon: casa, clienteTon: cliente, totalTon: casa + cliente };
+  }, [opsDisponiveis, selectedRowKeys]);
+
+  const diasDaSemana = useMemo(() => {
+    const inicio = dayjs(diaSequenciamento).startOf('week');
+    return Array.from({ length: 7 }, (_, i) => {
+      const dia = inicio.add(i, 'day');
+      const dk = getDateKey(dia);
+      const seq = getOrCreateSeq(sequenciasPorDia, dk);
+      const ops = seq.ops || [];
+      const casaTon = ops.filter((op) => op.tipo === 'casa').reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
+      const clienteTon = ops.filter((op) => op.tipo !== 'casa').reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
+      return { dia, dateKey: dk, ops, casaTon, clienteTon, confirmada: !!seq.confirmada };
+    });
+  }, [diaSequenciamento, sequenciasPorDia]);
+
+  const CAPACIDADE_CASA_SEMANA = 18 * 7; // 126 ton
+  const CAPACIDADE_CLIENTE_SEMANA = 12 * 7; // 84 ton
+
+  const { casaTonSemana, clienteTonSemana, opsSemanaOrdenadas } = useMemo(() => {
+    let casa = 0;
+    let cliente = 0;
+    const lista = [];
+    diasDaSemana.forEach(({ dia, dateKey, ops, casaTon, clienteTon, confirmada }) => {
+      casa += casaTon;
+      cliente += clienteTon;
+      ops.forEach((op) => lista.push({ ...op, diaAssignado: dia, dateKeyAssignado: dateKey, diaConfirmado: confirmada }));
+    });
+    lista.sort((a, b) => (a.dateKeyAssignado || '').localeCompare(b.dateKeyAssignado || ''));
+    return { casaTonSemana: casa, clienteTonSemana: cliente, opsSemanaOrdenadas: lista };
+  }, [diasDaSemana]);
+
+  const opsSemanaFiltradas = useMemo(
+    () => opsSemanaOrdenadas.filter((op) => (op.tipo || 'cliente') === filtroTipo),
+    [opsSemanaOrdenadas, filtroTipo]
+  );
+
+  const semanaTemOPs = useMemo(
+    () => diasDaSemana.some((d) => (d.ops?.length ?? 0) > 0),
+    [diasDaSemana]
+  );
 
   const filterFormConfig = useMemo(
     () => [
@@ -453,6 +514,50 @@ const FilaProducao = () => {
     []
   );
 
+  const columnsTotvs = useMemo(
+    () => [
+      { title: 'OP Totvs', dataIndex: 'numeroOPERP', key: 'numeroOPERP', width: 110 },
+      { title: 'Produto', key: 'produto', width: 160, ellipsis: true, render: (_, r) => r.produto || r.itens?.[0]?.item?.descricao || '-' },
+      { title: 'Cliente', key: 'cliente', width: 140, ellipsis: true, render: (_, r) => r?.cliente?.nome ?? '-' },
+      { title: 'Tipo', dataIndex: 'tipo', key: 'tipo', width: 80, render: (t) => (t === 'casa' ? <Tag color="blue">Casa</Tag> : <Tag>Cliente</Tag>) },
+      { title: 'Liga', dataIndex: 'liga', key: 'liga', width: 80 },
+      { title: 'Têmpera', dataIndex: 'tempera', key: 'tempera', width: 80 },
+      { title: 'Qtd (kg)', key: 'qtdTotal', width: 90, align: 'right', render: (_, r) => (r.itens?.reduce((s, i) => s + (parseFloat(i.quantidadePecas) || 0), 0) || 0).toLocaleString('pt-BR') },
+      { title: 'Saldo', key: 'saldo', width: 70, align: 'right', render: (_, r) => { const total = (r.itens || []).reduce((s, i) => s + (parseFloat(i.quantidadePecas) || 0), 0); const prog = r.qtdProgramada != null ? Number(r.qtdProgramada) : 0; return Math.max(0, total - prog).toLocaleString('pt-BR'); } },
+      { title: 'Entrega', key: 'dataEntrega', width: 100, render: (_, r) => { const d = r.dataEntrega ?? r.itens?.[0]?.dataEntrega; return d ? dayjs(d).format('DD/MM/YYYY') : '-'; } },
+      { title: 'Situação', dataIndex: 'situacao', key: 'situacao', width: 110, render: (s) => <Tag>{s || '-'}</Tag> },
+      {
+        title: '',
+        key: 'acao',
+        width: 120,
+        fixed: 'right',
+        render: (_, record) => (
+          <Button type="primary" size="small" onClick={() => setModalCriarOPMESCPai(record)}>
+            Criar OP MESC
+          </Button>
+        ),
+      },
+    ],
+    []
+  );
+
+  const fetchDataTotvs = useCallback(async (page, pageSize) => {
+    try {
+      const res = await OrdemProducaoService.getAll({
+        tipoOp: 'PAI',
+        page,
+        pageSize,
+        dataInicio: dayjs().subtract(1, 'month').format('YYYY-MM-DD'),
+        dataFim: dayjs().add(3, 'month').format('YYYY-MM-DD'),
+      });
+      const data = res?.data?.data ?? [];
+      const total = res?.data?.pagination?.totalRecords ?? data.length;
+      return { data, total };
+    } catch (e) {
+      return { data: [], total: 0 };
+    }
+  }, []);
+
   const selectedOPsComPerda = useMemo(() => {
     return opsDisponiveis.filter((op) => {
       if (!selectedRowKeys.includes(op.id)) return false;
@@ -502,25 +607,51 @@ const FilaProducao = () => {
   const filtrosNaTitulo = (
     <Space wrap size="small">
       <Space>
-        <Button type="text" icon={<LeftOutlined />} onClick={handlePrevDay} />
-        <Text strong style={{ minWidth: 220 }}>
-          {diaSequenciamento.format('dddd DD/MM/YYYY')}
-        </Text>
-        <Button type="text" icon={<RightOutlined />} onClick={handleNextDay} />
+        {viewMode === 'semana' ? (
+          <>
+            <Button type="text" icon={<LeftOutlined />} onClick={handlePrevWeek} />
+            <Text strong style={{ minWidth: 220 }}>
+              {dayjs(diaSequenciamento).startOf('week').format('DD/MM')} - {dayjs(diaSequenciamento).startOf('week').add(6, 'day').format('DD/MM/YYYY')}
+            </Text>
+            <Button type="text" icon={<RightOutlined />} onClick={handleNextWeek} />
+          </>
+        ) : (
+          <>
+            <Button type="text" icon={<LeftOutlined />} onClick={handlePrevDay} />
+            <Text strong style={{ minWidth: 220 }}>
+              {diaSequenciamento.format('dddd DD/MM/YYYY')}
+            </Text>
+            <Button type="text" icon={<RightOutlined />} onClick={handleNextDay} />
+          </>
+        )}
+        <Button
+          type={viewMode === 'dia' ? 'primary' : 'default'}
+          onClick={() => setViewMode('dia')}
+        >
+          Dia
+        </Button>
+        <Button
+          type={viewMode === 'semana' ? 'primary' : 'default'}
+          onClick={() => setViewMode('semana')}
+        >
+          Semana
+        </Button>
       </Space>
      
       {/*<Button icon={<UnorderedListOutlined />} onClick={() => setModalSequenciarOpen(true)}>
         Sequenciar OP
       </Button>*/}
      
-      <Button
-        type="primary"
-        icon={<LockOutlined />}
-        onClick={handleConfirmarSequencia}
-        disabled={confirmada || (currentSeq.ops || []).length === 0}
-      >
-        Confirmar Sequência
-      </Button>
+      {viewMode === 'dia' && (
+        <Button
+          type="primary"
+          icon={<LockOutlined />}
+          onClick={handleConfirmarSequencia}
+          disabled={confirmada || (currentSeq.ops || []).length === 0}
+        >
+          Confirmar Sequência
+        </Button>
+      )}
       <FilterModalForm
         open={modalFiltrosOpen}
         onOpenChange={setModalFiltrosOpen}
@@ -577,14 +708,14 @@ const FilaProducao = () => {
           icon={<HomeOutlined />}
           onClick={() => setFiltroTipo('casa')}
         >
-          Casa (18 Ton)
+          {viewMode === 'semana' ? 'Casa (126 Ton/sem)' : 'Casa (18 Ton)'}
         </Button>
         <Button
           type={filtroTipo === 'cliente' ? 'primary' : 'default'}
           icon={<TeamOutlined />}
           onClick={() => setFiltroTipo('cliente')}
         >
-          Cliente (12 Ton)
+          {viewMode === 'semana' ? 'Cliente (84 Ton/sem)' : 'Cliente (12 Ton)'}
         </Button>
         {confirmada && (
           <Tag icon={<LockOutlined />} color="default">
@@ -593,14 +724,111 @@ const FilaProducao = () => {
         )}
       </div>
                     <CapacidadeIndicator
-                      utilizadoTon={utilizadoTon}
-                      capacidadeTon={CAPACIDADE_TON}
-                      casaTon={casaTon}
-                      clienteTon={clienteTon}
+                      filtroTipo={filtroTipo}
+                      casaTon={viewMode === 'semana' ? casaTonSemana : casaTon}
+                      clienteTon={viewMode === 'semana' ? clienteTonSemana : clienteTon}
+                      casaCap={viewMode === 'semana' ? CAPACIDADE_CASA_SEMANA : ((CAPACIDADE_TON * (casaPct ?? 70)) / 100)}
+                      clienteCap={viewMode === 'semana' ? CAPACIDADE_CLIENTE_SEMANA : ((CAPACIDADE_TON * (100 - (casaPct ?? 70))) / 100)}
                     />
+                    {viewMode !== 'semana' && selectedRowKeys.length > 0 && selectedOpsTon.totalTon > 0 && (
+                      <div style={{ marginTop: 8, padding: '8px 12px', background: '#e6f7ff', borderRadius: 6, border: '1px solid #91d5ff', fontSize: 12 }}>
+                        <Text strong>Selecionadas para adicionar:</Text>
+                        <Text style={{ marginLeft: 6 }}>{selectedOpsTon.totalTon.toFixed(1)} ton</Text>
+                        <Text type="secondary" style={{ marginLeft: 8 }}>(Casa: {selectedOpsTon.casaTon.toFixed(1)} · Cliente: {selectedOpsTon.clienteTon.toFixed(1)})</Text>
+                        <br />
+                        <Text type="secondary" style={{ fontSize: 11 }}>
+                          Total previsto: Casa {(casaTon + selectedOpsTon.casaTon).toFixed(1)}/{(CAPACIDADE_TON * (casaPct ?? 70) / 100).toFixed(0)} ton · Cliente {(clienteTon + selectedOpsTon.clienteTon).toFixed(1)}/{(CAPACIDADE_TON * (100 - (casaPct ?? 70)) / 100).toFixed(0)} ton
+                        </Text>
+                      </div>
+                    )}
                   </Col>
                 </Row>
-                {seqDiaAtiva.length > 0 && (
+                {viewMode === 'semana' ? (
+                <Row gutter={16}>
+                  <Col span={24}>
+                    <Card
+                      title={
+                        <span style={{ fontSize: 12, fontWeight: 600 }}>
+                          Sequência da semana — {dayjs(diaSequenciamento).startOf('week').format('DD/MM')} - {dayjs(diaSequenciamento).startOf('week').add(6, 'day').format('DD/MM')} • {filtroTipo === 'casa' ? 'Casa' : 'Cliente'}
+                          <Text type="secondary" style={{ marginLeft: 6, fontSize: 12 }}>({opsSemanaFiltradas.length} OPs)</Text>
+                        </span>
+                      }
+                      size="small"
+                      bodyStyle={{ padding: '8px 12px' }}
+                    >
+                      <div style={{ minHeight: 40 }}>
+                        {semanaTemOPs && (
+                          <div style={{ marginBottom: 8, fontSize: 11 }}>
+                            {diasDaSemana.some((d) => d.confirmada) ? (
+                              <span style={{ marginRight: 12 }}>
+                                <LockOutlined style={{ marginRight: 4 }} />
+                                Confirmados: {diasDaSemana.filter((d) => d.confirmada).map((d) => d.dia.format('ddd DD/MM')).join(', ')}
+                              </span>
+                            ) : (
+                              <span style={{ marginRight: 12, color: '#666' }}>
+                                <LockOutlined style={{ marginRight: 4 }} />
+                                Confirmados: nenhum
+                              </span>
+                            )}
+                            {diasDaSemana.some((d) => !d.confirmada && (d.ops?.length ?? 0) > 0) && (
+                              <span style={{ color: '#666' }}>
+                                Não confirmados: {diasDaSemana.filter((d) => !d.confirmada && (d.ops?.length ?? 0) > 0).map((d) => d.dia.format('ddd DD/MM')).join(', ')}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {opsSemanaFiltradas.length === 0 ? (
+                          <div style={{ textAlign: 'center', color: '#666', padding: 12 }}>
+                            {opsSemanaOrdenadas.length === 0 ? 'Nenhuma OP sequenciada nesta semana.' : `Nenhuma OP de ${filtroTipo === 'casa' ? 'Casa' : 'Cliente'} nesta semana.`}
+                          </div>
+                        ) : (
+                          <>
+                            {opsSemanaFiltradas.map((op, index) => (
+                            <div
+                              key={`${op.dateKeyAssignado}-${op.id}-${index}`}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                padding: '4px 6px',
+                                marginBottom: 2,
+                                borderRadius: 4,
+                                border: '1px solid #f0f0f0',
+                                fontSize: 12,
+                                backgroundColor: '#fff',
+                              }}
+                            >
+                              <span style={{ width: 72, fontSize: 11, color: '#666' }}>{op.diaAssignado ? dayjs(op.diaAssignado).format('ddd DD/MM') : '-'}</span>
+                              {op.diaConfirmado ? (
+                                <Tag icon={<LockOutlined />} color="success" style={{ fontSize: 10 }}>Confirmado</Tag>
+                              ) : (
+                                <Tag color="default" style={{ fontSize: 10 }}>Aguardando confirmação</Tag>
+                              )}
+                              <Text strong style={{ fontFamily: 'monospace', width: 72, fontSize: 12 }}>{op.codigo || '-'}</Text>
+                              {op.contingencia && (
+                                <Tooltip title="OP criada manualmente (contingência)">
+                                  <Tag color="orange" style={{ margin: 0, fontSize: 10 }}>Manual</Tag>
+                                </Tooltip>
+                              )}
+                              
+                              <Text ellipsis style={{ flex: 1, fontSize: 12 }}>{op.produto || '-'}</Text>
+                              <Text type="secondary" style={{ fontSize: 11 }}>{op.liga || '-'} / {op.tempera || '-'}</Text>
+                              <Text style={{ fontSize: 11 }}>{(Number(op.quantidade) || 0).toLocaleString('pt-BR')} kg</Text>
+                              <span style={{ fontSize: 11, color: (op.tipo || 'cliente') === 'casa' ? undefined : undefined }}>
+                                {(op.tipo || 'cliente') === 'casa' ? <Tag color="blue" style={{ margin: 0 }}>Casa</Tag> : <Tag style={{ margin: 0 }}>Cliente</Tag>}
+                              </span>
+                              <span style={{ fontSize: 11, color: urgencyColors[getUrgencyLevel(op.dataEntrega, op.status)] }}>
+                                {op.dataEntrega ? dayjs(op.dataEntrega).format('DD/MM') : '-'}
+                              </span>
+                            </div>
+                            ))}
+                          </>
+                        )}
+                      </div>
+                    </Card>
+                  </Col>
+                </Row>
+                ) : seqDiaAtiva.length > 0 ? (
                 <Row gutter={16}>
                   <Col span={24}>
                     <Card
@@ -615,9 +843,14 @@ const FilaProducao = () => {
                       extra={
                         <Space size="small">
                           {!confirmada && (
-                            <Button danger size="small" icon={<DeleteOutlined />} onClick={handleRemoverTodos}>
-                              Remover todos
-                            </Button>
+                            <>
+                              <Button type="primary" size="small" onClick={() => setModalDisponiveisOpen(true)}>
+                                Adicionar OPs ao dia
+                              </Button>
+                              <Button danger size="small" icon={<DeleteOutlined />} onClick={handleRemoverTodos}>
+                                Remover todos
+                              </Button>
+                            </>
                           )}
                           {confirmada && <Tag icon={<LockOutlined />}>Confirmada</Tag>}
                         </Space>
@@ -696,63 +929,132 @@ const FilaProducao = () => {
                     </Card>
                   </Col>
                 </Row>
-                )}
+                ) : (
                 <Row gutter={16}>
                   <Col span={24}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
-                        <Space size="middle">
-                          <span style={{ fontWeight: 600, fontSize: 14 }}>OPs Disponíveis</span>
-                          <Space size="small">
-                            <Button
-                              type={filtroListaOPs === 'disponiveis' ? 'primary' : 'default'}
-                              size="small"
-                              onClick={() => setFiltroListaOPs('disponiveis')}
-                            >
-                              Disponíveis ({opsDisponiveis.length})
-                            </Button>
-                            <Button
-                              type={filtroListaOPs === 'selecionadas' ? 'primary' : 'default'}
-                              size="small"
-                              onClick={() => setFiltroListaOPs('selecionadas')}
-                            >
-                              Selecionadas ({selectedRowKeys.length})
-                            </Button>
-                          </Space>
-                        </Space>
-                        <Button type="primary" onClick={handleAdicionarAoDia} disabled={selectedRowKeys.length === 0 || confirmada}>
-                          Adicionar ao Dia
-                        </Button>
+                    <Card
+                      title={<span style={{ fontSize: 12, fontWeight: 600 }}>Sequência — {diaSequenciamento.format('DD/MM')}</span>}
+                      size="small"
+                      bodyStyle={{ padding: 16 }}
+                    >
+                      <div style={{ textAlign: 'center', color: '#666', marginBottom: 12 }}>
+                        Nenhuma OP sequenciada neste dia.
                       </div>
-                      <PaginatedTable
-                        ref={tableDisponiveisRef}
-                        fetchData={fetchDataDisponiveis}
-                        initialPageSize={10}
-                        columns={columnsDisponiveis}
-                        rowKey="id"
-                        loadingIcon={<LoadingSpinner />}
-                        disabled={loadingFila}
-                        scroll={{ x: 'max-content' }}
-                        onRow={onRowDisponiveis}
-                        rowSelection={rowSelection}
-                      />
-                      {selectedOPsComPerda.length > 0 && (
-                        <div style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
-                          {selectedOPsComPerda.map((op) => {
-                            const qtd = Number(op.quantidade) || 0;
-                            const perdaPct = op.percentualPerda != null ? Number(op.percentualPerda) : op.item?.percentualPerda || 0;
-                            const produzir = Math.ceil(qtd / (1 - perdaPct / 100));
-                            return (
-                              <div key={op.id}>
-                                {op.codigo}: Necessário: {qtd.toLocaleString('pt-BR')} | Produzir: {produzir.toLocaleString('pt-BR')} ({perdaPct}% perda)
-                              </div>
-                            );
-                          })}
+                      {!confirmada && (
+                        <div style={{ textAlign: 'center' }}>
+                          <Button type="primary" onClick={() => setModalDisponiveisOpen(true)}>
+                            Adicionar OPs ao dia
+                          </Button>
                         </div>
                       )}
-                    </div>
+                    </Card>
                   </Col>
                 </Row>
+                )}
+                <Modal
+                  title="Adicionar OPs ao dia"
+                  open={modalDisponiveisOpen}
+                  onCancel={() => { setModalDisponiveisOpen(false); setTabDisponiveis('mesc'); }}
+                  width={1200}
+                  footer={null}
+                  destroyOnClose
+                >
+                  <Tabs
+                    activeKey={tabDisponiveis}
+                    onChange={setTabDisponiveis}
+                    items={[
+                      {
+                        key: 'mesc',
+                        label: 'OPs MESC',
+                        children: (
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                              <Space size="middle">
+                                <span style={{ fontWeight: 600, fontSize: 14 }}>OPs Disponíveis</span>
+                                <Space size="small">
+                                  <Button
+                                    type={filtroListaOPs === 'disponiveis' ? 'primary' : 'default'}
+                                    size="small"
+                                    onClick={() => setFiltroListaOPs('disponiveis')}
+                                  >
+                                    Disponíveis ({opsDisponiveis.length})
+                                  </Button>
+                                  <Button
+                                    type={filtroListaOPs === 'selecionadas' ? 'primary' : 'default'}
+                                    size="small"
+                                    onClick={() => setFiltroListaOPs('selecionadas')}
+                                  >
+                                    Selecionadas ({selectedRowKeys.length})
+                                  </Button>
+                                </Space>
+                              </Space>
+                              <Button type="primary" onClick={handleAdicionarAoDia} disabled={selectedRowKeys.length === 0 || confirmada}>
+                                Adicionar ao Dia
+                              </Button>
+                            </div>
+                            <PaginatedTable
+                              ref={tableDisponiveisRef}
+                              fetchData={fetchDataDisponiveis}
+                              initialPageSize={10}
+                              columns={columnsDisponiveis}
+                              rowKey="id"
+                              loadingIcon={<LoadingSpinner />}
+                              disabled={loadingFila}
+                              scroll={{ x: 'max-content' }}
+                              onRow={onRowDisponiveis}
+                              rowSelection={rowSelection}
+                            />
+                            {selectedOPsComPerda.length > 0 && (
+                              <div style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
+                                {selectedOPsComPerda.map((op) => {
+                                  const qtd = Number(op.quantidade) || 0;
+                                  const perdaPct = op.percentualPerda != null ? Number(op.percentualPerda) : op.item?.percentualPerda || 0;
+                                  const produzir = Math.ceil(qtd / (1 - perdaPct / 100));
+                                  return (
+                                    <div key={op.id}>
+                                      {op.codigo}: Necessário: {qtd.toLocaleString('pt-BR')} | Produzir: {produzir.toLocaleString('pt-BR')} ({perdaPct}% perda)
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        ),
+                      },
+                      {
+                        key: 'totvs',
+                        label: 'OPs Totvs',
+                        children: (
+                          <div>
+                            <p style={{ marginBottom: 8, fontSize: 12, color: '#666' }}>
+                              OPs Totvs para consulta. Use &quot;Criar OP MESC&quot; por linha para gerar uma OP MESC a partir da OP Totvs.
+                            </p>
+                            <PaginatedTable
+                              ref={tableTotvsRef}
+                              fetchData={fetchDataTotvs}
+                              initialPageSize={10}
+                              columns={columnsTotvs}
+                              rowKey="id"
+                              loadingIcon={<LoadingSpinner />}
+                              scroll={{ x: 'max-content' }}
+                            />
+                          </div>
+                        ),
+                      },
+                    ]}
+                  />
+                </Modal>
+                <CriarOPMESCModal
+                  open={modalCriarOPMESCPai != null}
+                  onClose={() => setModalCriarOPMESCPai(null)}
+                  opPaiId={modalCriarOPMESCPai?.id}
+                  opPaiRecord={modalCriarOPMESCPai ?? undefined}
+                  onSuccess={() => {
+                    loadAllFila();
+                    setModalCriarOPMESCPai(null);
+                    if (tableTotvsRef.current?.reloadTable) tableTotvsRef.current.reloadTable();
+                  }}
+                />
               </Space>
             </Card>
           </Col>

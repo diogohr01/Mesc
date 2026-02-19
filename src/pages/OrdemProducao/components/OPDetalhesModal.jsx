@@ -255,7 +255,7 @@ const OPDetalhesModal = ({ open, onClose, ordemId }) => {
             />
           </TabPane>
 
-          <TabPane tab="OPs Filhas (MESC)" key="3">
+          <TabPane tab="OPs MESC" key="3">
             {ordemData?.opsMESC && ordemData.opsMESC.length > 0 ? (
               <Table
                 dataSource={ordemData.opsMESC}
