@@ -191,4 +191,29 @@ export default createGlobalStyle`
     .header-search-input input::placeholder {
         color: ${colors.layout.siderTextMuted} !important;
     }
+
+    /* Table header: primary bg, white text, primaryLight no hover, ícones de sort brancos */
+    .ant-table-thead > tr > th.ant-table-cell {
+        background: ${colors.primary} !important;
+        color: ${colors.white} !important;
+        border-color: transparent !important;
+    }
+    .ant-table-thead > tr > th.ant-table-cell:hover {
+        background: ${colors.primaryLight}, ${colors.primary} !important;
+        color: ${colors.white} !important;
+    }
+    .ant-table-thead .ant-table-column-sorters {
+        color: ${colors.white} !important;
+    }
+    .ant-table-thead .ant-table-column-sorter {
+        color: rgba(255,255,255,0.65) !important;
+    }
+    .ant-table-thead .ant-table-column-sorter .anticon {
+        color: rgba(255,255,255,0.65) !important;
+    }
+    .ant-table-thead .ant-table-column-has-sorters:hover .ant-table-column-sorter,
+    .ant-table-thead .ant-table-column-sort .ant-table-column-sorter,
+    .ant-table-thead .ant-table-column-sort .ant-table-column-sorter .anticon {
+        color: ${colors.white} !important;
+    }
 `;

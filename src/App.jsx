@@ -27,9 +27,9 @@ function App() {
                 },
                 components: {
                     Table: {
-                        headerBg: colors.background,
-                        headerColor: colors.text.primary,
-                        headerSplitColor: colors.backgroundGray,
+                        headerBg: colors.primary,
+                        headerColor: colors.white,
+                        headerSplitColor: 'transparent',
                        // borderColor: '#e0e0e0',
                         rowHoverBg: colors.background,
                         cellPaddingBlock: 6,
