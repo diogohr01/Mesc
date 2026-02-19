@@ -42,9 +42,10 @@ const FerramentasCadastro = preloadComponent(() => import('../pages/Ferramentas/
 const ClientesCadastro = preloadComponent(() => import('../pages/Clientes/cadastro'));
 const SequenciamentoCadastro = preloadComponent(() => import('../pages/Sequenciamento/cadastro'));
 
-// Tipo de Exceções e Exceções
+// Tipo de Exceções, Exceções e Exceções de Capacidade
 const TipoExcecoesCadastro = preloadComponent(() => import('../pages/TipoExcecoes/cadastro'));
 const ExcecoesCadastro = preloadComponent(() => import('../pages/Excecoes/cadastro'));
+const ExcecoesCapacidade = preloadComponent(() => import('../pages/ExcecoesCapacidade'));
 
 // Dashboard
 const Dashboard = preloadComponent(() => import('../pages/Dashboard'));
@@ -104,9 +105,10 @@ export const defaultRoutes = [
         element: ConfiguracoesRedirect,
         children: [
             { key: '/configuracoes/excecoes', icon: <GradientizeIcon gradientId="menu-excecoes" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Exceções de Calendário', element: ExcecoesCadastro, roles: [roles.roleAdmin] },
+            { key: '/configuracoes/excecoes-capacidade', icon: <GradientizeIcon gradientId="menu-excecoes-capacidade" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Exceções de Capacidade', element: ExcecoesCapacidade, roles: [roles.roleAdmin] },
             { key: '/configuracoes/tipo-excecoes', icon: <GradientizeIcon gradientId="menu-tipo-excecoes" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Tipo de Exceções', element: TipoExcecoesCadastro, roles: [roles.roleAdmin] },
-            { key: '/configuracoes/monitoramento-integracao', icon: <GradientizeIcon gradientId="menu-monitor" fillGradient><AiOutlineSetting /></GradientizeIcon>, label: 'Monitoramento de Integração', element: MonitoramentoIntegracao, roles: [roles.roleAdmin] },
-            { key: '/configuracoes/totvs', icon: <GradientizeIcon gradientId="menu-totvs" fillGradient><AiOutlineSetting /></GradientizeIcon>, label: 'TOTVS', element: Configuracoes, roles: [roles.roleAdmin] },
+            //{ key: '/configuracoes/monitoramento-integracao', icon: <GradientizeIcon gradientId="menu-monitor" fillGradient><AiOutlineSetting /></GradientizeIcon>, label: 'Monitoramento de Integração', element: MonitoramentoIntegracao, roles: [roles.roleAdmin] },
+            { key: '/configuracoes/totvs', icon: <GradientizeIcon gradientId="menu-totvs" fillGradient><AiOutlineSetting /></GradientizeIcon>, label: 'Monitoramento', element: Configuracoes, roles: [roles.roleAdmin] },
 
         ],
     },

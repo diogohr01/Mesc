@@ -324,6 +324,7 @@ const GanttProducao = () => {
             </div>
             <Space size="middle" wrap>
               <GanttZoomPresets zoomScale={zoomScale} onZoomScaleChange={setZoomScale} />
+              {/* 
               <Button
                 size="middle"
                 icon={<UnorderedListOutlined style={{ fontSize: 15 }} />}
@@ -332,6 +333,7 @@ const GanttProducao = () => {
               >
                 Sequenciar OP
               </Button>
+              */}
               <Button
                 size="middle"
                 icon={isFullscreen ? <FullscreenExitOutlined style={{ fontSize: 15 }} /> : <FullscreenOutlined style={{ fontSize: 15 }} />}
