@@ -508,27 +508,7 @@ const FilaProducao = () => {
         </Text>
         <Button type="text" icon={<RightOutlined />} onClick={handleNextDay} />
       </Space>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <Button
-          type={filtroTipo === 'casa' ? 'primary' : 'default'}
-          icon={<HomeOutlined />}
-          onClick={() => setFiltroTipo('casa')}
-        >
-          Casa (18 Ton)
-        </Button>
-        <Button
-          type={filtroTipo === 'cliente' ? 'primary' : 'default'}
-          icon={<TeamOutlined />}
-          onClick={() => setFiltroTipo('cliente')}
-        >
-          Cliente (12 Ton)
-        </Button>
-        {confirmada && (
-          <Tag icon={<LockOutlined />} color="default">
-            Confirmada
-          </Tag>
-        )}
-      </div>
+     
       {/*<Button icon={<UnorderedListOutlined />} onClick={() => setModalSequenciarOpen(true)}>
         Sequenciar OP
       </Button>*/}
@@ -591,6 +571,27 @@ const FilaProducao = () => {
               <Space direction="vertical" size="middle" style={{ width: '100%' }}>
                 <Row gutter={16}>
                   <Col span={24}>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <Button
+          type={filtroTipo === 'casa' ? 'primary' : 'default'}
+          icon={<HomeOutlined />}
+          onClick={() => setFiltroTipo('casa')}
+        >
+          Casa (18 Ton)
+        </Button>
+        <Button
+          type={filtroTipo === 'cliente' ? 'primary' : 'default'}
+          icon={<TeamOutlined />}
+          onClick={() => setFiltroTipo('cliente')}
+        >
+          Cliente (12 Ton)
+        </Button>
+        {confirmada && (
+          <Tag icon={<LockOutlined />} color="default">
+            Confirmada
+          </Tag>
+        )}
+      </div>
                     <CapacidadeIndicator
                       utilizadoTon={utilizadoTon}
                       capacidadeTon={CAPACIDADE_TON}
