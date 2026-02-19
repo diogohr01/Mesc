@@ -24,6 +24,8 @@ const SITUACOES = [
   { key: 'Cancelada', label: 'Cancelada' },
 ];
 
+const temperaTagColor = { T4: 'error', T5: 'processing', T6: 'blue', default: 'default' };
+
 function getStatusCalculado(record, filhas = []) {
   const situacao = record.situacao;
   if (situacao === 'Cancelada') return { label: 'Cancelada', color: 'error' };
@@ -361,7 +363,7 @@ const List = ({ onAdd, onEdit, onView }) => {
       width: 130,
       render: (situacao) => {
         const colorMap = { 'Em cadastro': 'default', 'Liberada': 'processing', 'Programada': 'warning', 'Encerrada': 'success', 'Cancelada': 'error' };
-        return <Badge status={colorMap[situacao] || 'default'} text={situacao} />;
+        return <Badge status={colorMap[situacao] || 'default'} style={{ fontSize: 9 }} text={situacao} />;
       },
     },
     {
@@ -434,7 +436,8 @@ const List = ({ onAdd, onEdit, onView }) => {
           <PaginatedTable
             ref={(r) => { if (r) expandidoRefs.current[record.id] = r; }}
             fetchData={fetchDataFilhasExpandido(record.id)}
-            initialPageSize={5}
+            initialPageSize={100}
+            hidePagination
             columns={columnsFilhas}
             rowKey="id"
             loadingIcon={<LoadingSpinner />}
@@ -451,11 +454,27 @@ const List = ({ onAdd, onEdit, onView }) => {
     {
       title: 'Produto',
       key: 'produto',
-      width: 200,
+      width: 160,
       ellipsis: true,
       render: (_, record) => record.produto || record.itens?.[0]?.item?.descricao || '-',
     },
-    { title: 'Cliente', dataIndex: ['cliente', 'nome'], key: 'cliente', width: 180, ellipsis: true },
+    {
+      title: 'Cliente',
+      dataIndex: ['cliente', 'nome'],
+      key: 'cliente',
+      width: 140,
+      ellipsis: true,
+      render: (_, record) => {
+        const text = record?.cliente?.nome ?? '-';
+        const str = String(text);
+        const display = str.length > 15 ? `${str.slice(0, 15)}...` : str;
+        return (
+          <Tooltip title={str}>
+            <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180 }}>{display}</span>
+          </Tooltip>
+        );
+      },
+    },
     {
       title: 'Tipo',
       dataIndex: 'tipo',
@@ -467,9 +486,23 @@ const List = ({ onAdd, onEdit, onView }) => {
       },
     },
     {
+      title: 'Liga',
+      dataIndex: 'liga',
+      key: 'liga',
+      width: 80,
+      render: (_, record) => <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{record.liga || '-'}</span>,
+    },
+    {
+      title: 'Têmpera',
+      dataIndex: 'tempera',
+      key: 'tempera',
+      width: 80,
+      render: (_, record) => <Tag color={temperaTagColor[record.tempera] || temperaTagColor.default} style={{ margin: 0 }}>{record.tempera || '-'}</Tag>,
+    },
+    {
       title: 'Qtd Total (kg)',
       key: 'qtdTotal',
-      width: 110,
+      width: 80,
       align: 'right',
       render: (_, record) => {
         const itens = record.itens || [];
@@ -496,7 +529,7 @@ const List = ({ onAdd, onEdit, onView }) => {
     {
       title: 'Saldo',
       key: 'saldo',
-      width: 100,
+      width: 60,
       align: 'right',
       render: (_, record) => {
         const itens = record.itens || [];
@@ -509,7 +542,7 @@ const List = ({ onAdd, onEdit, onView }) => {
     {
       title: 'Data Entrega',
       key: 'dataEntrega',
-      width: 110,
+      width: 80,
       render: (_, record) => {
         const dataEntrega = record.dataEntrega ?? record.itens?.[0]?.dataEntrega;
         const level = getUrgencyLevel(dataEntrega, record.situacao === 'Encerrada' ? 'concluida' : '');
@@ -536,7 +569,22 @@ const List = ({ onAdd, onEdit, onView }) => {
     { title: 'Data', dataIndex: 'dataOP', key: 'dataOP', width: 120, render: (date) => (date ? dayjs(date).format('DD/MM/YYYY') : '-'), sorter: true },
     { title: 'Recurso', key: 'recurso', width: 140, render: (_, r) => r.ferramenta?.descricao || r.ferramentas?.[0]?.descricao || '-' },
     { title: 'Nº Pedido', dataIndex: 'numeroPedidoCliente', key: 'numeroPedidoCliente', width: 120, render: (val, r) => val || (r.pedidoId ? `Pedido #${r.pedidoId}` : '-') },
-    { title: 'Cliente', dataIndex: ['cliente', 'nome'], key: 'cliente', width: 250 },
+    {
+      title: 'Cliente',
+      dataIndex: ['cliente', 'nome'],
+      key: 'cliente',
+      width: 250,
+      render: (_, record) => {
+        const text = record?.cliente?.nome ?? '-';
+        const str = String(text);
+        const display = str.length > 15 ? `${str.slice(0, 15)}...` : str;
+        return (
+          <Tooltip title={str}>
+            <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 250 }}>{display}</span>
+          </Tooltip>
+        );
+      },
+    },
     { title: 'Entrega', key: 'dataEntrega', width: 120, render: (_, r) => { const d = r.dataEntrega ?? r.itens?.[0]?.dataEntrega; return d ? dayjs(d).format('DD/MM/YYYY') : '-'; } },
     { title: 'Situação', dataIndex: 'situacao', key: 'situacao', width: 150, render: (situacao) => { const colorMap = { 'Em cadastro': 'default', 'Liberada': 'processing', 'Programada': 'warning', 'Encerrada': 'success', 'Cancelada': 'error' }; return <Badge status={colorMap[situacao] || 'default'} text={situacao} />; } },
     {

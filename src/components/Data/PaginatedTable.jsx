@@ -49,14 +49,16 @@ const PaginatedTable = forwardRef(
             expandable = null, // Suporte para linhas expansíveis
             scroll = { x: 'max-content' }, // Responsividade
             loadingIcon = <LoadingSpinner />, // Ícone customizado para loading
+            hidePagination = false, // Se true, não exibe paginação e carrega todos os itens (pageSize grande)
             ...restProps // Permite passar outras propriedades para a tabela
         },
         ref
     ) => {
+        const effectivePageSize = hidePagination ? 100 : initialPageSize;
         const [data, setData] = useState([]);
         const [pagination, setPagination] = useState({
             current: 1,
-            pageSize: initialPageSize,
+            pageSize: effectivePageSize,
             total: 0,
             showSizeChanger: true, // Adiciona o seletor de tamanho de página
             pageSizeOptions: ['1', '2', '5', '10', '20', '50'],
@@ -239,7 +241,7 @@ const PaginatedTable = forwardRef(
                 {...restProps}
                 dataSource={data}
                 columns={combinedColumns}
-                pagination={{
+                pagination={hidePagination ? false : {
                     ...pagination,
                     disabled: disabled, // Desativa a paginação quando `disabled` for true
                 }}

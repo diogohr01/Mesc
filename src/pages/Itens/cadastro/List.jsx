@@ -1,4 +1,4 @@
-import { Badge, Button, Col, Form, Layout, message, Row } from 'antd';
+import { Badge, Button, Col, Form, Layout, message, Row, Space, Tag } from 'antd';
 import { debounce } from 'lodash';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AiOutlineClear, AiOutlinePlus } from 'react-icons/ai';
@@ -7,6 +7,8 @@ import { useFilterSearchContext } from '../../../contexts/FilterSearchContext';
 import ItensService from '../../../services/itensService';
 
 const { Content } = Layout;
+
+const temperaTagColor = { T4: 'error', T5: 'processing', T6: 'blue', default: 'default' };
 
 const List = ({ onAdd, onEdit, onView }) => {
   const [loading, setLoading] = useState(false);
@@ -87,13 +89,32 @@ const List = ({ onAdd, onEdit, onView }) => {
         width: 120,
         sorter: true,
       },
-      
       {
         title: 'Descrição',
         dataIndex: 'descricao',
         key: 'descricao',
-        width: 300,
+        width: 280,
         sorter: true,
+      },
+      {
+        title: 'Liga',
+        dataIndex: 'liga',
+        key: 'liga',
+        width: 80,
+      },
+      {
+        title: 'Têmpera',
+        dataIndex: 'tempera',
+        key: 'tempera',
+        width: 80,
+        render: (v) =>
+          v ? (
+            <Tag color={temperaTagColor[v] || temperaTagColor.default} style={{ margin: 0, fontFamily: 'monospace' }}>
+              {v}
+            </Tag>
+          ) : (
+            '-'
+          ),
       },
       {
         title: '% Perda',
@@ -104,8 +125,32 @@ const List = ({ onAdd, onEdit, onView }) => {
         align: 'right',
         render: (v, record) => {
           const val = record?.percentual_perda ?? record?.percentualPerda ?? v;
-          return val != null && val !== '' ? Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-';
+          const num = val != null && val !== '' ? Number(val) : null;
+          const style = num != null && num > 10 ? { color: '#ff4d4f', fontWeight: 600 } : {};
+          return num != null ? (
+            <span style={style}>{num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%</span>
+          ) : (
+            '-'
+          );
         },
+      },
+      {
+        title: 'LT Produção',
+        dataIndex: 'leadtime_producao',
+        key: 'leadtime_producao',
+        width: 100,
+        align: 'right',
+        sorter: true,
+        render: (v) => (v != null && v !== '' ? `${v}d` : '-'),
+      },
+      {
+        title: 'LT Entrega',
+        dataIndex: 'leadtime_entrega',
+        key: 'leadtime_entrega',
+        width: 100,
+        align: 'right',
+        sorter: true,
+        render: (v) => (v != null && v !== '' ? `${v}d` : '-'),
       },
       {
         title: 'Unidade',
@@ -161,30 +206,35 @@ const List = ({ onAdd, onEdit, onView }) => {
               variant="borderless"
               title="Itens"
               extra={
-                <FilterModalForm
-                  open={modalFiltrosOpen}
-                  onOpenChange={setModalFiltrosOpen}
-                  formConfig={filterFormConfig}
-                  formInstance={filterForm}
-                  onSubmit={() => {
-                    handleFilter();
-                    setModalFiltrosOpen(false);
-                  }}
-                  secondaryButton={
-                    <Button
-                      icon={<AiOutlineClear />}
-                      onClick={() => {
-                        filterForm.resetFields();
-                        clearSearch();
-                        debouncedReloadTable();
-                        setModalFiltrosOpen(false);
-                      }}
-                      size="middle"
-                    >
-                      Limpar
-                    </Button>
-                  }
-                />
+                <Space>
+                  <Button type="primary" icon={<AiOutlinePlus />} onClick={onAdd} size="middle">
+                    Novo Item
+                  </Button>
+                  <FilterModalForm
+                    open={modalFiltrosOpen}
+                    onOpenChange={setModalFiltrosOpen}
+                    formConfig={filterFormConfig}
+                    formInstance={filterForm}
+                    onSubmit={() => {
+                      handleFilter();
+                      setModalFiltrosOpen(false);
+                    }}
+                    secondaryButton={
+                      <Button
+                        icon={<AiOutlineClear />}
+                        onClick={() => {
+                          filterForm.resetFields();
+                          clearSearch();
+                          debouncedReloadTable();
+                          setModalFiltrosOpen(false);
+                        }}
+                        size="middle"
+                      >
+                        Limpar
+                      </Button>
+                    }
+                  />
+                </Space>
               }
             >
               <div style={{ padding: '16px 0' }}>

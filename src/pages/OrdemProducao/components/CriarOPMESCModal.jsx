@@ -1,18 +1,22 @@
-import { Form, message, Modal, Tag, Typography } from 'antd';
+import { Alert, Form, message, Modal, Tag, Typography } from 'antd';
 import { DynamicForm } from '../../../components';
 import dayjs from 'dayjs';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import OrdemProducaoService from '../../../services/ordemProducaoService';
 import FerramentasService from '../../../services/ferramentasService';
+import ItensService from '../../../services/itensService';
 
 const { Text } = Typography;
 
 const CriarOPMESCModal = ({ open, onClose, opPaiId, opPaiRecord, onSuccess }) => {
   const [form] = Form.useForm();
   const [saldo, setSaldo] = useState(null);
+  const [opPaiResumo, setOpPaiResumo] = useState(null);
+  const [itemMatch, setItemMatch] = useState(null);
   const [ferramentasOptions, setFerramentasOptions] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const quantidadeAProduzir = Form.useWatch('quantidadeAProduzir', form) ?? 0;
   const isManual = opPaiId == null && !opPaiRecord;
 
   useEffect(() => {
@@ -27,10 +31,14 @@ const CriarOPMESCModal = ({ open, onClose, opPaiId, opPaiRecord, onSuccess }) =>
   useEffect(() => {
     if (!open) {
       setSaldo(null);
+      setOpPaiResumo(null);
+      setItemMatch(null);
       return;
     }
     if (isManual) {
       setSaldo(null);
+      setOpPaiResumo(null);
+      setItemMatch(null);
       form.setFieldsValue({ dataOP: dayjs(), situacao: 'Em cadastro' });
       return;
     }
@@ -39,15 +47,31 @@ const CriarOPMESCModal = ({ open, onClose, opPaiId, opPaiRecord, onSuccess }) =>
     setLoading(true);
     OrdemProducaoService.getById(id)
       .then((res) => {
-        if (res?.success && res?.data?.data) {
-          const pai = res.data.data;
+        const pai = res?.data?.data ?? res?.data;
+        if (res?.success && pai) {
           const itens = pai.itens || [];
           const total = itens.reduce((sum, i) => sum + (parseFloat(i.quantidadePecas) || 0), 0);
           const programada = pai.qtdProgramada != null ? Number(pai.qtdProgramada) : 0;
-          setSaldo(Math.max(0, total - programada));
+          const saldoVal = Math.max(0, total - programada);
+          setSaldo(saldoVal);
+          setOpPaiResumo({ total, programada, saldo: saldoVal });
+          if (pai.liga && pai.tempera) {
+            ItensService.getAll({ liga: pai.liga, tempera: pai.tempera, pageSize: 1 })
+              .then((r) => {
+                const list = r?.data?.data ?? [];
+                setItemMatch(list[0] || null);
+              })
+              .catch(() => setItemMatch(null));
+          } else {
+            setItemMatch(null);
+          }
         }
       })
-      .catch(() => setSaldo(null))
+      .catch(() => {
+        setSaldo(null);
+        setOpPaiResumo(null);
+        setItemMatch(null);
+      })
       .finally(() => setLoading(false));
     form.setFieldsValue({ dataOP: dayjs(), situacao: 'Em cadastro' });
   }, [open, opPaiId, opPaiRecord, isManual, form]);
@@ -131,7 +155,7 @@ const CriarOPMESCModal = ({ open, onClose, opPaiId, opPaiRecord, onSuccess }) =>
         let opPai = opPaiRecord || null;
         if (!isManual && id && !opPai) {
           const resPai = await OrdemProducaoService.getById(id);
-          if (resPai?.success && resPai?.data?.data) opPai = resPai.data.data;
+          if (resPai?.success) opPai = resPai?.data?.data ?? resPai?.data;
         }
         const quantidade = values.quantidadeAProduzir ?? (opPai?.itens?.[0]?.quantidadePecas ?? 0);
         const itensPai = opPai?.itens || [];
@@ -192,11 +216,38 @@ const CriarOPMESCModal = ({ open, onClose, opPaiId, opPaiRecord, onSuccess }) =>
           <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>Sem vínculo com OP Totvs</Text>
         </div>
       )}
-      {!isManual && saldo != null && (
+      {!isManual && opPaiResumo != null && (
         <div style={{ marginBottom: 16, padding: 12, background: '#fafafa', borderRadius: 8 }}>
-          <Text strong>Saldo disponível: {saldo.toLocaleString('pt-BR')} peças</Text>
+          <Text strong>Total: {opPaiResumo.total.toLocaleString('pt-BR')} peças</Text>
+          <Text type="secondary" style={{ marginLeft: 12 }}>Programada: {opPaiResumo.programada.toLocaleString('pt-BR')}</Text>
+          <Text type="secondary" style={{ marginLeft: 12 }}>Saldo disponível: {opPaiResumo.saldo.toLocaleString('pt-BR')} peças</Text>
         </div>
       )}
+      {!isManual && saldo != null && quantidadeAProduzir > saldo && saldo > 0 && (
+        <Alert
+          type="warning"
+          showIcon
+          message={`Excede o saldo disponível em ${(quantidadeAProduzir - saldo).toLocaleString('pt-BR')} unidades`}
+          style={{ marginBottom: 16 }}
+        />
+      )}
+      {!isManual && itemMatch && (itemMatch.percentual_perda > 0 || itemMatch.percentualPerda > 0) && quantidadeAProduzir > 0 && (() => {
+        const perdaPct = itemMatch.percentual_perda ?? itemMatch.percentualPerda ?? 0;
+        const qtdIdeal = Math.ceil(Number(quantidadeAProduzir) * (1 + perdaPct / 100));
+        return (
+          <Alert
+            type="info"
+            showIcon
+            message="Item com perda cadastrada"
+            description={
+              <span>
+                O item tem <Text strong>{perdaPct}% de perda</Text> cadastrada. Quantidade solicitada: <Text strong>{Number(quantidadeAProduzir).toLocaleString('pt-BR')}</Text>. Quantidade ideal a produzir: <Text strong>{qtdIdeal.toLocaleString('pt-BR')}</Text> peças.
+              </span>
+            }
+            style={{ marginBottom: 16 }}
+          />
+        );
+      })()}
       <DynamicForm
         formConfig={formConfig}
         formInstance={form}

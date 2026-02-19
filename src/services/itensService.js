@@ -25,6 +25,16 @@ const getMockData = async (endpoint, data) => {
         item.unidade?.toString().toLowerCase().includes(String(filtros.unidade).toLowerCase())
       );
     }
+    if (filtros.liga) {
+      filteredData = filteredData.filter((item) =>
+        String(item.liga || '').toLowerCase().includes(String(filtros.liga).toLowerCase())
+      );
+    }
+    if (filtros.tempera) {
+      filteredData = filteredData.filter((item) =>
+        String(item.tempera || '').toLowerCase() === String(filtros.tempera).toLowerCase()
+      );
+    }
     if (typeof filtros.ativo === 'boolean') {
       filteredData = filteredData.filter((item) => item.ativo === filtros.ativo);
     }
@@ -65,6 +75,8 @@ const getMockData = async (endpoint, data) => {
       codigo: payload.codigo || '',
       cod_ferramenta: payload.cod_ferramenta || '',
       descricao: payload.descricao || '',
+      liga: payload.liga || '',
+      tempera: payload.tempera || '',
       unidade: payload.unidade || 'UN',
       observacoes: payload.observacoes || '',
       leadtime_producao: payload.leadtime_producao ?? 0,

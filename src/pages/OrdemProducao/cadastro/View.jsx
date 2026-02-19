@@ -34,6 +34,8 @@ const View = ({ record, onEdit, onCancel, onCopy, onAtivarDesativar }) => {
             { label: "Encerrada", value: "Encerrada" },
           ]
         },
+        { type: "text", id: "liga", label: "Liga" },
+        { type: "text", id: "tempera", label: "Têmpera" },
         { type: "text", id: "itemCodigo", label: "Item a Produzir (Código)" },
         { type: "text", id: "itemDescricao", label: "Item a Produzir (Descrição)" },
         { type: "integer", id: "quantidadeAProduzir", label: "Quantidade a Produzir" },
@@ -104,6 +106,8 @@ const View = ({ record, onEdit, onCancel, onCopy, onAtivarDesativar }) => {
           numeroPedidoCliente: data.numeroPedidoCliente || '',
           clienteNome: data.cliente?.nome || '',
           situacao: data.situacao || '',
+          liga: data.liga || '',
+          tempera: data.tempera || '',
           itemCodigo: primeiroItem?.codigoItem || '',
           itemDescricao: primeiroItem?.descricaoItem || '',
           quantidadeAProduzir: primeiroItem?.quantidadePecas ?? 0,

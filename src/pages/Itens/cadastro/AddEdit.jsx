@@ -19,6 +19,13 @@ const TIPO_ACABAMENTO = [
   { label: 'Anodização', value: 'anodização' },
 ];
 
+const TEMPERA_OPTIONS = [
+  { label: 'T4', value: 'T4' },
+  { label: 'T5', value: 'T5' },
+  { label: 'T6', value: 'T6' },
+  { label: 'H32', value: 'H32' },
+];
+
 const AddEdit = ({ editingRecord, onCancel, onSave }) => {
   const [loading, setLoading] = useState(false);
   const [ferramentasOptions, setFerramentasOptions] = useState([]);
@@ -57,6 +64,8 @@ const AddEdit = ({ editingRecord, onCancel, onSave }) => {
             showSearch: true,
           },
           { type: 'text', id: 'descricao', required: true, placeholder: 'Digite a descrição', label: 'Descrição' },
+          { type: 'text', id: 'liga', required: false, placeholder: 'Ex.: 6063', label: 'Liga' },
+          { type: 'select', id: 'tempera', required: false, placeholder: 'Selecione', label: 'Têmpera', options: TEMPERA_OPTIONS },
           { type: 'select', id: 'unidade', required: true, placeholder: 'Unidade', label: 'Unidade', options: UNIDADES },
           { type: 'integer', id: 'leadtime_producao', required: false, placeholder: '0', label: 'Lead time produção (dias)' },
           { type: 'integer', id: 'leadtime_entrega', required: false, placeholder: '0', label: 'Lead time entrega (dias)' },
@@ -81,6 +90,8 @@ const AddEdit = ({ editingRecord, onCancel, onSave }) => {
             codigo: r.codigo || '',
             cod_ferramenta: r.cod_ferramenta || undefined,
             descricao: r.descricao || '',
+            liga: r.liga || '',
+            tempera: r.tempera || undefined,
             unidade: r.unidade || 'UN',
             leadtime_producao: r.leadtime_producao ?? 0,
             leadtime_entrega: r.leadtime_entrega ?? 0,
@@ -127,6 +138,8 @@ const AddEdit = ({ editingRecord, onCancel, onSave }) => {
         const itemData = {
           ...values,
           id: editingRecord?.id,
+          liga: values.liga || '',
+          tempera: values.tempera || '',
           leadtime_producao: values.leadtime_producao ?? 0,
           leadtime_entrega: values.leadtime_entrega ?? 0,
           percentual_perda: values.percentual_perda ?? 0,
