@@ -9,8 +9,8 @@ import { useFilterSearchContext } from '../../../contexts/FilterSearchContext';
 import { getUrgencyLevel, urgencyColors } from '../../../helpers/urgency';
 import { toast } from '../../../helpers/toast';
 import OrdemProducaoService from '../../../services/ordemProducaoService';
-import { colors } from '../../../styles/colors';
 import CriarOPMESCModal from '../components/CriarOPMESCModal';
+import OrdemProducaoTotvsList from '../components/OrdemProducaoTotvsList';
 
 const { confirm } = Modal;
 const { Content } = Layout;
@@ -24,36 +24,12 @@ const SITUACOES = [
   { key: 'Cancelada', label: 'Cancelada' },
 ];
 
-const temperaTagColor = { T4: 'error', T5: 'processing', T6: 'blue', default: 'default' };
-
-function getStatusCalculado(record, filhas = []) {
-  const situacao = record.situacao;
-  if (situacao === 'Cancelada') return { label: 'Cancelada', color: 'error' };
-  const itens = record.itens || [];
-  const quantidadeTotal = itens.reduce((sum, i) => sum + (parseFloat(i.quantidadePecas) || 0), 0);
-  let quantidadeProgramada = record.qtdProgramada != null ? Number(record.qtdProgramada) : 0;
-  let quantidadeProduzida = record.qtdProduzida != null ? Number(record.qtdProduzida) : 0;
-  if (quantidadeProgramada === 0 && quantidadeProduzida === 0 && filhas.length > 0) {
-    quantidadeProgramada = filhas.reduce((sum, f) => {
-      const itensF = f.itens || [];
-      return sum + itensF.reduce((s, i) => s + (parseFloat(i.quantidadePecas) || 0), 0);
-    }, 0);
-  }
-  if (quantidadeProduzida >= quantidadeTotal && quantidadeTotal > 0) return { label: 'Concluída', color: 'success' };
-  if (quantidadeProgramada >= quantidadeTotal) return { label: 'Programada', color: 'processing' };
-  if (quantidadeProgramada > 0) return { label: 'Parcial', color: 'warning' };
-  return { label: 'Não Programada', color: 'default' };
-}
-
 const List = ({ onAdd, onEdit, onView }) => {
   const [loading, setLoading] = useState(false);
   const [modalFiltrosOpen, setModalFiltrosOpen] = useState(false);
   const [filterForm] = Form.useForm();
   const tableRef = useRef(null);
   const tableFilhasRef = useRef(null);
-  const [filhasMap, setFilhasMap] = useState({});
-  const [loadingFilhas, setLoadingFilhas] = useState({});
-  const loadedFilhasRef = useRef({});
   const { searchTerm, clearSearch } = useFilterSearchContext();
   const [statusFilter, setStatusFilter] = useState('todos');
   const [activeTab, setActiveTab] = useState('pai');
@@ -294,275 +270,6 @@ const List = ({ onAdd, onEdit, onView }) => {
     return atrasada ? 'op-atrasada' : '';
   }, []);
 
-  const fetchFilhas = useCallback(async (opPaiId) => {
-    if (loadedFilhasRef.current[opPaiId]) return;
-    loadedFilhasRef.current[opPaiId] = true;
-    setLoadingFilhas((prev) => ({ ...prev, [opPaiId]: true }));
-    try {
-      const response = await OrdemProducaoService.getAll({
-        opPaiId,
-        page: 1,
-        pageSize: 100,
-      });
-      const data = response?.data?.data || [];
-      setFilhasMap((prev) => ({ ...prev, [opPaiId]: data }));
-    } catch (error) {
-      console.error('Erro ao buscar OPs MESC:', error);
-      setFilhasMap((prev) => ({ ...prev, [opPaiId]: [] }));
-    } finally {
-      setLoadingFilhas((prev) => ({ ...prev, [opPaiId]: false }));
-    }
-  }, []);
-
-  const fetchDataFilhasExpandido = useCallback((opPaiId) => async (page, pageSize, sorterField, sortOrder) => {
-    const response = await OrdemProducaoService.getAll({
-      opPaiId,
-      page,
-      pageSize,
-      sorterField,
-      sortOrder,
-    });
-    return {
-      data: response?.data?.data || [],
-      total: response?.data?.pagination?.totalRecords || 0,
-    };
-  }, []);
-
-  const expandidoRefs = useRef({});
-
-  const columnsFilhas = useMemo(() => [
-    { title: 'Código OP MESC', dataIndex: 'codigo', key: 'codigo', width: 130, render: (v) => v || '-' },
-    {
-      title: 'Ferramenta',
-      key: 'ferramenta',
-      width: 140,
-      render: (_, record) => record.ferramenta?.descricao || record.ferramentas?.[0]?.descricao || '-',
-    },
-    {
-      title: 'Quantidade',
-      dataIndex: 'itens',
-      key: 'quantidade',
-      width: 100,
-      align: 'right',
-      render: (itens) => {
-        if (!itens || !Array.isArray(itens)) return '0';
-        return itens.reduce((sum, item) => sum + (parseFloat(item.quantidadePecas) || 0), 0).toLocaleString('pt-BR');
-      },
-    },
-    {
-      title: 'Data Programada',
-      dataIndex: 'dataInicio',
-      key: 'dataProgramada',
-      width: 120,
-      render: (v) => (v ? dayjs(v).format('DD/MM/YYYY') : '-'),
-    },
-    {
-      title: 'Status',
-      dataIndex: 'situacao',
-      key: 'situacao',
-      width: 130,
-      render: (situacao) => {
-        const colorMap = { 'Em cadastro': 'default', 'Liberada': 'processing', 'Programada': 'warning', 'Encerrada': 'success', 'Cancelada': 'error' };
-        return <Badge status={colorMap[situacao] || 'default'} style={{ fontSize: 9 }} text={situacao} />;
-      },
-    },
-    {
-      title: 'Seq.',
-      key: 'sequenciamento',
-      width: 120,
-      render: (_, record) => {
-        const jaSequenciada = record.jaSequenciada;
-        const disponivel = record.disponivelParaSequenciamento;
-        if (!jaSequenciada && !disponivel) return '-';
-        return (
-          <Space size={4} wrap>
-            {jaSequenciada && <Tag color="success">Sequenciada</Tag>}
-            {disponivel && !jaSequenciada && <Tag color="blue">Disponível p/ seq.</Tag>}
-          </Space>
-        );
-      },
-    },
-    {
-      title: '',
-      key: 'problema',
-      width: 32,
-      render: (_, record) => {
-        const hasProblema = record.ferramentaIndisponivel || record.alerta || record.statusDetalhado === 'falha';
-        const tooltipTitle = record.statusDetalhado === 'falha' ? 'Ferramenta quebrada ou perda excessiva' : 'Indicador de problema';
-        return hasProblema ? (
-          <Tooltip title={tooltipTitle}>
-            <span style={{ color: '#ff4d4f' }}>&#9888;</span>
-          </Tooltip>
-        ) : null;
-      },
-    },
-    {
-      title: 'Ações',
-      key: 'actions',
-      width: 120,
-      fixed: 'right',
-      render: (_, record) => (
-        <ActionButtons
-          onView={() => handleView(record)}
-          onEdit={() => handleEdit(record)}
-          onCopy={() => handleCopy(record)}
-          onActivate={() => handleAtivarDesativar(record)}
-          onDeactivate={() => handleAtivarDesativar(record)}
-          onDelete={() => handleDelete(record)}
-          showCopy={false}
-          showActivate={false}
-          showDeactivate={false}
-          showDelete={true}
-          isActive={record.ativo}
-          size="small"
-        />
-      ),
-    },
-  ], [handleView, handleEdit, handleCopy, handleAtivarDesativar, handleDelete]);
-
-  const expandable = useMemo(
-    () => ({
-      onExpand: (expanded, record) => {
-        if (expanded) fetchFilhas(record.id);
-      },
-      expandedRowRender: (record) => (
-        <div style={{ marginLeft: 24, padding: 12, background: '#fafafa', borderRadius: 6, border: '1px solid #f0f0f0', fontSize: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
-            <Text strong style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em', color: colors.text.secondary }}>OPs MESC</Text>
-            <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => { setModalCriarOPPai(record); setModalCriarOPOpen(true); }}>
-              Criar OP MESC
-            </Button>
-          </div>
-          <PaginatedTable
-            ref={(r) => { if (r) expandidoRefs.current[record.id] = r; }}
-            fetchData={fetchDataFilhasExpandido(record.id)}
-            initialPageSize={100}
-            hidePagination
-            columns={columnsFilhas}
-            rowKey="id"
-            loadingIcon={<LoadingSpinner />}
-            scroll={{ x: 'max-content' }}
-          />
-        </div>
-      ),
-    }),
-    [fetchFilhas, fetchDataFilhasExpandido, columnsFilhas]
-  );
-
-  const columns = useMemo(() => [
-    { title: 'OP Totvs', dataIndex: 'numeroOPERP', key: 'numeroOPERP', width: 110 },
-    {
-      title: 'Produto',
-      key: 'produto',
-      width: 160,
-      ellipsis: true,
-      render: (_, record) => record.produto || record.itens?.[0]?.item?.descricao || '-',
-    },
-    {
-      title: 'Cliente',
-      dataIndex: ['cliente', 'nome'],
-      key: 'cliente',
-      width: 140,
-      ellipsis: true,
-      render: (_, record) => {
-        const text = record?.cliente?.nome ?? '-';
-        const str = String(text);
-        const display = str.length > 15 ? `${str.slice(0, 15)}...` : str;
-        return (
-          <Tooltip title={str}>
-            <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180 }}>{display}</span>
-          </Tooltip>
-        );
-      },
-    },
-    {
-      title: 'Tipo',
-      dataIndex: 'tipo',
-      key: 'tipo',
-      width: 90,
-      render: (tipo) => {
-        const t = (tipo || 'cliente').toLowerCase();
-        return t === 'casa' ? <Tag color="blue">Casa</Tag> : <Tag>Cliente</Tag>;
-      },
-    },
-    {
-      title: 'Liga',
-      dataIndex: 'liga',
-      key: 'liga',
-      width: 80,
-      render: (_, record) => <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{record.liga || '-'}</span>,
-    },
-    {
-      title: 'Têmpera',
-      dataIndex: 'tempera',
-      key: 'tempera',
-      width: 80,
-      render: (_, record) => <Tag color={temperaTagColor[record.tempera] || temperaTagColor.default} style={{ margin: 0 }}>{record.tempera || '-'}</Tag>,
-    },
-    {
-      title: 'Qtd Total (kg)',
-      key: 'qtdTotal',
-      width: 80,
-      align: 'right',
-      render: (_, record) => {
-        const itens = record.itens || [];
-        const total = itens.reduce((sum, i) => sum + (parseFloat(i.quantidadePecas) || 0), 0);
-        return total > 0 ? total.toLocaleString('pt-BR') : (record.qtdTotalKg != null ? Number(record.qtdTotalKg).toLocaleString('pt-BR') : '-');
-      },
-    },
-    {
-      title: 'Qtd Programada',
-      dataIndex: 'qtdProgramada',
-      key: 'qtdProgramada',
-      width: 80,
-      align: 'right',
-      render: (v) => (v != null ? Number(v).toLocaleString('pt-BR') : '-'),
-    },
-    {
-      title: 'Qtd Produzida',
-      dataIndex: 'qtdProduzida',
-      key: 'qtdProduzida',
-      width: 80,
-      align: 'right',
-      render: (v) => (v != null ? Number(v).toLocaleString('pt-BR') : '-'),
-    },
-    {
-      title: 'Saldo',
-      key: 'saldo',
-      width: 60,
-      align: 'right',
-      render: (_, record) => {
-        const itens = record.itens || [];
-        const total = itens.reduce((sum, i) => sum + (parseFloat(i.quantidadePecas) || 0), 0);
-        const programada = record.qtdProgramada != null ? Number(record.qtdProgramada) : 0;
-        const saldo = Math.max(0, total - programada);
-        return <Text strong={saldo > 0}>{saldo.toLocaleString('pt-BR')}</Text>;
-      },
-    },
-    {
-      title: 'Data Entrega',
-      key: 'dataEntrega',
-      width: 80,
-      render: (_, record) => {
-        const dataEntrega = record.dataEntrega ?? record.itens?.[0]?.dataEntrega;
-        const level = getUrgencyLevel(dataEntrega, record.situacao === 'Encerrada' ? 'concluida' : '');
-        const color = urgencyColors[level];
-        return <span style={{ color: color || undefined }}>{dataEntrega ? dayjs(dataEntrega).format('DD/MM/YYYY') : '-'}</span>;
-      },
-    },
-    {
-      title: 'Status',
-      key: 'statusCalculado',
-      width: 130,
-      render: (_, record) => {
-        const filhas = filhasMap[record.id] || [];
-        const { label, color } = getStatusCalculado(record, filhas);
-        return <Tag color={color}>{label}</Tag>;
-      },
-    },
-    
-  ], [handleEdit, handleView, handleCopy, handleAtivarDesativar, filhasMap]);
-
   // Colunas para a aba OPs MESC (lista paginada, com Recurso, sem expandível)
   const columnsFilhasList = useMemo(() => [
     { title: 'OP ERP', dataIndex: 'numeroOPERP', key: 'numeroOPERP', width: 120 },
@@ -673,16 +380,18 @@ const List = ({ onAdd, onEdit, onView }) => {
                   label: 'OPs Totvs',
                   children: (
                     <div style={{ padding: '16px 0' }}>
-                      <PaginatedTable
+                      <OrdemProducaoTotvsList
                         ref={tableRef}
-                        disabled={loading}
                         fetchData={fetchData}
-                        initialPageSize={10}
-                        columns={columns}
-                        loadingIcon={<LoadingSpinner />}
-                        rowKey="id"
-                        expandable={expandable}
-                        rowClassName={rowClassName}
+                        onCriarOPMESC={(record) => {
+                          setModalCriarOPPai(record);
+                          setModalCriarOPOpen(true);
+                        }}
+                        onViewFilha={handleView}
+                        onEditFilha={handleEdit}
+                        onCopyFilha={handleCopy}
+                        onDeleteFilha={handleDelete}
+                        onAtivarDesativarFilha={handleAtivarDesativar}
                       />
                     </div>
                   ),
@@ -717,8 +426,7 @@ const List = ({ onAdd, onEdit, onView }) => {
           onSuccess={() => {
             if (tableRef.current) tableRef.current.reloadTable();
             if (tableFilhasRef.current) tableFilhasRef.current.reloadTable();
-            const opPaiId = modalCriarOPPai?.id;
-            if (opPaiId && expandidoRefs.current[opPaiId]?.reloadTable) expandidoRefs.current[opPaiId].reloadTable();
+            tableRef.current?.reloadExpandido?.(modalCriarOPPai?.id);
             setModalCriarOPOpen(false);
             setModalCriarOPPai(null);
           }}

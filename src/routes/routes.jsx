@@ -28,6 +28,7 @@ import { PcpRedirect, CadastrosRedirect, ConfiguracoesRedirect } from '../pages/
 // Rotas de Ordem de Produção
 const OrdemProducaoCadastro = preloadComponent(() => import('../pages/OrdemProducao/cadastro'));
 const GanttProducao = preloadComponent(() => import('../pages/OrdemProducao/gantt'));
+const SequenciamentoNovo = preloadComponent(() => import('../pages/SequenciamentoNovo'));
 const FilaProducao = preloadComponent(() => import('../pages/FilaProducao'));
 const KanbanProducao = preloadComponent(() => import('../pages/KanbanProducao'));
 
@@ -74,7 +75,8 @@ export const defaultRoutes = [
         element: PcpRedirect,
         children: [
             { key: '/ordem-producao/cadastro', icon: <GradientizeIcon gradientId="menu-op" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Ordens de Produção', element: OrdemProducaoCadastro, roles: [roles.roleAdmin] },
-            { key: '/fila-producao', icon: <GradientizeIcon gradientId="menu-fila" fillGradient><AiOutlineUnorderedList /></GradientizeIcon>, label: 'Sequenciamento', element: FilaProducao, roles: [roles.roleAdmin] },
+            { key: '/sequenciamento', icon: <GradientizeIcon gradientId="menu-fila" fillGradient><AiOutlineUnorderedList /></GradientizeIcon>, label: 'Sequenciamento', element: SequenciamentoNovo, roles: [roles.roleAdmin] },
+            { key: '/fila-producao', icon: <GradientizeIcon gradientId="menu-fila-producao" fillGradient><AiOutlineUnorderedList /></GradientizeIcon>, label: 'Fila de Produção', element: FilaProducao, roles: [roles.roleAdmin] },
             { key: '/kanban-producao', icon: <GradientizeIcon gradientId="menu-kanban" fillGradient><AiOutlineAppstore /></GradientizeIcon>, label: 'Kanban', element: KanbanProducao, roles: [roles.roleAdmin] },
             { key: '/ordem-producao/gantt', icon: <GradientizeIcon gradientId="menu-gantt" fillGradient><AiOutlineSchedule /></GradientizeIcon>, label: 'Gantt', element: GanttProducao, roles: [roles.roleAdmin] },
         ],

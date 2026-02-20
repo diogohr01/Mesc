@@ -31,9 +31,11 @@ const CapacidadeIndicator = ({
   const capCasa = Number(casaCap) || 18;
   const capCliente = Number(clienteCap) || 12;
 
-  const mainTon = filtroTipo === 'casa' ? casa : cliente;
-  const mainCap = filtroTipo === 'casa' ? capCasa : capCliente;
-  const mainLabel = filtroTipo === 'casa' ? 'Casa' : 'Cliente';
+  const isTodos = filtroTipo === 'todos';
+
+  const mainTon = isTodos ? casa + cliente : (filtroTipo === 'casa' ? casa : cliente);
+  const mainCap = isTodos ? capCasa + capCliente : (filtroTipo === 'casa' ? capCasa : capCliente);
+  const mainLabel = isTodos ? 'Total' : (filtroTipo === 'casa' ? 'Casa' : 'Cliente');
 
   const otherTon = filtroTipo === 'casa' ? cliente : casa;
   const otherCap = filtroTipo === 'casa' ? capCliente : capCasa;
@@ -43,6 +45,9 @@ const CapacidadeIndicator = ({
   const otherPercent = otherCap > 0 ? Math.min(Math.round((otherTon / otherCap) * 100), 999) : 0;
   const barPercent = Math.min(mainPercent, 100);
   const color = getColorByPercent(mainPercent);
+
+  const casaPercent = capCasa > 0 ? Math.min(Math.round((casa / capCasa) * 100), 999) : 0;
+  const clientePercent = capCliente > 0 ? Math.min(Math.round((cliente / capCliente) * 100), 999) : 0;
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -76,7 +81,9 @@ const CapacidadeIndicator = ({
       >
         <InfoCircleOutlined style={{ color: colors.text.secondary }} />
         <Text type="secondary" style={{ fontSize: 12, margin: 0 }}>
-          {otherLabel}: {otherTon.toFixed(1)}/{otherCap} ton ({otherPercent}%)
+          {isTodos
+            ? `Casa: ${casa.toFixed(1)}/${capCasa} ton (${casaPercent}%) · Cliente: ${cliente.toFixed(1)}/${capCliente} ton (${clientePercent}%)`
+            : `${otherLabel}: ${otherTon.toFixed(1)}/${otherCap} ton (${otherPercent}%)`}
         </Text>
       </div>
     </div>

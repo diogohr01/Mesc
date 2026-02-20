@@ -6,6 +6,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Modal } from '../../../components';
 import { FilterSearchProvider, useFilterSearchContext } from '../../../contexts/FilterSearchContext';
 import { FilaGanttFilterProvider } from '../../../contexts/FilaGanttFilterContext';
+import { SequenciamentoProvider } from '../../../contexts/SequenciamentoContext';
 import { useAuth } from '../../../hooks/auth';
 import { defaultRoutes } from '../../../routes/routes';
 import { colors } from '../../../styles/colors';
@@ -326,7 +327,9 @@ const AuthorizedLayout = ({ children, userName }) => {
 const Authorized = ({ children, userName }) => (
     <FilterSearchProvider>
         <FilaGanttFilterProvider>
-            <AuthorizedLayout children={children} userName={userName} />
+            <SequenciamentoProvider>
+                <AuthorizedLayout children={children} userName={userName} />
+            </SequenciamentoProvider>
         </FilaGanttFilterProvider>
     </FilterSearchProvider>
 );

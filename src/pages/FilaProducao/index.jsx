@@ -1,28 +1,23 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Col, Form, Input, Layout, message, Modal, Row, Space, Tag, Tabs, Tooltip, Typography } from 'antd';
-import { ThunderboltOutlined, LockOutlined, LeftOutlined, RightOutlined, HolderOutlined, DeleteOutlined, InfoCircleOutlined, HomeOutlined, TeamOutlined } from '@ant-design/icons';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import 'dayjs/locale/pt-br';
+import { Button, Form, Layout, Row, Col, Space, Typography } from 'antd';
+import {
+  ThunderboltOutlined,
+  HomeOutlined,
+  TeamOutlined,
+  CalendarOutlined,
+  InboxOutlined,
+  DownOutlined,
+  RightOutlined,
+  PlayCircleOutlined,
+} from '@ant-design/icons';
 import { AiOutlineClear } from 'react-icons/ai';
-import { CapacidadeIndicator, Card, FilterModalForm, LoadingSpinner, PaginatedTable } from '../../components';
-import { useFilterSearchContext } from '../../contexts/FilterSearchContext';
-import { useFilaGanttFilterContext } from '../../contexts/FilaGanttFilterContext';
-import { getUrgencyLevel, urgencyBarColors, urgencyColors } from '../../helpers/urgency';
+import { Card, FilterModalForm } from '../../components';
+import { useSequenciamento } from '../../contexts/SequenciamentoContext';
 import StatusBadge from '../../components/Dashboard/StatusBadge';
-import { statusRowTint } from '../../constants/ordemProducaoStatus';
-import OrdemProducaoService from '../../services/ordemProducaoService';
-import SequenciamentoService from '../../services/sequenciamentoService';
+import { getUrgencyLevel, urgencyColors } from '../../helpers/urgency';
 import { colors } from '../../styles/colors';
-import ModalSequenciarOP from './Modals/ModalSequenciarOP';
-import ModalConfirmarOP from './Modals/ModalConfirmarOP';
-import ModalGerarOPs from './Modals/ModalGerarOPs';
-import CriarOPMESCModal from '../OrdemProducao/components/CriarOPMESCModal';
-
-dayjs.locale('pt-br');
-
-const CAPACIDADE_TON = 30;
-const FILA_PAGE_SIZE = 500;
 
 const { Content } = Layout;
 const { Text } = Typography;
@@ -31,661 +26,124 @@ function getDateKey(d) {
   return dayjs(d).format('YYYY-MM-DD');
 }
 
-function getOrCreateSeq(sequenciasPorDia, dateKey) {
-  if (!sequenciasPorDia[dateKey]) {
-    return { ops: [], casaPct: 70, confirmada: false };
-  }
-  return sequenciasPorDia[dateKey];
+function formatDateKey(dateKey) {
+  if (!dateKey || dateKey.length < 10) return dateKey;
+  return `${dateKey.slice(8, 10)}/${dateKey.slice(5, 7)}/${dateKey.slice(0, 4)}`;
 }
 
-function buildSequenciamentoPayload(dateKey, sequenciasPorDia, capacidadeTon = 30) {
-  const seq = sequenciasPorDia[dateKey];
-  if (!seq) {
-    return { data: dateKey, confirmada: false, capacidade: { casaPct: 70, clientePct: 30, casaCap: capacidadeTon * 0.7, clienteCap: capacidadeTon * 0.3 }, sequencia: [] };
+function formatDataEntrega(dataEntrega) {
+  if (!dataEntrega) return '-';
+  const d = dayjs(dataEntrega);
+  return d.isValid() ? d.format('DD/MM') : '-';
+}
+
+/** Extrai texto de valor que pode ser string ou objeto { codigo, descricao } (evita "Objects are not valid as React child") */
+function toLabel(value) {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object' && (value.codigo != null || value.descricao != null)) {
+    return value.descricao ?? value.codigo ?? '';
   }
-  const casaPct = seq.casaPct ?? 70;
-  const clientePct = 100 - casaPct;
-  const casaCap = (capacidadeTon * casaPct) / 100;
-  const clienteCap = (capacidadeTon * clientePct) / 100;
-  const ops = seq.ops || [];
-  const sequencia = ops.map((op, index) => ({
-    idOP: op.id,
-    ordem: index + 1,
-    tipo: op.tipo || 'cliente',
-    quantidade: op.quantidade,
-    ferramenta: op.recurso || op.ferramenta || '',
-  }));
-  return {
-    data: dateKey,
-    confirmada: !!seq.confirmada,
-    capacidade: { casaPct, clientePct, casaCap, clienteCap },
-    sequencia,
-  };
+  return String(value);
 }
 
 const FilaProducao = () => {
-  const [cenarios, setCenarios] = useState([]);
-  const [cenarioAtivo, setCenarioAtivo] = useState(null);
-  const [loadingCenarios, setLoadingCenarios] = useState(true);
-  const [filtroTipo, setFiltroTipo] = useState('casa');
-  const [filtroListaOPs, setFiltroListaOPs] = useState('disponiveis'); // 'disponiveis' | 'selecionadas'
-  const [filtroLiga, setFiltroLiga] = useState(undefined);
-  const [filtroTempera, setFiltroTempera] = useState(undefined);
-  const [allFilaData, setAllFilaData] = useState([]);
-  const [loadingFila, setLoadingFila] = useState(false);
-  const [sequenciasPorDia, setSequenciasPorDia] = useState({});
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
-  const [diaSequenciamento, setDiaSequenciamento] = useState(() => dayjs());
+  const navigate = useNavigate();
+  const { sequenciasPorDia } = useSequenciamento();
   const [modalFiltrosOpen, setModalFiltrosOpen] = useState(false);
-  const [modalSequenciarOpen, setModalSequenciarOpen] = useState(false);
-  const [modalDisponiveisOpen, setModalDisponiveisOpen] = useState(false);
-  const [tabDisponiveis, setTabDisponiveis] = useState('mesc'); // 'mesc' | 'totvs'
-  const [modalCriarOPMESCPai, setModalCriarOPMESCPai] = useState(null); // record OP Totvs para Criar OP MESC
-  const [viewMode, setViewMode] = useState('dia'); // 'dia' | 'semana'
-  const [modalConfirmarOpen, setModalConfirmarOpen] = useState(false);
-  const [modalGerarOPsOpen, setModalGerarOPsOpen] = useState(false);
-  const [justificativaModal, setJustificativaModal] = useState(null);
-  const [justificativaTexto, setJustificativaTexto] = useState('');
-  const tableDisponiveisRef = useRef(null);
-  const tableTotvsRef = useRef(null);
-  const { searchTerm } = useFilterSearchContext();
-  const { setCenarioId: setContextCenarioId, setFiltroTipo: setContextFiltroTipo } = useFilaGanttFilterContext();
+  const [appliedDateKey, setAppliedDateKey] = useState(() => getDateKey(dayjs()));
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
+  const [appliedFiltroTipo, setAppliedFiltroTipo] = useState('todos');
+  const [expandedIds, setExpandedIds] = useState(() => new Set());
   const [filterForm] = Form.useForm();
-
-  const cenarioAtivoId = cenarioAtivo ?? (cenarios[0]?.id ?? null);
-  const dateKey = getDateKey(diaSequenciamento);
-  const currentSeq = getOrCreateSeq(sequenciasPorDia, dateKey);
-  const casaPct = currentSeq.casaPct;
-  const confirmada = currentSeq.confirmada; // pós-confirmação: só visualização (sem adicionar, reordenar, remover ou editar)
-
-  useEffect(() => {
-    filterForm.setFieldsValue({
-      diaSequenciamento: diaSequenciamento,
-      filtroLiga: filtroLiga ?? undefined,
-      filtroTempera: filtroTempera ?? undefined,
-    });
-  }, [diaSequenciamento, filtroLiga, filtroTempera, filterForm]);
-
-  useEffect(() => {
-    setContextCenarioId(cenarioAtivoId);
-  }, [cenarioAtivoId, setContextCenarioId]);
-
-  useEffect(() => {
-    setContextFiltroTipo(filtroTipo);
-  }, [filtroTipo, setContextFiltroTipo]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoadingCenarios(true);
-    SequenciamentoService.getAll({ page: 1, pageSize: 100 })
-      .then((res) => {
-        if (!cancelled && res.success && res.data?.data) {
-          const list = res.data.data;
-          setCenarios(list);
-          if (list.length && cenarioAtivo == null) setCenarioAtivo(list[0].id);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) message.error('Erro ao carregar cenários.');
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingCenarios(false);
-      });
-    return () => { cancelled = true; };
-  }, []);
-
-  const loadAllFila = useCallback(async () => {
-    setLoadingFila(true);
-    try {
-      const response = await OrdemProducaoService.getFilaProducao({
-        page: 1,
-        pageSize: FILA_PAGE_SIZE,
-        search: searchTerm?.trim() || undefined,
-        cenarioId: cenarioAtivoId ?? undefined,
-        filtroTipo: filtroTipo === 'casa' || filtroTipo === 'cliente' ? filtroTipo : undefined,
-      });
-      const data = response.data?.data || [];
-      setAllFilaData(data);
-    } catch (error) {
-      message.error('Erro ao carregar a fila de produção.');
-      console.error(error);
-      setAllFilaData([]);
-    } finally {
-      setLoadingFila(false);
-    }
-  }, [searchTerm, cenarioAtivoId, filtroTipo]);
-
-  useEffect(() => {
-    loadAllFila();
-  }, [loadAllFila]);
-
-  const idsEmQualquerSequencia = useMemo(() => {
-    const ids = new Set();
-    Object.values(sequenciasPorDia).forEach((seq) => {
-      (seq.ops || []).forEach((op) => ids.add(op.id));
-    });
-    return ids;
-  }, [sequenciasPorDia]);
-
-  const opsDisponiveis = useMemo(() => {
-    let list = allFilaData.filter((op) => !idsEmQualquerSequencia.has(op.id));
-    if (filtroLiga != null && filtroLiga !== '') {
-      list = list.filter((op) => String(op.liga || '').toLowerCase() === String(filtroLiga).toLowerCase());
-    }
-    if (filtroTempera != null && filtroTempera !== '') {
-      list = list.filter((op) => String(op.tempera || '').toLowerCase() === String(filtroTempera).toLowerCase());
-    }
-    if (searchTerm?.trim()) {
-      const term = searchTerm.trim().toLowerCase();
-      list = list.filter(
-        (op) =>
-          op.codigo?.toLowerCase().includes(term) ||
-          op.produto?.toLowerCase().includes(term) ||
-          op.cliente?.toLowerCase().includes(term)
-      );
-    }
-    list.sort((a, b) => new Date(a.dataEntrega || 0) - new Date(b.dataEntrega || 0));
-    return list;
-  }, [allFilaData, idsEmQualquerSequencia, filtroLiga, filtroTempera, searchTerm]);
-
-  const opcoesLiga = useMemo(() => {
-    const set = new Set();
-    allFilaData.forEach((op) => {
-      if (op.liga != null && String(op.liga).trim()) set.add(String(op.liga).trim());
-    });
-    return Array.from(set).sort().map((v) => ({ value: v, label: v }));
-  }, [allFilaData]);
-
-  const opcoesTempera = useMemo(() => {
-    const set = new Set();
-    allFilaData.forEach((op) => {
-      if (op.tempera != null && String(op.tempera).trim()) set.add(String(op.tempera).trim());
-    });
-    return Array.from(set).sort().map((v) => ({ value: v, label: v }));
-  }, [allFilaData]);
-
-  const handleAdicionarAoDia = useCallback(() => {
-    if (selectedRowKeys.length === 0) {
-      message.info('Selecione pelo menos uma OP.');
-      return;
-    }
-    const toAdd = opsDisponiveis.filter((op) => selectedRowKeys.includes(op.id));
-    if (toAdd.length === 0) return;
-    const toAddWithFlag = toAdd.map((op) => ({ ...op, jaSequenciada: true }));
-    setSequenciasPorDia((prev) => {
-      const seq = getOrCreateSeq(prev, dateKey);
-      const newOps = [...(seq.ops || []), ...toAddWithFlag];
-      return { ...prev, [dateKey]: { ...seq, ops: newOps } };
-    });
-    setSelectedRowKeys([]);
-    setModalDisponiveisOpen(false);
-  }, [selectedRowKeys, opsDisponiveis, dateKey]);
-
-  const handleRemoverDoDia = useCallback(
-    (opId) => {
-      setSequenciasPorDia((prev) => {
-        const seq = getOrCreateSeq(prev, dateKey);
-        const newOps = (seq.ops || []).filter((op) => op.id !== opId);
-        return { ...prev, [dateKey]: { ...seq, ops: newOps } };
-      });
-    },
-    [dateKey]
-  );
-
-  const handleRemoverTodos = useCallback(() => {
-    setSequenciasPorDia((prev) => {
-      const seq = getOrCreateSeq(prev, dateKey);
-      return { ...prev, [dateKey]: { ...seq, ops: [] } };
-    });
-  }, [dateKey]);
-
-  const handleReorderDia = useCallback(
-    (result) => {
-      if (!result.destination) return;
-      const sourceIndex = result.source.index;
-      const destIndex = result.destination.index;
-      const ops = [...currentSeq.ops];
-      const [removed] = ops.splice(sourceIndex, 1);
-      ops.splice(destIndex, 0, removed);
-      const movedDataEntrega = removed.dataEntrega ? new Date(removed.dataEntrega).getTime() : 0;
-      let precisaJustificativa = false;
-      if (destIndex > sourceIndex) {
-        for (let j = 0; j < destIndex; j++) {
-          const otherDataEntrega = ops[j].dataEntrega ? new Date(ops[j].dataEntrega).getTime() : 0;
-          if (otherDataEntrega > movedDataEntrega) {
-            precisaJustificativa = true;
-            break;
-          }
-        }
-      }
-      if (precisaJustificativa) {
-        setJustificativaModal({ op: removed, fromIndex: sourceIndex + 1, toIndex: destIndex + 1 });
-        setJustificativaTexto('');
-      }
-      setSequenciasPorDia((prev) => ({ ...prev, [dateKey]: { ...currentSeq, ops } }));
-    },
-    [currentSeq, dateKey]
-  );
-
-  const handleReorderDiaTab = useCallback(
-    (result) => {
-      if (!result.destination) return;
-      const sourceIndex = result.source.index;
-      const destIndex = result.destination.index;
-      const fullOpsCurrent = currentSeq.ops || [];
-      const otherOps = fullOpsCurrent.filter((op) => (op.tipo || 'cliente') !== filtroTipo);
-      const tabOps = fullOpsCurrent.filter((op) => (op.tipo || 'cliente') === filtroTipo);
-      const [removed] = tabOps.splice(sourceIndex, 1);
-      tabOps.splice(destIndex, 0, removed);
-      const movedDataEntrega = removed.dataEntrega ? new Date(removed.dataEntrega).getTime() : 0;
-      let precisaJustificativa = false;
-      if (destIndex > sourceIndex) {
-        for (let j = 0; j < destIndex; j++) {
-          const otherDataEntrega = tabOps[j].dataEntrega ? new Date(tabOps[j].dataEntrega).getTime() : 0;
-          if (otherDataEntrega > movedDataEntrega) {
-            precisaJustificativa = true;
-            break;
-          }
-        }
-      }
-      if (precisaJustificativa) {
-        setJustificativaModal({ op: removed, fromIndex: sourceIndex + 1, toIndex: destIndex + 1 });
-        setJustificativaTexto('');
-      }
-      const fullOps = filtroTipo === 'casa' ? [...tabOps, ...otherOps] : [...otherOps, ...tabOps];
-      setSequenciasPorDia((prev) => ({ ...prev, [dateKey]: { ...currentSeq, ops: fullOps } }));
-    },
-    [currentSeq, dateKey, filtroTipo]
-  );
-
-  const handleConfirmarSequencia = useCallback(() => {
-    setSequenciasPorDia((prev) => {
-      const seq = getOrCreateSeq(prev, dateKey);
-      const opsSeq = seq.ops || [];
-      const casaTonSeq = opsSeq.filter((op) => op.tipo === 'casa').reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
-      const clienteTonSeq = opsSeq.filter((op) => op.tipo !== 'casa').reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
-      const casaCap = (CAPACIDADE_TON * (seq.casaPct || 70)) / 100;
-      const clienteCap = (CAPACIDADE_TON * (100 - (seq.casaPct || 70))) / 100;
-      if (casaTonSeq > casaCap || clienteTonSeq > clienteCap) {
-        message.warning('Capacidade excedida — excedente será rolado para o próximo dia');
-      }
-      const totalTon = opsSeq.reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
-      message.success(
-        `Sequência do dia ${diaSequenciamento.format('DD/MM/YYYY')} confirmada. ${opsSeq.length} OPs, ${totalTon.toFixed(1)} ton.`
-      );
-      return { ...prev, [dateKey]: { ...seq, confirmada: true } };
-    });
-  }, [dateKey, diaSequenciamento]);
-
-  const handlePrevDay = useCallback(() => {
-    const next = dayjs(diaSequenciamento).subtract(1, 'day');
-    setDiaSequenciamento(next);
-  }, [diaSequenciamento]);
-
-  const handleNextDay = useCallback(() => {
-    const next = dayjs(diaSequenciamento).add(1, 'day');
-    setDiaSequenciamento(next);
-  }, [diaSequenciamento]);
-
-  const handlePrevWeek = useCallback(() => {
-    setDiaSequenciamento(dayjs(diaSequenciamento).subtract(1, 'week'));
-  }, [diaSequenciamento]);
-
-  const handleNextWeek = useCallback(() => {
-    setDiaSequenciamento(dayjs(diaSequenciamento).add(1, 'week'));
-  }, [diaSequenciamento]);
-
-  const handleSliderChange = useCallback(
-    (value) => {
-      const v = Array.isArray(value) ? value[0] : value;
-      setSequenciasPorDia((prev) => {
-        const seq = getOrCreateSeq(prev, dateKey);
-        return { ...prev, [dateKey]: { ...seq, casaPct: v } };
-      });
-      if (v < 20 || v > 90) {
-        message.warning(`Proporção extrema: ${v}% Casa / ${100 - v}% Cliente`);
-      }
-    },
-    [dateKey]
-  );
-
-  const utilizadoTon = useMemo(() => {
-    const ops = currentSeq.ops || [];
-    return ops.reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
-  }, [currentSeq.ops]);
-
-  const casaTon = useMemo(() => {
-    const ops = (currentSeq.ops || []).filter((op) => op.tipo === 'casa');
-    return ops.reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
-  }, [currentSeq.ops]);
-
-  const clienteTon = useMemo(() => {
-    const ops = (currentSeq.ops || []).filter((op) => op.tipo !== 'casa');
-    return ops.reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
-  }, [currentSeq.ops]);
-
-  const selectedOpsTon = useMemo(() => {
-    const selected = opsDisponiveis.filter((op) => selectedRowKeys.includes(op.id));
-    const casa = selected.filter((op) => (op.tipo || 'cliente') === 'casa').reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
-    const cliente = selected.filter((op) => (op.tipo || 'cliente') !== 'casa').reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
-    return { casaTon: casa, clienteTon: cliente, totalTon: casa + cliente };
-  }, [opsDisponiveis, selectedRowKeys]);
-
-  const diasDaSemana = useMemo(() => {
-    const inicio = dayjs(diaSequenciamento).startOf('week');
-    return Array.from({ length: 7 }, (_, i) => {
-      const dia = inicio.add(i, 'day');
-      const dk = getDateKey(dia);
-      const seq = getOrCreateSeq(sequenciasPorDia, dk);
-      const ops = seq.ops || [];
-      const casaTon = ops.filter((op) => op.tipo === 'casa').reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
-      const clienteTon = ops.filter((op) => op.tipo !== 'casa').reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
-      return { dia, dateKey: dk, ops, casaTon, clienteTon, confirmada: !!seq.confirmada };
-    });
-  }, [diaSequenciamento, sequenciasPorDia]);
-
-  const CAPACIDADE_CASA_SEMANA = 18 * 7; // 126 ton
-  const CAPACIDADE_CLIENTE_SEMANA = 12 * 7; // 84 ton
-
-  const { casaTonSemana, clienteTonSemana, opsSemanaOrdenadas } = useMemo(() => {
-    let casa = 0;
-    let cliente = 0;
-    const lista = [];
-    diasDaSemana.forEach(({ dia, dateKey, ops, casaTon, clienteTon, confirmada }) => {
-      casa += casaTon;
-      cliente += clienteTon;
-      ops.forEach((op) => lista.push({ ...op, diaAssignado: dia, dateKeyAssignado: dateKey, diaConfirmado: confirmada }));
-    });
-    lista.sort((a, b) => (a.dateKeyAssignado || '').localeCompare(b.dateKeyAssignado || ''));
-    return { casaTonSemana: casa, clienteTonSemana: cliente, opsSemanaOrdenadas: lista };
-  }, [diasDaSemana]);
-
-  const opsSemanaFiltradas = useMemo(
-    () => opsSemanaOrdenadas.filter((op) => (op.tipo || 'cliente') === filtroTipo),
-    [opsSemanaOrdenadas, filtroTipo]
-  );
-
-  const semanaTemOPs = useMemo(
-    () => diasDaSemana.some((d) => (d.ops?.length ?? 0) > 0),
-    [diasDaSemana]
-  );
 
   const filterFormConfig = useMemo(
     () => [
-      { columns: 1, questions: [{ type: 'period', id: 'period', noLabel: false, label: 'Período', size: 'middle' }] },
       {
         columns: 3,
         questions: [
-          { type: 'date', id: 'diaSequenciamento', required: false, label: 'Dia do sequenciamento', size: 'middle', format: 'DD/MM/YYYY' },
-          { type: 'select', id: 'filtroLiga', required: false, label: 'Liga', size: 'middle', options: [{ value: '', label: 'Todos' }, ...(opcoesLiga || [])] },
-          { type: 'select', id: 'filtroTempera', required: false, label: 'Têmpera', size: 'middle', options: [{ value: '', label: 'Todos' }, ...(opcoesTempera || [])] },
+          { type: 'date', id: 'dia', required: false, label: 'Dia', size: 'middle', format: 'DD/MM/YYYY' },
+          { type: 'text', id: 'searchTerm', required: false, placeholder: 'OP, produto, cliente, OP Totvs...', label: 'Buscar', size: 'middle' },
+          {
+            type: 'select',
+            id: 'filtroTipo',
+            required: false,
+            label: 'Tipo',
+            size: 'middle',
+            options: [
+              { value: 'todos', label: 'Todos' },
+              { value: 'casa', label: 'Casa' },
+              { value: 'cliente', label: 'Cliente' },
+            ],
+          },
         ],
       },
     ],
-    [opcoesLiga, opcoesTempera]
-  );
-
-  const handleFilter = useCallback(
-    (values) => {
-      if (values?.diaSequenciamento) setDiaSequenciamento(dayjs(values.diaSequenciamento));
-      if (values?.filtroLiga !== undefined) setFiltroLiga(values.filtroLiga === '' ? undefined : values.filtroLiga);
-      if (values?.filtroTempera !== undefined) setFiltroTempera(values.filtroTempera === '' ? undefined : values.filtroTempera);
-      loadAllFila();
-    },
-    [loadAllFila]
-  );
-
-  const columnsDisponiveis = useMemo(
-    () => [
-      {
-        title: '',
-        key: 'contingencia',
-        width: 56,
-        render: (_, record) =>
-          record.contingencia ? (
-            <Tooltip title="OP criada manualmente (contingência)">
-              <Space size={4}>
-                <InfoCircleOutlined style={{ color: '#faad14' }} />
-                <Tag color="orange" style={{ margin: 0 }}>Manual</Tag>
-              </Space>
-            </Tooltip>
-          ) : null,
-      },
-      { title: 'Código', dataIndex: 'codigo', key: 'codigo', width: 90, render: (v) => <Text strong style={{ fontFamily: 'monospace' }}>{v || '-'}</Text> },
-      { title: 'Produto', dataIndex: 'produto', key: 'produto', width: 200, ellipsis: true },
-      { title: 'Liga', dataIndex: 'liga', key: 'liga', width: 80, ellipsis: true },
-      { title: 'Têmpera', dataIndex: 'tempera', key: 'tempera', width: 80, ellipsis: true },
-      { title: 'Recurso', dataIndex: 'recurso', key: 'recurso', width: 100, ellipsis: true },
-      {
-        title: 'Tipo',
-        dataIndex: 'tipo',
-        key: 'tipo',
-        width: 80,
-        render: (tipo) => {
-          const t = tipo || 'cliente';
-          return t === 'casa' ? <Tag color="blue">CASA</Tag> : <Tag color="default">CLIENTE</Tag>;
-        },
-      },
-      {
-        title: 'Qtd (kg)',
-        dataIndex: 'quantidade',
-        key: 'quantidade',
-        width: 90,
-        align: 'right',
-        render: (v) => (v != null ? Number(v).toLocaleString('pt-BR') : '-'),
-      },
-      {
-        title: 'Necessário | Produzir',
-        key: 'necessarioProduzir',
-        width: 160,
-        align: 'right',
-        render: (_, record) => {
-          const qtd = record.quantidade != null ? Number(record.quantidade) : 0;
-          const perdaPct = record.percentualPerda != null ? Number(record.percentualPerda) : record.item?.percentualPerda;
-          if (perdaPct == null || perdaPct === 0) return qtd > 0 ? <Text type="secondary">{qtd.toLocaleString('pt-BR')}</Text> : '-';
-          const necessario = qtd;
-          const produzir = Math.ceil(necessario / (1 - perdaPct / 100));
-          return (
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              Necessário: {necessario.toLocaleString('pt-BR')} | Produzir: {produzir.toLocaleString('pt-BR')} ({perdaPct}% perda)
-            </Text>
-          );
-        },
-      },
-      {
-        title: 'Entrega',
-        dataIndex: 'dataEntrega',
-        key: 'dataEntrega',
-        width: 110,
-        render: (v, record) => {
-          const level = getUrgencyLevel(v, record.status);
-          const color = urgencyColors[level];
-          return <span style={{ color: color || undefined }}>{v ? dayjs(v).format('DD/MM/YYYY') : '-'}</span>;
-        },
-      },
-      {
-        title: 'Status',
-        dataIndex: 'status',
-        key: 'status',
-        width: 140,
-        render: (status) => <StatusBadge status={status} />,
-      },
-    ],
     []
   );
-
-  const columnsTotvs = useMemo(
-    () => [
-      { title: 'OP Totvs', dataIndex: 'numeroOPERP', key: 'numeroOPERP', width: 110 },
-      { title: 'Produto', key: 'produto', width: 160, ellipsis: true, render: (_, r) => r.produto || r.itens?.[0]?.item?.descricao || '-' },
-      { title: 'Cliente', key: 'cliente', width: 140, ellipsis: true, render: (_, r) => r?.cliente?.nome ?? '-' },
-      { title: 'Tipo', dataIndex: 'tipo', key: 'tipo', width: 80, render: (t) => (t === 'casa' ? <Tag color="blue">Casa</Tag> : <Tag>Cliente</Tag>) },
-      { title: 'Liga', dataIndex: 'liga', key: 'liga', width: 80 },
-      { title: 'Têmpera', dataIndex: 'tempera', key: 'tempera', width: 80 },
-      { title: 'Qtd (kg)', key: 'qtdTotal', width: 90, align: 'right', render: (_, r) => (r.itens?.reduce((s, i) => s + (parseFloat(i.quantidadePecas) || 0), 0) || 0).toLocaleString('pt-BR') },
-      { title: 'Saldo', key: 'saldo', width: 70, align: 'right', render: (_, r) => { const total = (r.itens || []).reduce((s, i) => s + (parseFloat(i.quantidadePecas) || 0), 0); const prog = r.qtdProgramada != null ? Number(r.qtdProgramada) : 0; return Math.max(0, total - prog).toLocaleString('pt-BR'); } },
-      { title: 'Entrega', key: 'dataEntrega', width: 100, render: (_, r) => { const d = r.dataEntrega ?? r.itens?.[0]?.dataEntrega; return d ? dayjs(d).format('DD/MM/YYYY') : '-'; } },
-      { title: 'Situação', dataIndex: 'situacao', key: 'situacao', width: 110, render: (s) => <Tag>{s || '-'}</Tag> },
-      {
-        title: '',
-        key: 'acao',
-        width: 120,
-        fixed: 'right',
-        render: (_, record) => (
-          <Button type="primary" size="small" onClick={() => setModalCriarOPMESCPai(record)}>
-            Criar OP MESC
-          </Button>
-        ),
-      },
-    ],
-    []
-  );
-
-  const fetchDataTotvs = useCallback(async (page, pageSize) => {
-    try {
-      const res = await OrdemProducaoService.getAll({
-        tipoOp: 'PAI',
-        page,
-        pageSize,
-        dataInicio: dayjs().subtract(1, 'month').format('YYYY-MM-DD'),
-        dataFim: dayjs().add(3, 'month').format('YYYY-MM-DD'),
-      });
-      const data = res?.data?.data ?? [];
-      const total = res?.data?.pagination?.totalRecords ?? data.length;
-      return { data, total };
-    } catch (e) {
-      return { data: [], total: 0 };
-    }
-  }, []);
-
-  const selectedOPsComPerda = useMemo(() => {
-    return opsDisponiveis.filter((op) => {
-      if (!selectedRowKeys.includes(op.id)) return false;
-      const perdaPct = op.percentualPerda != null ? Number(op.percentualPerda) : op.item?.percentualPerda;
-      return perdaPct != null && perdaPct > 0;
-    });
-  }, [opsDisponiveis, selectedRowKeys]);
-
-  const opsParaTabela = useMemo(() => {
-    if (filtroListaOPs === 'selecionadas') {
-      return opsDisponiveis.filter((op) => selectedRowKeys.includes(op.id));
-    }
-    return opsDisponiveis;
-  }, [filtroListaOPs, opsDisponiveis, selectedRowKeys]);
-
-  const fetchDataDisponiveis = useCallback(async (page, pageSize) => {
-    const start = (page - 1) * pageSize;
-    const data = opsParaTabela.slice(start, start + pageSize);
-    return { data, total: opsParaTabela.length };
-  }, [opsParaTabela]);
 
   useEffect(() => {
-    tableDisponiveisRef.current?.reloadTable?.();
-  }, [opsParaTabela]);
+    if (modalFiltrosOpen) {
+      filterForm.setFieldsValue({
+        dia: appliedDateKey ? dayjs(appliedDateKey) : dayjs(),
+        searchTerm: appliedSearchTerm,
+        filtroTipo: appliedFiltroTipo,
+      });
+    }
+  }, [modalFiltrosOpen, appliedDateKey, appliedSearchTerm, appliedFiltroTipo, filterForm]);
 
-  const onRowDisponiveis = useCallback((record) => {
-    const id = record.id;
-    const statusTint = statusRowTint[record.status] || { backgroundColor: 'transparent', borderLeft: '4px solid transparent' };
-    return {
-      style: {
-        cursor: 'pointer',
-        ...statusTint,
-      },
-      onClick: () => {
-        setSelectedRowKeys((prev) =>
-          prev.includes(id) ? prev.filter((k) => k !== id) : [...prev, id]
+  // Só OPs do dia selecionado que estejam confirmadas
+  const confirmedOPsDoDia = useMemo(() => {
+    const seq = sequenciasPorDia[appliedDateKey];
+    if (!seq || !seq.confirmada || !(seq.ops || []).length) return [];
+    const dateLabel = formatDateKey(appliedDateKey);
+    return (seq.ops || []).map((op) => ({ op, date: dateLabel }));
+  }, [sequenciasPorDia, appliedDateKey]);
+
+  const filtered = useMemo(() => {
+    return confirmedOPsDoDia
+      .filter(({ op }) => appliedFiltroTipo === 'todos' || (op.tipo || 'cliente') === appliedFiltroTipo)
+      .filter(({ op }) => {
+        if (!appliedSearchTerm || !appliedSearchTerm.trim()) return true;
+        const term = appliedSearchTerm.trim().toLowerCase();
+        return (
+          toLabel(op.codigo).toLowerCase().includes(term) ||
+          toLabel(op.produto).toLowerCase().includes(term) ||
+          toLabel(op.cliente).toLowerCase().includes(term) ||
+          toLabel(op.codigoPai).toLowerCase().includes(term)
         );
-      },
-    };
+      });
+  }, [confirmedOPsDoDia, appliedFiltroTipo, appliedSearchTerm]);
+
+  const hasAnyConfirmedForDay = useMemo(() => {
+    const seq = sequenciasPorDia[appliedDateKey];
+    return !!(seq && seq.confirmada && (seq.ops || []).length > 0);
+  }, [sequenciasPorDia, appliedDateKey]);
+
+  const handleFilter = useCallback(() => {
+    const values = filterForm.getFieldsValue();
+    if (values?.dia) setAppliedDateKey(getDateKey(dayjs(values.dia)));
+    setAppliedSearchTerm(values.searchTerm ?? '');
+    setAppliedFiltroTipo(values.filtroTipo ?? 'todos');
+    setModalFiltrosOpen(false);
+  }, [filterForm]);
+
+  const handleLimparFiltros = useCallback(() => {
+    filterForm.resetFields();
+    setAppliedDateKey(getDateKey(dayjs()));
+    setAppliedSearchTerm('');
+    setAppliedFiltroTipo('todos');
+    setModalFiltrosOpen(false);
+  }, [filterForm]);
+
+  const toggleExpand = useCallback((key) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   }, []);
-
-  const rowSelection = {
-    selectedRowKeys,
-    onChange: (keys) => setSelectedRowKeys(keys),
-  };
-
-  const filtrosNaTitulo = (
-    <Space wrap size="small">
-      <Space>
-        {viewMode === 'semana' ? (
-          <>
-            <Button type="text" icon={<LeftOutlined />} onClick={handlePrevWeek} />
-            <Text strong style={{ minWidth: 220 }}>
-              {dayjs(diaSequenciamento).startOf('week').format('DD/MM')} - {dayjs(diaSequenciamento).startOf('week').add(6, 'day').format('DD/MM/YYYY')}
-            </Text>
-            <Button type="text" icon={<RightOutlined />} onClick={handleNextWeek} />
-          </>
-        ) : (
-          <>
-            <Button type="text" icon={<LeftOutlined />} onClick={handlePrevDay} />
-            <Text strong style={{ minWidth: 220 }}>
-              {diaSequenciamento.format('dddd DD/MM/YYYY')}
-            </Text>
-            <Button type="text" icon={<RightOutlined />} onClick={handleNextDay} />
-          </>
-        )}
-        <Button
-          type={viewMode === 'dia' ? 'primary' : 'default'}
-          onClick={() => setViewMode('dia')}
-        >
-          Dia
-        </Button>
-        <Button
-          type={viewMode === 'semana' ? 'primary' : 'default'}
-          onClick={() => setViewMode('semana')}
-        >
-          Semana
-        </Button>
-      </Space>
-     
-      {/*<Button icon={<UnorderedListOutlined />} onClick={() => setModalSequenciarOpen(true)}>
-        Sequenciar OP
-      </Button>*/}
-     
-      {viewMode === 'dia' && (
-        <Button
-          type="primary"
-          icon={<LockOutlined />}
-          onClick={handleConfirmarSequencia}
-          disabled={confirmada || (currentSeq.ops || []).length === 0}
-        >
-          Confirmar Sequência
-        </Button>
-      )}
-      <FilterModalForm
-        open={modalFiltrosOpen}
-        onOpenChange={setModalFiltrosOpen}
-        formConfig={filterFormConfig}
-        formInstance={filterForm}
-        onSubmit={() => {
-          handleFilter(filterForm.getFieldsValue());
-          setModalFiltrosOpen(false);
-        }}
-        secondaryButton={
-          <Button
-            icon={<AiOutlineClear />}
-            onClick={() => {
-              setFiltroTipo('casa');
-              setFiltroLiga(undefined);
-              setFiltroTempera(undefined);
-              filterForm.resetFields();
-              loadAllFila();
-              setModalFiltrosOpen(false);
-            }}
-            size="middle"
-          >
-            Limpar
-          </Button>
-        }
-      />
-    </Space>
-  );
-
-  const opsDoDia = currentSeq.ops || [];
-  const seqDiaAtiva = useMemo(
-    () => opsDoDia.filter((op) => (op.tipo || 'cliente') === filtroTipo),
-    [opsDoDia, filtroTipo]
-  );
 
   return (
     <Layout>
@@ -694,422 +152,244 @@ const FilaProducao = () => {
           <Col span={24}>
             <Card
               variant="borderless"
-              title="Sequenciamento"
-              subtitle="Ordenação por cenário de prioridade"
+              title="Fila de Produção"
+              subtitle="Apenas ordens sequenciadas e confirmadas pelo PCP (por dia)"
               icon={<ThunderboltOutlined style={{ color: colors.primary }} />}
-              extra={filtrosNaTitulo}
+              extra={
+                <FilterModalForm
+                  open={modalFiltrosOpen}
+                  onOpenChange={setModalFiltrosOpen}
+                  formConfig={filterFormConfig}
+                  formInstance={filterForm}
+                  onSubmit={() => {
+                    handleFilter();
+                    setModalFiltrosOpen(false);
+                  }}
+                  secondaryButton={
+                    <Button icon={<AiOutlineClear />} onClick={handleLimparFiltros} size="middle">
+                      Limpar
+                    </Button>
+                  }
+                />
+              }
             >
-              <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-                <Row gutter={16}>
-                  <Col span={24}>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-        <Button
-          type={filtroTipo === 'casa' ? 'primary' : 'default'}
-          icon={<HomeOutlined />}
-          onClick={() => setFiltroTipo('casa')}
-        >
-          {viewMode === 'semana' ? 'Casa (126 Ton/sem)' : 'Casa (18 Ton)'}
-        </Button>
-        <Button
-          type={filtroTipo === 'cliente' ? 'primary' : 'default'}
-          icon={<TeamOutlined />}
-          onClick={() => setFiltroTipo('cliente')}
-        >
-          {viewMode === 'semana' ? 'Cliente (84 Ton/sem)' : 'Cliente (12 Ton)'}
-        </Button>
-        {confirmada && (
-          <Tag icon={<LockOutlined />} color="default">
-            Confirmada
-          </Tag>
-        )}
-      </div>
-                    <CapacidadeIndicator
-                      filtroTipo={filtroTipo}
-                      casaTon={viewMode === 'semana' ? casaTonSemana : casaTon}
-                      clienteTon={viewMode === 'semana' ? clienteTonSemana : clienteTon}
-                      casaCap={viewMode === 'semana' ? CAPACIDADE_CASA_SEMANA : ((CAPACIDADE_TON * (casaPct ?? 70)) / 100)}
-                      clienteCap={viewMode === 'semana' ? CAPACIDADE_CLIENTE_SEMANA : ((CAPACIDADE_TON * (100 - (casaPct ?? 70))) / 100)}
-                    />
-                    {viewMode !== 'semana' && selectedRowKeys.length > 0 && selectedOpsTon.totalTon > 0 && (
-                      <div style={{ marginTop: 8, padding: '8px 12px', background: '#e6f7ff', borderRadius: 6, border: '1px solid #91d5ff', fontSize: 12 }}>
-                        <Text strong>Selecionadas para adicionar:</Text>
-                        <Text style={{ marginLeft: 6 }}>{selectedOpsTon.totalTon.toFixed(1)} ton</Text>
-                        <Text type="secondary" style={{ marginLeft: 8 }}>(Casa: {selectedOpsTon.casaTon.toFixed(1)} · Cliente: {selectedOpsTon.clienteTon.toFixed(1)})</Text>
-                        <br />
-                        <Text type="secondary" style={{ fontSize: 11 }}>
-                          Total previsto: Casa {(casaTon + selectedOpsTon.casaTon).toFixed(1)}/{(CAPACIDADE_TON * (casaPct ?? 70) / 100).toFixed(0)} ton · Cliente {(clienteTon + selectedOpsTon.clienteTon).toFixed(1)}/{(CAPACIDADE_TON * (100 - (casaPct ?? 70)) / 100).toFixed(0)} ton
-                        </Text>
-                      </div>
-                    )}
-                  </Col>
-                </Row>
-                {viewMode === 'semana' ? (
-                <Row gutter={16}>
-                  <Col span={24}>
-                    <Card
-                      title={
-                        <span style={{ fontSize: 12, fontWeight: 600 }}>
-                          Sequência da semana — {dayjs(diaSequenciamento).startOf('week').format('DD/MM')} - {dayjs(diaSequenciamento).startOf('week').add(6, 'day').format('DD/MM')} • {filtroTipo === 'casa' ? 'Casa' : 'Cliente'}
-                          <Text type="secondary" style={{ marginLeft: 6, fontSize: 12 }}>({opsSemanaFiltradas.length} OPs)</Text>
-                        </span>
-                      }
-                      size="small"
-                      bodyStyle={{ padding: '8px 12px' }}
-                    >
-                      <div style={{ minHeight: 40 }}>
-                        {semanaTemOPs && (
-                          <div style={{ marginBottom: 8, fontSize: 11 }}>
-                            {diasDaSemana.some((d) => d.confirmada) ? (
-                              <span style={{ marginRight: 12 }}>
-                                <LockOutlined style={{ marginRight: 4 }} />
-                                Confirmados: {diasDaSemana.filter((d) => d.confirmada).map((d) => d.dia.format('ddd DD/MM')).join(', ')}
-                              </span>
+              {!hasAnyConfirmedForDay && (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 48,
+                    textAlign: 'center',
+                  }}
+                >
+                  <CalendarOutlined style={{ fontSize: 40, color: colors.text?.secondary || '#8c8c8c', marginBottom: 12, opacity: 0.5 }} />
+                  <Text strong style={{ color: colors.text?.secondary, marginBottom: 4 }}>
+                    Nenhuma sequência confirmada para este dia
+                  </Text>
+                  <Text type="secondary" style={{ fontSize: 12, marginBottom: 16 }}>
+                    Acesse Sequenciamento, confirme a sequência do dia e escolha o dia no filtro para ver as OPs aqui.
+                  </Text>
+                  <Button type="primary" onClick={() => navigate('/sequenciamento')}>
+                    Ir para Sequenciamento
+                  </Button>
+                </div>
+              )}
+
+              {hasAnyConfirmedForDay && filtered.length === 0 && (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 32,
+                    textAlign: 'center',
+                  }}
+                >
+                  <InboxOutlined style={{ fontSize: 32, color: colors.text?.secondary || '#8c8c8c', marginBottom: 8, opacity: 0.5 }} />
+                  <Text type="secondary">Nenhuma OP encontrada com os filtros atuais.</Text>
+                </div>
+              )}
+
+              {hasAnyConfirmedForDay && filtered.length > 0 && (
+                <Space direction="vertical" size={8} style={{ width: '100%', paddingTop: 8 }}>
+                  {filtered.map(({ op, date }, idx) => {
+                    const urgency = getUrgencyLevel(op.dataEntrega, op.status);
+                    const rowKey = `${op.id}-${date}`;
+                    const isExpanded = expandedIds.has(rowKey);
+                    const borderLeftColor =
+                      urgency === 'critical' ? '#ff4d4f' : urgency === 'warning' ? '#faad14' : '#52c41a';
+                    const bgStyle =
+                      urgency === 'critical'
+                        ? { background: 'rgba(255,77,79,0.03)' }
+                        : urgency === 'warning'
+                          ? { background: 'rgba(250,173,20,0.03)' }
+                          : {};
+
+                    return (
+                      <div
+                        key={rowKey}
+                        style={{
+                          borderRadius: 8,
+                          border: '1px solid #f0f0f0',
+                          borderLeftWidth: 4,
+                          borderLeftColor,
+                          background: '#fff',
+                          transition: 'all 0.2s',
+                          ...bgStyle,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            padding: '8px 12px',
+                            cursor: 'pointer',
+                            flexWrap: 'wrap',
+                          }}
+                          onClick={() => toggleExpand(rowKey)}
+                          onKeyDown={(e) => e.key === 'Enter' && toggleExpand(rowKey)}
+                          role="button"
+                          tabIndex={0}
+                        >
+                          <span
+                            style={{
+                              width: 20,
+                              height: 20,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              borderRadius: 4,
+                              background: colors.backgroundGray,
+                              fontSize: 9,
+                              fontWeight: 700,
+                              fontFamily: 'monospace',
+                              color: colors.text?.secondary ?? '#666',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {idx + 1}
+                          </span>
+                          {isExpanded ? (
+                            <DownOutlined style={{ fontSize: 11, color: '#8c8c8c', flexShrink: 0 }} />
+                          ) : (
+                            <RightOutlined style={{ fontSize: 11, color: '#8c8c8c', flexShrink: 0 }} />
+                          )}
+                          <Space size={6} wrap style={{ flex: 1, minWidth: 0 }}>
+                            <Text strong style={{ fontFamily: 'monospace', fontSize: 11 }}>
+                              {toLabel(op.codigo) || '-'}
+                            </Text>
+                            <Text type="secondary" style={{ fontSize: 10 }}>→</Text>
+                            <Text type="secondary" style={{ fontFamily: 'monospace', fontSize: 10 }}>
+                              {toLabel(op.codigoPai) || '-'}
+                            </Text>
+                            <span style={{ width: 1, height: 12, background: '#e8e8e8' }} />
+                            <Text ellipsis style={{ maxWidth: 180, fontSize: 10 }}>{toLabel(op.produto) || '-'}</Text>
+                            <Text type="secondary" ellipsis style={{ maxWidth: 120, fontSize: 10 }}>{toLabel(op.cliente) || '-'}</Text>
+                            <span style={{ width: 1, height: 12, background: '#e8e8e8' }} />
+                            <span
+                              style={{
+                                fontSize: 9,
+                                fontFamily: 'monospace',
+                                padding: '1px 5px',
+                                borderRadius: 4,
+                                background: colors.backgroundGray,
+                                border: '1px solid #e8e8e8',
+                                color: colors.text?.primary,
+                              }}
+                            >
+                              {toLabel(op.liga) || '-'}
+                            </span>
+                            <Text type="secondary" style={{ fontSize: 9, fontFamily: 'monospace' }}>{op.tempera || '-'}</Text>
+                            {toLabel(op.ferramenta) && (
+                              <>
+                                <span style={{ width: 1, height: 12, background: '#e8e8e8' }} />
+                                <Text type="secondary" style={{ fontSize: 9, fontFamily: 'monospace' }}>{toLabel(op.ferramenta)}</Text>
+                              </>
+                            )}
+                            <span style={{ width: 1, height: 12, background: '#e8e8e8' }} />
+                            <Text strong style={{ fontSize: 9, fontFamily: 'monospace' }}>
+                              {((Number(op.quantidade) || 0) / 1000).toFixed(2)}t
+                            </Text>
+                            {(op.tipo || 'cliente') === 'casa' ? (
+                              <HomeOutlined style={{ color: colors.primary, fontSize: 12 }} />
                             ) : (
-                              <span style={{ marginRight: 12, color: '#666' }}>
-                                <LockOutlined style={{ marginRight: 4 }} />
-                                Confirmados: nenhum
-                              </span>
+                              <TeamOutlined style={{ color: '#8c8c8c', fontSize: 12 }} />
                             )}
-                            {diasDaSemana.some((d) => !d.confirmada && (d.ops?.length ?? 0) > 0) && (
-                              <span style={{ color: '#666' }}>
-                                Não confirmados: {diasDaSemana.filter((d) => !d.confirmada && (d.ops?.length ?? 0) > 0).map((d) => d.dia.format('ddd DD/MM')).join(', ')}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        {opsSemanaFiltradas.length === 0 ? (
-                          <div style={{ textAlign: 'center', color: '#666', padding: 12 }}>
-                            {opsSemanaOrdenadas.length === 0 ? 'Nenhuma OP sequenciada nesta semana.' : `Nenhuma OP de ${filtroTipo === 'casa' ? 'Casa' : 'Cliente'} nesta semana.`}
-                          </div>
-                        ) : (
-                          <>
-                            {opsSemanaFiltradas.map((op, index) => (
+                          </Space>
+                          <span
+                            style={{
+                              fontSize: 9,
+                              fontFamily: 'monospace',
+                              padding: '1px 5px',
+                              borderRadius: 4,
+                              background: colors.backgroundGray,
+                              border: '1px solid #e8e8e8',
+                              color: colors.text?.secondary,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {date}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: 9,
+                              fontFamily: 'monospace',
+                              padding: '1px 5px',
+                              borderRadius: 4,
+                              flexShrink: 0,
+                              color: urgencyColors[urgency] || undefined,
+                            }}
+                          >
+                            {formatDataEntrega(op.dataEntrega)}
+                          </span>
+                          <StatusBadge status={op.status} />
+                        </div>
+
+                        {isExpanded && (
+                          <div
+                            style={{
+                              borderTop: '1px solid #f0f0f0',
+                              padding: '8px 12px',
+                              background: 'rgba(0,0,0,0.02)',
+                            }}
+                          >
+                            <Space size="middle" wrap style={{ fontSize: 10, color: '#666', marginBottom: 6 }}>
+                              <span>OP Totvs: <Text strong style={{ fontFamily: 'monospace', fontSize: 10 }}>{toLabel(op.codigoPai) || '-'}</Text></span>
+                              <span>Qtd: <Text strong style={{ fontFamily: 'monospace', fontSize: 10 }}>{(op.quantidade || 0).toLocaleString('pt-BR')} kg</Text></span>
+                              {toLabel(op.ferramenta) && <span>Ferramenta: <Text strong style={{ fontFamily: 'monospace', fontSize: 10 }}>{toLabel(op.ferramenta)}</Text></span>}
+                              {toLabel(op.recurso) && <span>Recurso: <Text strong style={{ fontSize: 10 }}>{toLabel(op.recurso)}</Text></span>}
+                              <span>Programada: <Text strong style={{ fontSize: 10 }}>{date}</Text></span>
+                            </Space>
                             <div
-                              key={`${op.dateKeyAssignado}-${op.id}-${index}`}
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: 8,
-                                padding: '4px 6px',
-                                marginBottom: 2,
-                                borderRadius: 4,
-                                border: '1px solid #f0f0f0',
-                                fontSize: 12,
-                                backgroundColor: '#fff',
+                                gap: 6,
+                                fontSize: 10,
+                                color: colors.primary,
+                                background: 'rgba(36,59,94,0.08)',
+                                padding: '6px 10px',
+                                borderRadius: 6,
+                                border: '1px solid rgba(36,59,94,0.2)',
                               }}
                             >
-                              <span style={{ width: 72, fontSize: 11, color: '#666' }}>{op.diaAssignado ? dayjs(op.diaAssignado).format('ddd DD/MM') : '-'}</span>
-                              {op.diaConfirmado ? (
-                                <Tag icon={<LockOutlined />} color="success" style={{ fontSize: 10 }}>Confirmado</Tag>
-                              ) : (
-                                <Tag color="default" style={{ fontSize: 10 }}>Aguardando confirmação</Tag>
-                              )}
-                              <Text strong style={{ fontFamily: 'monospace', width: 72, fontSize: 12 }}>{op.codigo || '-'}</Text>
-                              {op.contingencia && (
-                                <Tooltip title="OP criada manualmente (contingência)">
-                                  <Tag color="orange" style={{ margin: 0, fontSize: 10 }}>Manual</Tag>
-                                </Tooltip>
-                              )}
-                              
-                              <Text ellipsis style={{ flex: 1, fontSize: 12 }}>{op.produto || '-'}</Text>
-                              <Text type="secondary" style={{ fontSize: 11 }}>{op.liga || '-'} / {op.tempera || '-'}</Text>
-                              <Text style={{ fontSize: 11 }}>{(Number(op.quantidade) || 0).toLocaleString('pt-BR')} kg</Text>
-                              <span style={{ fontSize: 11, color: (op.tipo || 'cliente') === 'casa' ? undefined : undefined }}>
-                                {(op.tipo || 'cliente') === 'casa' ? <Tag color="blue" style={{ margin: 0 }}>Casa</Tag> : <Tag style={{ margin: 0 }}>Cliente</Tag>}
-                              </span>
-                              <span style={{ fontSize: 11, color: urgencyColors[getUrgencyLevel(op.dataEntrega, op.status)] }}>
-                                {op.dataEntrega ? dayjs(op.dataEntrega).format('DD/MM') : '-'}
-                              </span>
+                              <PlayCircleOutlined style={{ fontSize: 12 }} />
+                              <span>Sequenciada — aguardando início do processo produtivo</span>
                             </div>
-                            ))}
-                          </>
+                          </div>
                         )}
                       </div>
-                    </Card>
-                  </Col>
-                </Row>
-                ) : seqDiaAtiva.length > 0 ? (
-                <Row gutter={16}>
-                  <Col span={24}>
-                    <Card
-                      title={
-                        <span style={{ fontSize: 12, fontWeight: 600 }}>
-                          Sequência — {diaSequenciamento.format('DD/MM')} • {filtroTipo === 'casa' ? 'Casa' : 'Cliente'}
-                          <Text type="secondary" style={{ marginLeft: 6, fontSize: 12 }}>({seqDiaAtiva.length} OPs)</Text>
-                        </span>
-                      }
-                      size="small"
-                      bodyStyle={{ padding: '8px 12px' }}
-                      extra={
-                        <Space size="small">
-                          {!confirmada && (
-                            <>
-                              <Button type="primary" size="small" onClick={() => setModalDisponiveisOpen(true)}>
-                                Adicionar OPs ao dia
-                              </Button>
-                              <Button danger size="small" icon={<DeleteOutlined />} onClick={handleRemoverTodos}>
-                                Remover todos
-                              </Button>
-                            </>
-                          )}
-                          {confirmada && <Tag icon={<LockOutlined />}>Confirmada</Tag>}
-                        </Space>
-                      }
-                    >
-                      <DragDropContext onDragEnd={handleReorderDiaTab}>
-                        <Droppable droppableId="sequencia-dia-tab" isDropDisabled={confirmada}>
-                          {(provided) => (
-                            <div ref={provided.innerRef} {...provided.droppableProps} style={{ minHeight: 60 }}>
-                              {seqDiaAtiva.map((op, index) => (
-                                <Draggable key={op.id} draggableId={String(op.id)} index={index} isDragDisabled={confirmada || seqDiaAtiva.length === 1}>
-                                  {(prov, snap) => (
-                                    <div
-                                      ref={prov.innerRef}
-                                      {...prov.draggableProps}
-                                      style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 6,
-                                        padding: '4px 6px',
-                                        marginBottom: 2,
-                                        borderRadius: 4,
-                                        border: '1px solid #f0f0f0',
-                                        backgroundColor: snap.isDragging ? '#fafafa' : '#fff',
-                                        fontSize: 12,
-                                        ...prov.draggableProps.style,
-                                      }}
-                                    >
-                                      {seqDiaAtiva.length > 1 && (
-                                        <span {...prov.dragHandleProps} style={{ cursor: confirmada ? 'default' : 'grab' }}>
-                                          <HolderOutlined style={{ color: '#999', fontSize: 12 }} />
-                                        </span>
-                                      )}
-                                      {seqDiaAtiva.length === 1 && <span style={{ width: 16, display: 'inline-block' }} />}
-                                      <span style={{ width: 20, fontSize: 11, color: '#666' }}>{index + 1}.</span>
-                                      <Text strong style={{ fontFamily: 'monospace', width: 72, fontSize: 12 }}>{op.codigo || '-'}</Text>
-                                      {op.contingencia && (
-                                        <Tooltip title="OP criada manualmente (contingência)">
-                                          <Tag color="orange" style={{ margin: 0, fontSize: 10 }}>Manual</Tag>
-                                        </Tooltip>
-                                      )}
-                                      <Text ellipsis style={{ flex: 1, fontSize: 12 }}>{op.produto || '-'}</Text>
-                                      <Text type="secondary" style={{ fontSize: 11 }}>{op.liga || '-'} / {op.tempera || '-'}</Text>
-                                      <Text style={{ fontSize: 11 }}>{(Number(op.quantidade) || 0).toLocaleString('pt-BR')} kg</Text>
-                                      <span style={{ fontSize: 11, color: urgencyColors[getUrgencyLevel(op.dataEntrega, op.status)] }}>
-                                        {op.dataEntrega ? dayjs(op.dataEntrega).format('DD/MM') : '-'}
-                                      </span>
-                                      {!confirmada && (
-                                        <Button
-                                          type="text"
-                                          danger
-                                          size="small"
-                                          icon={<DeleteOutlined />}
-                                          onClick={() => handleRemoverDoDia(op.id)}
-                                          style={{ padding: '0 4px' }}
-                                        />
-                                      )}
-                                    </div>
-                                  )}
-                                </Draggable>
-                              ))}
-                              {provided.placeholder}
-                            </div>
-                          )}
-                        </Droppable>
-                      </DragDropContext>
-                      <div style={{ marginTop: 8, paddingTop: 6, borderTop: '1px solid #f0f0f0' }}>
-                        <Text type="secondary" style={{ fontSize: 11 }}>Follow-up: </Text>
-                        <Space size="small">
-                          <Tag style={{ margin: 0, fontSize: 10 }}>Prensa</Tag>
-                          <Tag style={{ margin: 0, fontSize: 10 }}>Corte</Tag>
-                          <Tag style={{ margin: 0, fontSize: 10 }}>Forno</Tag>
-                          <Tag style={{ margin: 0, fontSize: 10 }}>Embalagem</Tag>
-                        </Space>
-                      </div>
-                    </Card>
-                  </Col>
-                </Row>
-                ) : (
-                <Row gutter={16}>
-                  <Col span={24}>
-                    <Card
-                      title={<span style={{ fontSize: 12, fontWeight: 600 }}>Sequência — {diaSequenciamento.format('DD/MM')}</span>}
-                      size="small"
-                      bodyStyle={{ padding: 16 }}
-                    >
-                      <div style={{ textAlign: 'center', color: '#666', marginBottom: 12 }}>
-                        Nenhuma OP sequenciada neste dia.
-                      </div>
-                      {!confirmada && (
-                        <div style={{ textAlign: 'center' }}>
-                          <Button type="primary" onClick={() => setModalDisponiveisOpen(true)}>
-                            Adicionar OPs ao dia
-                          </Button>
-                        </div>
-                      )}
-                    </Card>
-                  </Col>
-                </Row>
-                )}
-                <Modal
-                  title="Adicionar OPs ao dia"
-                  open={modalDisponiveisOpen}
-                  onCancel={() => { setModalDisponiveisOpen(false); setTabDisponiveis('mesc'); }}
-                  width={1200}
-                  footer={null}
-                  destroyOnClose
-                >
-                  <Tabs
-                    activeKey={tabDisponiveis}
-                    onChange={setTabDisponiveis}
-                    items={[
-                      {
-                        key: 'mesc',
-                        label: 'OPs MESC',
-                        children: (
-                          <div>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
-                              <Space size="middle">
-                                <span style={{ fontWeight: 600, fontSize: 14 }}>OPs Disponíveis</span>
-                                <Space size="small">
-                                  <Button
-                                    type={filtroListaOPs === 'disponiveis' ? 'primary' : 'default'}
-                                    size="small"
-                                    onClick={() => setFiltroListaOPs('disponiveis')}
-                                  >
-                                    Disponíveis ({opsDisponiveis.length})
-                                  </Button>
-                                  <Button
-                                    type={filtroListaOPs === 'selecionadas' ? 'primary' : 'default'}
-                                    size="small"
-                                    onClick={() => setFiltroListaOPs('selecionadas')}
-                                  >
-                                    Selecionadas ({selectedRowKeys.length})
-                                  </Button>
-                                </Space>
-                              </Space>
-                              <Button type="primary" onClick={handleAdicionarAoDia} disabled={selectedRowKeys.length === 0 || confirmada}>
-                                Adicionar ao Dia
-                              </Button>
-                            </div>
-                            <PaginatedTable
-                              ref={tableDisponiveisRef}
-                              fetchData={fetchDataDisponiveis}
-                              initialPageSize={10}
-                              columns={columnsDisponiveis}
-                              rowKey="id"
-                              loadingIcon={<LoadingSpinner />}
-                              disabled={loadingFila}
-                              scroll={{ x: 'max-content' }}
-                              onRow={onRowDisponiveis}
-                              rowSelection={rowSelection}
-                            />
-                            {selectedOPsComPerda.length > 0 && (
-                              <div style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
-                                {selectedOPsComPerda.map((op) => {
-                                  const qtd = Number(op.quantidade) || 0;
-                                  const perdaPct = op.percentualPerda != null ? Number(op.percentualPerda) : op.item?.percentualPerda || 0;
-                                  const produzir = Math.ceil(qtd / (1 - perdaPct / 100));
-                                  return (
-                                    <div key={op.id}>
-                                      {op.codigo}: Necessário: {qtd.toLocaleString('pt-BR')} | Produzir: {produzir.toLocaleString('pt-BR')} ({perdaPct}% perda)
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        ),
-                      },
-                      {
-                        key: 'totvs',
-                        label: 'OPs Totvs',
-                        children: (
-                          <div>
-                            <p style={{ marginBottom: 8, fontSize: 12, color: '#666' }}>
-                              OPs Totvs para consulta. Use &quot;Criar OP MESC&quot; por linha para gerar uma OP MESC a partir da OP Totvs.
-                            </p>
-                            <PaginatedTable
-                              ref={tableTotvsRef}
-                              fetchData={fetchDataTotvs}
-                              initialPageSize={10}
-                              columns={columnsTotvs}
-                              rowKey="id"
-                              loadingIcon={<LoadingSpinner />}
-                              scroll={{ x: 'max-content' }}
-                            />
-                          </div>
-                        ),
-                      },
-                    ]}
-                  />
-                </Modal>
-                <CriarOPMESCModal
-                  open={modalCriarOPMESCPai != null}
-                  onClose={() => setModalCriarOPMESCPai(null)}
-                  opPaiId={modalCriarOPMESCPai?.id}
-                  opPaiRecord={modalCriarOPMESCPai ?? undefined}
-                  onSuccess={() => {
-                    loadAllFila();
-                    setModalCriarOPMESCPai(null);
-                    if (tableTotvsRef.current?.reloadTable) tableTotvsRef.current.reloadTable();
-                  }}
-                />
-              </Space>
+                    );
+                  })}
+                </Space>
+              )}
             </Card>
           </Col>
         </Row>
-        <ModalSequenciarOP
-          open={modalSequenciarOpen}
-          onClose={() => setModalSequenciarOpen(false)}
-          cenarios={cenarios}
-          cenarioAtivoId={cenarioAtivoId}
-          setCenarioAtivo={setCenarioAtivo}
-          filtroTipo={filtroTipo}
-          setFiltroTipo={setFiltroTipo}
-          casaPct={casaPct}
-          setCasaPct={(v) => handleSliderChange(v)}
-          columns={columnsDisponiveis}
-          fetchDataForSequenciarModal={async (page, pageSize) => {
-            const res = await OrdemProducaoService.getFilaProducao({
-              page,
-              pageSize,
-              cenarioId: cenarioAtivoId ?? undefined,
-              filtroTipo: filtroTipo === 'casa' || filtroTipo === 'cliente' ? filtroTipo : undefined,
-            });
-            return { data: res.data?.data || [], total: res.data?.pagination?.totalRecords || 0 };
-          }}
-          onRow={onRowDisponiveis}
-        />
-        <ModalConfirmarOP open={modalConfirmarOpen} onClose={() => setModalConfirmarOpen(false)} />
-        <ModalGerarOPs open={modalGerarOPsOpen} onClose={() => setModalGerarOPsOpen(false)} />
-        <Modal
-          title="Justificativa — alteração de prioridade"
-          open={!!justificativaModal}
-          onCancel={() => setJustificativaModal(null)}
-          onOk={() => {
-            message.info(justificativaTexto ? `Justificativa registrada: ${justificativaTexto}` : 'Justificativa registrada.');
-            setJustificativaModal(null);
-            setJustificativaTexto('');
-          }}
-          okText="Registrar"
-          cancelText="Cancelar"
-        >
-          {justificativaModal && (
-            <>
-              <p style={{ marginBottom: 8 }}>
-                A OP <Text strong>{justificativaModal.op.codigo}</Text> (entrega mais próxima) foi movida da posição {justificativaModal.fromIndex} para {justificativaModal.toIndex}.
-              </p>
-              <p style={{ marginBottom: 8, fontSize: 12, color: '#666' }}>Informe a justificativa (opcional):</p>
-              <Input.TextArea
-                rows={3}
-                value={justificativaTexto}
-                onChange={(e) => setJustificativaTexto(e.target.value)}
-                placeholder="Justificativa para alteração de prioridade..."
-              />
-            </>
-          )}
-        </Modal>
       </Content>
     </Layout>
   );

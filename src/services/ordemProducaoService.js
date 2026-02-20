@@ -7,6 +7,46 @@ import manutencoesMock from '../mocks/recursosProdutivos/manutencoes.json';
 // Função auxiliar para simular delay da API
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+/**
+ * Normaliza um registo de OP (bruto da API ou já da fila) para o formato usado na fila de produção e na lista do dia.
+ * @param {object} op - Registo da OP (pode ter numeroOPERP/itens ou já codigo/produto/quantidade)
+ * @param {object} [pai] - OP pai (tipoOp === 'PAI'), opcional; usado quando op é FILHA para obter produto, liga, tempera, cliente
+ * @returns {object} Objeto com id, codigo, produto, quantidade, liga, tempera, dataEntrega, tipo, contingencia, etc.
+ */
+export function normalizeOPParaFila(op, pai) {
+    if (!op) return op;
+    const primeiroItem = (op.itens && op.itens[0]) || (pai && pai.itens && pai.itens[0]);
+    const quantidade =
+        op.quantidade != null && op.quantidade !== ''
+            ? Number(op.quantidade)
+            : (op.itens || []).reduce((s, i) => s + (parseFloat(i.quantidadePecas) || 0), 0);
+    const produto =
+        op.produto != null && op.produto !== ''
+            ? op.produto
+            : (pai && pai.produto) || primeiroItem?.descricaoItem || '';
+    const codigo = op.codigo != null && op.codigo !== '' ? op.codigo : (op.numeroOPERP || '');
+    const dataEntrega = op.dataEntrega ?? primeiroItem?.dataEntrega ?? '';
+    const tipo = op.tipo != null && op.tipo !== '' ? (op.tipo === 'casa' ? 'casa' : 'cliente') : (pai && pai.tipo === 'casa' ? 'casa' : 'cliente');
+    return {
+        ...op,
+        id: op.id,
+        codigo,
+        produto,
+        quantidade,
+        liga: op.liga != null && op.liga !== '' ? op.liga : (pai && pai.liga) || '',
+        tempera: op.tempera != null && op.tempera !== '' ? op.tempera : (pai && pai.tempera) || '',
+        dataEntrega,
+        tipo,
+        contingencia: op.contingencia ?? false,
+        status: op.status ?? 'nao_programada',
+        score: op.score != null ? op.score : 0,
+        cliente: (op.cliente && (typeof op.cliente === 'object' ? op.cliente.nome : op.cliente)) || (pai && pai.cliente && (typeof pai.cliente === 'object' ? pai.cliente.nome : pai.cliente)) || '',
+        dataInicio: op.dataInicio ?? op.dataOP ?? null,
+        horaPrevista: op.horaPrevista ?? '08:00',
+        recurso: op.recurso || op.ferramenta?.descricao || '',
+    };
+}
+
 // Função auxiliar para buscar dados mockados
 const getMockData = async (endpoint, data) => {
     await delay(300); // Simula delay de rede
@@ -385,30 +425,7 @@ const OrdemProducaoService = {
             .filter((op) => op.tipoOp === 'FILHA' && op.status !== 'concluida' && op.status !== 'cancelada')
             .map((f) => {
                 const pai = pais.find((p) => p.id === f.opPaiId);
-                const primeiroItem = (f.itens && f.itens[0]) || (pai && pai.itens && pai.itens[0]);
-                const quantidade = (f.itens || []).reduce((s, i) => s + (parseFloat(i.quantidadePecas) || 0), 0);
-                const dataEntrega = primeiroItem?.dataEntrega || '';
-                const produto = (pai && pai.produto) || primeiroItem?.descricaoItem || '';
-                const tipo = (f.tipo === 'casa' || (pai && pai.tipo === 'casa')) ? 'casa' : 'cliente';
-                const dataInicio = f.dataInicio || f.dataOP || null;
-                const horaPrevista = f.horaPrevista || '08:00';
-                return {
-                    id: f.id,
-                    codigo: f.numeroOPERP || '',
-                    status: f.status || 'nao_programada',
-                    score: f.score != null ? f.score : 0,
-                    produto,
-                    cliente: (f.cliente && f.cliente.nome) || (pai && pai.cliente && pai.cliente.nome) || '',
-                    liga: (pai && pai.liga) || f.liga || '',
-                    tempera: (pai && pai.tempera) || f.tempera || '',
-                    quantidade,
-                    dataEntrega,
-                    dataInicio,
-                    horaPrevista,
-                    recurso: f.recurso || f.ferramenta?.descricao || '',
-                    tipo,
-                    contingencia: f.contingencia || false,
-                };
+                return normalizeOPParaFila(f, pai);
             });
 
         if (search && String(search).trim()) {

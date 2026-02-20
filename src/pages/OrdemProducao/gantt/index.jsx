@@ -28,7 +28,7 @@ import GanttChart from './components/GanttChart';
 import GanttLegend from './components/GanttLegend';
 import GanttDetailPanel from './components/GanttDetailPanel';
 import GanttZoomPresets from './components/GanttZoomPresets';
-import ModalSequenciarOP from '../../FilaProducao/Modals/ModalSequenciarOP';
+import ModalSequenciarOP from '../../SequenciamentoNovo/Modals/ModalSequenciarOP';
 import { useGanttTime } from '../../../hooks/useGanttTime';
 import { toast } from '../../../helpers/toast';
 import { useFilaGanttFilterContext } from '../../../contexts/FilaGanttFilterContext';
