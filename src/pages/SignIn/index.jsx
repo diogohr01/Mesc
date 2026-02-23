@@ -67,9 +67,10 @@ const SignIn = () => {
 
        <Text style={{ color: '#fff', fontSize: '32px', marginLeft: '0px' , fontWeight: 600   }}>MESC</Text>
        </div>
-        <Card  variant="borderless">
+        <Card  variant="borderless"  extra={ <div></div>} >
           {loading ?
             <Loading /> :
+            <>
             <DynamicForm
               formConfig={[
                 {
@@ -84,8 +85,10 @@ const SignIn = () => {
               onSubmit={submitForm}
               submitText='Login'
             />
+            </>
           }
         </Card>
+      
       </Col>
     </Row>
   );
