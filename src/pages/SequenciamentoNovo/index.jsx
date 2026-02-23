@@ -1177,6 +1177,7 @@ const FilaProducao = () => {
                 </Row>
                 )}
                 <Modal
+                  key={modalDisponiveisOpen ? 'modal-open' : 'modal-closed'}
                   title={
                     <span>
                       Adicionar OPs ao dia
@@ -1186,7 +1187,11 @@ const FilaProducao = () => {
                     </span>
                   }
                   open={modalDisponiveisOpen}
-                  onCancel={() => { setModalDisponiveisOpen(false); setTabDisponiveis('mesc'); }}
+                  onCancel={(e) => {
+                    e?.stopPropagation?.();
+                    setModalDisponiveisOpen(false);
+                    setTabDisponiveis('mesc');
+                  }}
                   afterClose={() => {
                     setTabDisponiveis('mesc');
                     setSelectedRowKeys([]);
@@ -1194,6 +1199,7 @@ const FilaProducao = () => {
                   width={1300}
                   footer={null}
                   destroyOnClose
+                  getContainer={() => document.body}
                 >
                   <Tabs
                     activeKey={tabDisponiveis}
