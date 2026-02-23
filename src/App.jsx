@@ -36,6 +36,10 @@ function App() {
                         cellFontSize: 9,
                         cellPaddingInline: 8,
                     },
+                    Modal: {
+                        motionDurationMid: 200,
+                        motionDurationSlow: 200,
+                    },
                 },
                 hashed: false,
                 cssVar: false,

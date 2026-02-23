@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, startTransition } from 'react';
 import { Button, Col, Form, Input, Layout, message, Modal, Progress, Row, Select, Space, Tag, Tabs, Tooltip, Typography } from 'antd';
 import { ThunderboltOutlined, LockOutlined, UnlockOutlined, HolderOutlined, DeleteOutlined, InfoCircleOutlined, HomeOutlined, TeamOutlined, UnorderedListOutlined, PlusOutlined } from '@ant-design/icons';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -225,13 +225,15 @@ const FilaProducao = () => {
     const targetDateKey =
       viewMode === 'semana' ? (diaAlvoAdicionar || getDateKey(diaSequenciamento.startOf('week'))) : dateKey;
     const toAddWithFlag = toAdd.map((op) => ({ ...op, jaSequenciada: true }));
-    setSequenciasPorDia((prev) => {
-      const seq = getOrCreateSeq(prev, targetDateKey);
-      const newOps = [...(seq.ops || []), ...toAddWithFlag];
-      return { ...prev, [targetDateKey]: { ...seq, ops: newOps } };
+    startTransition(() => {
+      setSequenciasPorDia((prev) => {
+        const seq = getOrCreateSeq(prev, targetDateKey);
+        const newOps = [...(seq.ops || []), ...toAddWithFlag];
+        return { ...prev, [targetDateKey]: { ...seq, ops: newOps } };
+      });
     });
     setSelectedRowKeys([]);
-    setModalDisponiveisOpen(false);
+    queueMicrotask(() => setModalDisponiveisOpen(false));
   }, [selectedRowKeys, opsDisponiveis, dateKey, viewMode, diaAlvoAdicionar, diaSequenciamento]);
 
   const handleAdicionarUmaOPAoDia = useCallback(
@@ -681,8 +683,10 @@ const FilaProducao = () => {
   }, [opsParaTabela]);
 
   useEffect(() => {
-    tableDisponiveisRef.current?.reloadTable?.();
-  }, [opsParaTabela]);
+    if (modalDisponiveisOpen) {
+      tableDisponiveisRef.current?.reloadTable?.();
+    }
+  }, [opsParaTabela, modalDisponiveisOpen]);
 
   const onRowDisponiveis = useCallback((record) => {
     const id = record.id;
@@ -1183,6 +1187,10 @@ const FilaProducao = () => {
                   }
                   open={modalDisponiveisOpen}
                   onCancel={() => { setModalDisponiveisOpen(false); setTabDisponiveis('mesc'); }}
+                  afterClose={() => {
+                    setTabDisponiveis('mesc');
+                    setSelectedRowKeys([]);
+                  }}
                   width={1300}
                   footer={null}
                   destroyOnClose
