@@ -96,7 +96,7 @@ export const defaultRoutes = [
             { key: '/ferramentas/cadastro', icon: <GradientizeIcon gradientId="menu-ferramentas" fillGradient><AiOutlineTool /></GradientizeIcon>, label: 'Ferramentas', element: FerramentasCadastro, roles: [roles.roleAdmin] },
             { key: '/clientes/cadastro', icon: <GradientizeIcon gradientId="menu-clientes" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Clientes', element: ClientesCadastro, roles: [roles.roleAdmin] },
             { key: '/pedidos/cadastro', icon: <GradientizeIcon gradientId="menu-pedidos" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Pedidos', element: PedidosCadastro, roles: [roles.roleAdmin] },
-            { key: '/sequenciamento/cadastro', icon: <GradientizeIcon gradientId="menu-sequenciamento" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Cenários', element: SequenciamentoCadastro, roles: [roles.roleAdmin] },
+            { key: '/cenarios/cadastro', icon: <GradientizeIcon gradientId="menu-sequenciamento" fillGradient><AiOutlineFileText /></GradientizeIcon>, label: 'Cenários', element: SequenciamentoCadastro, roles: [roles.roleAdmin] },
         ],
     },
     {

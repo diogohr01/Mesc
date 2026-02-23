@@ -11,12 +11,14 @@ import {
   DownOutlined,
   RightOutlined,
   PlayCircleOutlined,
+  ExclamationCircleOutlined,
 } from '@ant-design/icons';
 import { AiOutlineClear } from 'react-icons/ai';
-import { Card, FilterModalForm } from '../../components';
+import { Card, DateNavStepper, FilterModalForm } from '../../components';
 import { useSequenciamento } from '../../contexts/SequenciamentoContext';
-import StatusBadge from '../../components/Dashboard/StatusBadge';
+import { EtapaPill, StatusBadge } from '../../components/Dashboard';
 import { getUrgencyLevel, urgencyColors } from '../../helpers/urgency';
+import { getEtapasFromStatus } from '../../helpers/etapas';
 import { colors } from '../../styles/colors';
 
 const { Content } = Layout;
@@ -36,6 +38,9 @@ function formatDataEntrega(dataEntrega) {
   const d = dayjs(dataEntrega);
   return d.isValid() ? d.format('DD/MM') : '-';
 }
+
+const etapaLabels = ['Prensa', 'Corte', 'Forno', 'Embalagem'];
+const etapaKeys = ['prensa', 'corte', 'forno', 'embalagem'];
 
 /** Extrai texto de valor que pode ser string ou objeto { codigo, descricao } (evita "Objects are not valid as React child") */
 function toLabel(value) {
@@ -60,9 +65,8 @@ const FilaProducao = () => {
   const filterFormConfig = useMemo(
     () => [
       {
-        columns: 3,
+        columns: 2,
         questions: [
-          { type: 'date', id: 'dia', required: false, label: 'Dia', size: 'middle', format: 'DD/MM/YYYY' },
           { type: 'text', id: 'searchTerm', required: false, placeholder: 'OP, produto, cliente, OP Totvs...', label: 'Buscar', size: 'middle' },
           {
             type: 'select',
@@ -85,12 +89,11 @@ const FilaProducao = () => {
   useEffect(() => {
     if (modalFiltrosOpen) {
       filterForm.setFieldsValue({
-        dia: appliedDateKey ? dayjs(appliedDateKey) : dayjs(),
         searchTerm: appliedSearchTerm,
         filtroTipo: appliedFiltroTipo,
       });
     }
-  }, [modalFiltrosOpen, appliedDateKey, appliedSearchTerm, appliedFiltroTipo, filterForm]);
+  }, [modalFiltrosOpen, appliedSearchTerm, appliedFiltroTipo, filterForm]);
 
   // Só OPs do dia selecionado que estejam confirmadas
   const confirmedOPsDoDia = useMemo(() => {
@@ -122,7 +125,6 @@ const FilaProducao = () => {
 
   const handleFilter = useCallback(() => {
     const values = filterForm.getFieldsValue();
-    if (values?.dia) setAppliedDateKey(getDateKey(dayjs(values.dia)));
     setAppliedSearchTerm(values.searchTerm ?? '');
     setAppliedFiltroTipo(values.filtroTipo ?? 'todos');
     setModalFiltrosOpen(false);
@@ -135,6 +137,10 @@ const FilaProducao = () => {
     setAppliedFiltroTipo('todos');
     setModalFiltrosOpen(false);
   }, [filterForm]);
+
+  const handleDateChange = useCallback((newDateKey) => {
+    setAppliedDateKey(newDateKey);
+  }, []);
 
   const toggleExpand = useCallback((key) => {
     setExpandedIds((prev) => {
@@ -156,21 +162,28 @@ const FilaProducao = () => {
               subtitle="Apenas ordens sequenciadas e confirmadas pelo PCP (por dia)"
               icon={<ThunderboltOutlined style={{ color: colors.primary }} />}
               extra={
-                <FilterModalForm
-                  open={modalFiltrosOpen}
-                  onOpenChange={setModalFiltrosOpen}
-                  formConfig={filterFormConfig}
-                  formInstance={filterForm}
-                  onSubmit={() => {
-                    handleFilter();
-                    setModalFiltrosOpen(false);
-                  }}
-                  secondaryButton={
-                    <Button icon={<AiOutlineClear />} onClick={handleLimparFiltros} size="middle">
-                      Limpar
-                    </Button>
-                  }
-                />
+                <Space wrap>
+                  <DateNavStepper
+                    value={appliedDateKey}
+                    onChange={handleDateChange}
+                    format="dddd DD/MM/YYYY"
+                  />
+                  <FilterModalForm
+                    open={modalFiltrosOpen}
+                    onOpenChange={setModalFiltrosOpen}
+                    formConfig={filterFormConfig}
+                    formInstance={filterForm}
+                    onSubmit={() => {
+                      handleFilter();
+                      setModalFiltrosOpen(false);
+                    }}
+                    secondaryButton={
+                      <Button icon={<AiOutlineClear />} onClick={handleLimparFiltros} size="middle">
+                        Limpar
+                      </Button>
+                    }
+                  />
+                </Space>
               }
             >
               {!hasAnyConfirmedForDay && (
@@ -216,13 +229,25 @@ const FilaProducao = () => {
               {hasAnyConfirmedForDay && filtered.length > 0 && (
                 <Space direction="vertical" size={8} style={{ width: '100%', paddingTop: 8 }}>
                   {filtered.map(({ op, date }, idx) => {
+                    const etapas = getEtapasFromStatus(op);
                     const urgency = getUrgencyLevel(op.dataEntrega, op.status);
                     const rowKey = `${op.id}-${date}`;
                     const isExpanded = expandedIds.has(rowKey);
-                    const borderLeftColor =
-                      urgency === 'critical' ? '#ff4d4f' : urgency === 'warning' ? '#faad14' : '#52c41a';
+                    const temProblema =
+                      etapas &&
+                      (etapas.prensa === 'problema' ||
+                        etapas.corte === 'problema' ||
+                        etapas.forno === 'problema' ||
+                        etapas.embalagem === 'problema');
+                    const borderLeftColor = temProblema
+                      ? '#ff4d4f'
+                      : urgency === 'critical'
+                        ? '#ff4d4f'
+                        : urgency === 'warning'
+                          ? '#faad14'
+                          : '#52c41a';
                     const bgStyle =
-                      urgency === 'critical'
+                      temProblema || urgency === 'critical'
                         ? { background: 'rgba(255,77,79,0.03)' }
                         : urgency === 'warning'
                           ? { background: 'rgba(250,173,20,0.03)' }
@@ -347,6 +372,36 @@ const FilaProducao = () => {
                             {formatDataEntrega(op.dataEntrega)}
                           </span>
                           <StatusBadge status={op.status} />
+                          {etapas && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                              {etapaKeys.map((key, i) => {
+                                const st = etapas[key];
+                                const dotColor =
+                                  st === 'concluido'
+                                    ? colors.secondary
+                                    : st === 'em_processo'
+                                      ? colors.primary
+                                      : st === 'problema'
+                                        ? '#ff4d4f'
+                                        : colors.text?.secondary ?? '#8c8c8c';
+                                return (
+                                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <div
+                                      style={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: '50%',
+                                        background: dotColor,
+                                        opacity: st === 'aguardando' ? 0.3 : 1,
+                                      }}
+                                      title={etapaLabels[i]}
+                                    />
+                                    {i < 3 && <div style={{ width: 6, height: 1, background: colors.borderColor }} />}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
 
                         {isExpanded && (
@@ -364,22 +419,57 @@ const FilaProducao = () => {
                               {toLabel(op.recurso) && <span>Recurso: <Text strong style={{ fontSize: 10 }}>{toLabel(op.recurso)}</Text></span>}
                               <span>Programada: <Text strong style={{ fontSize: 10 }}>{date}</Text></span>
                             </Space>
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 6,
-                                fontSize: 10,
-                                color: colors.primary,
-                                background: 'rgba(36,59,94,0.08)',
-                                padding: '6px 10px',
-                                borderRadius: 6,
-                                border: '1px solid rgba(36,59,94,0.2)',
-                              }}
-                            >
-                              <PlayCircleOutlined style={{ fontSize: 12 }} />
-                              <span>Sequenciada — aguardando início do processo produtivo</span>
-                            </div>
+                            {etapas ? (
+                              <>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: temProblema ? 8 : 0 }}>
+                                  {etapaKeys.map((key, i) => (
+                                    <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                      <EtapaPill
+                                        label={etapaLabels[i]}
+                                        status={etapas[key]}
+                                        horario={op.etapaHorarios?.[key]}
+                                      />
+                                      {i < 3 && <RightOutlined style={{ fontSize: 10, color: colors.text?.secondary ?? '#8c8c8c', opacity: 0.4 }} />}
+                                    </div>
+                                  ))}
+                                </div>
+                                {temProblema && (
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: 8,
+                                      fontSize: 11,
+                                      color: '#ff4d4f',
+                                      background: 'rgba(255,77,79,0.05)',
+                                      padding: '6px 10px',
+                                      borderRadius: 6,
+                                      border: '1px solid rgba(255,77,79,0.2)',
+                                    }}
+                                  >
+                                    <ExclamationCircleOutlined style={{ fontSize: 14, flexShrink: 0 }} />
+                                    <span>Problema registrado em uma das etapas. Verificar ocorrência.</span>
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 6,
+                                  fontSize: 10,
+                                  color: colors.primary,
+                                  background: 'rgba(36,59,94,0.08)',
+                                  padding: '6px 10px',
+                                  borderRadius: 6,
+                                  border: '1px solid rgba(36,59,94,0.2)',
+                                }}
+                              >
+                                <PlayCircleOutlined style={{ fontSize: 12 }} />
+                                <span>Sequenciada — aguardando início do processo produtivo</span>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

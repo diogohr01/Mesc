@@ -6,7 +6,7 @@ import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from '
 import { AiOutlineClear } from 'react-icons/ai';
 import { Card, FilterModalForm, LoadingSpinner, PaginatedTable, ActionButtons, periodToDataRange } from '../../../components';
 import { useFilterSearchContext } from '../../../contexts/FilterSearchContext';
-import { getUrgencyLevel, urgencyColors } from '../../../helpers/urgency';
+import { getUrgencyLevel, isDataEntregaAtrasada, urgencyColors } from '../../../helpers/urgency';
 import { toast } from '../../../helpers/toast';
 import OrdemProducaoService from '../../../services/ordemProducaoService';
 import CriarOPMESCModal from '../components/CriarOPMESCModal';
@@ -266,7 +266,7 @@ const List = ({ onAdd, onEdit, onView }) => {
   const rowClassName = useCallback((record) => {
     const dataEntrega = record.dataEntrega ?? record.itens?.[0]?.dataEntrega;
     if (!dataEntrega) return '';
-    const atrasada = dayjs(dataEntrega).isBefore(dayjs(), 'day') && record.situacao !== 'Encerrada';
+    const atrasada = isDataEntregaAtrasada(dataEntrega) && record.situacao !== 'Encerrada';
     return atrasada ? 'op-atrasada' : '';
   }, []);
 
@@ -292,7 +292,17 @@ const List = ({ onAdd, onEdit, onView }) => {
         );
       },
     },
-    { title: 'Entrega', key: 'dataEntrega', width: 120, render: (_, r) => { const d = r.dataEntrega ?? r.itens?.[0]?.dataEntrega; return d ? dayjs(d).format('DD/MM/YYYY') : '-'; } },
+    {
+      title: 'Entrega',
+      key: 'dataEntrega',
+      width: 120,
+      render: (_, r) => {
+        const d = r.dataEntrega ?? r.itens?.[0]?.dataEntrega;
+        const level = getUrgencyLevel(d, r.situacao === 'Encerrada' ? 'concluida' : '');
+        const color = urgencyColors[level];
+        return <span style={{ color: color || undefined }}>{d ? dayjs(d).format('DD/MM/YYYY') : '-'}</span>;
+      },
+    },
     { title: 'Situação', dataIndex: 'situacao', key: 'situacao', width: 150, render: (situacao) => { const colorMap = { 'Em cadastro': 'default', 'Liberada': 'processing', 'Programada': 'warning', 'Encerrada': 'success', 'Cancelada': 'error' }; return <Badge status={colorMap[situacao] || 'default'} text={situacao} />; } },
     {
       title: 'Seq.',

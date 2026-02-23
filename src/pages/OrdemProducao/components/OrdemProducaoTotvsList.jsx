@@ -3,7 +3,7 @@ import { Badge, Button, message, Space, Tag, Tooltip, Typography } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { LoadingSpinner, PaginatedTable, ActionButtons } from '../../../components';
-import { getUrgencyLevel, urgencyColors } from '../../../helpers/urgency';
+import { getUrgencyLevel, isDataEntregaAtrasada, urgencyColors } from '../../../helpers/urgency';
 import OrdemProducaoService from '../../../services/ordemProducaoService';
 import { colors } from '../../../styles/colors';
 import CriarOPMESCModal from './CriarOPMESCModal';
@@ -109,7 +109,7 @@ const OrdemProducaoTotvsList = forwardRef(function OrdemProducaoTotvsList(
   const rowClassName = useCallback((record) => {
     const dataEntrega = record.dataEntrega ?? record.itens?.[0]?.dataEntrega;
     if (!dataEntrega) return '';
-    const atrasada = dayjs(dataEntrega).isBefore(dayjs(), 'day') && record.situacao !== 'Encerrada';
+    const atrasada = isDataEntregaAtrasada(dataEntrega) && record.situacao !== 'Encerrada';
     return atrasada ? 'op-atrasada' : '';
   }, []);
 
@@ -364,7 +364,9 @@ const OrdemProducaoTotvsList = forwardRef(function OrdemProducaoTotvsList(
         dataIndex: 'liga',
         key: 'liga',
         width: 80,
-        render: (_, record) => <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{record.liga || '-'}</span>,
+        render: (_, record) => (
+          <Tag color="blue" style={{ margin: 0, fontFamily: 'monospace', fontSize: 12 }}>{record.liga || '-'}</Tag>
+        ),
       },
       {
         title: 'Têmpera',

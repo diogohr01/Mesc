@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Col, Form, Input, Layout, message, Modal, Progress, Row, Select, Space, Tag, Tabs, Tooltip, Typography } from 'antd';
-import { ThunderboltOutlined, LockOutlined, UnlockOutlined, LeftOutlined, RightOutlined, HolderOutlined, DeleteOutlined, InfoCircleOutlined, HomeOutlined, TeamOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { ThunderboltOutlined, LockOutlined, UnlockOutlined, HolderOutlined, DeleteOutlined, InfoCircleOutlined, HomeOutlined, TeamOutlined, UnorderedListOutlined, PlusOutlined } from '@ant-design/icons';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br';
 import { AiOutlineClear } from 'react-icons/ai';
-import { Card, FilterModalForm, LoadingSpinner, PaginatedTable } from '../../components';
+import { Card, DateNavStepper, FilterModalForm, LoadingSpinner, PaginatedTable } from '../../components';
 import { useFilterSearchContext } from '../../contexts/FilterSearchContext';
 import { useFilaGanttFilterContext } from '../../contexts/FilaGanttFilterContext';
 import { useSequenciamento } from '../../contexts/SequenciamentoContext';
@@ -399,23 +399,9 @@ const FilaProducao = () => {
     });
   }, [dateKey, diaSequenciamento, viewMode]);
 
-  const handlePrevDay = useCallback(() => {
-    const next = dayjs(diaSequenciamento).subtract(1, 'day');
-    setDiaSequenciamento(next);
-  }, [diaSequenciamento]);
-
-  const handleNextDay = useCallback(() => {
-    const next = dayjs(diaSequenciamento).add(1, 'day');
-    setDiaSequenciamento(next);
-  }, [diaSequenciamento]);
-
-  const handlePrevWeek = useCallback(() => {
-    setDiaSequenciamento(dayjs(diaSequenciamento).subtract(1, 'week'));
-  }, [diaSequenciamento]);
-
-  const handleNextWeek = useCallback(() => {
-    setDiaSequenciamento(dayjs(diaSequenciamento).add(1, 'week'));
-  }, [diaSequenciamento]);
+  const handleDateChange = useCallback((newDateKey) => {
+    setDiaSequenciamento(dayjs(newDateKey));
+  }, []);
 
   const handleSliderChange = useCallback(
     (value) => {
@@ -578,8 +564,24 @@ const FilaProducao = () => {
       },
       { title: 'Código', dataIndex: 'codigo', key: 'codigo', width: 90, render: (v) => <Text strong style={{ fontFamily: 'monospace' }}>{v || '-'}</Text> },
       { title: 'Produto', dataIndex: 'produto', key: 'produto', width: 200, ellipsis: true },
-      { title: 'Liga', dataIndex: 'liga', key: 'liga', width: 80, ellipsis: true },
-      { title: 'Têmpera', dataIndex: 'tempera', key: 'tempera', width: 80, ellipsis: true },
+      {
+        title: 'Liga',
+        dataIndex: 'liga',
+        key: 'liga',
+        width: 80,
+        render: (v) => <Tag color="blue" style={{ margin: 0, fontFamily: 'monospace' }}>{v || '-'}</Tag>,
+      },
+      {
+        title: 'Têmpera',
+        dataIndex: 'tempera',
+        key: 'tempera',
+        width: 80,
+        render: (v) => (
+          <Tag color={({ T4: 'error', T5: 'processing', T6: 'blue', H32: 'cyan' }[v] || 'default')} style={{ margin: 0, fontFamily: 'monospace' }}>
+            {v || '-'}
+          </Tag>
+        ),
+      },
       { title: 'Recurso', dataIndex: 'recurso', key: 'recurso', width: 100, ellipsis: true },
       {
         title: 'Tipo',
@@ -623,9 +625,10 @@ const FilaProducao = () => {
         key: 'dataEntrega',
         width: 110,
         render: (v, record) => {
-          const level = getUrgencyLevel(v, record.status);
+          const dataEntrega = v ?? record.itens?.[0]?.dataEntrega;
+          const level = getUrgencyLevel(dataEntrega, record.status);
           const color = urgencyColors[level];
-          return <span style={{ color: color || undefined }}>{v ? dayjs(v).format('DD/MM/YYYY') : '-'}</span>;
+          return <span style={{ color: color || undefined }}>{dataEntrega ? dayjs(dataEntrega).format('DD/MM/YYYY') : '-'}</span>;
         },
       },
       {
@@ -705,23 +708,12 @@ const FilaProducao = () => {
   const filtrosNaTitulo = (
     <Space wrap size="small">
       <Space>
-        {viewMode === 'semana' ? (
-          <>
-            <Button type="text" icon={<LeftOutlined />} onClick={handlePrevWeek} />
-            <Text strong style={{ minWidth: 220 }}>
-              {dayjs(diaSequenciamento).startOf('week').format('DD/MM')} - {dayjs(diaSequenciamento).startOf('week').add(6, 'day').format('DD/MM/YYYY')}
-            </Text>
-            <Button type="text" icon={<RightOutlined />} onClick={handleNextWeek} />
-          </>
-        ) : (
-          <>
-            <Button type="text" icon={<LeftOutlined />} onClick={handlePrevDay} />
-            <Text strong style={{ minWidth: 220 }}>
-              {diaSequenciamento.format('dddd DD/MM/YYYY')}
-            </Text>
-            <Button type="text" icon={<RightOutlined />} onClick={handleNextDay} />
-          </>
-        )}
+        <DateNavStepper
+          value={getDateKey(diaSequenciamento)}
+          onChange={handleDateChange}
+          mode={viewMode === 'semana' ? 'semana' : 'dia'}
+          format="dddd DD/MM/YYYY"
+        />
         <Button
           type={viewMode === 'dia' ? 'primary' : 'default'}
           onClick={() => setViewMode('dia')}
@@ -823,7 +815,7 @@ const FilaProducao = () => {
                         {
                           key: 'todos',
                           label: 'Total',
-                          icon: null,
+                          icon: <PlusOutlined style={{ marginRight: 4, fontSize: 11 }} />,
                           ton: viewMode === 'semana' ? casaTonSemana + clienteTonSemana : casaTon + clienteTon,
                           cap: viewMode === 'semana' ? CAPACIDADE_TOTAL_SEMANA : CAPACIDADE_TOTAL_TON,
                         },
@@ -1001,8 +993,8 @@ const FilaProducao = () => {
                                           <span style={{ fontSize: 11 }}>
                                             {(op.tipo || 'cliente') === 'casa' ? <Tag color="blue" style={{ margin: 0 }}>Casa</Tag> : <Tag style={{ margin: 0 }}>Cliente</Tag>}
                                           </span>
-                                          <span style={{ fontSize: 11, color: urgencyColors[getUrgencyLevel(op.dataEntrega, op.status)] }}>
-                                            {op.dataEntrega ? dayjs(op.dataEntrega).format('DD/MM') : '-'}
+                                          <span style={{ fontSize: 11, color: urgencyColors[getUrgencyLevel(op.dataEntrega ?? op.itens?.[0]?.dataEntrega, op.status)] ?? undefined }}>
+                                            {(op.dataEntrega ?? op.itens?.[0]?.dataEntrega) ? dayjs(op.dataEntrega ?? op.itens?.[0]?.dataEntrega).format('DD/MM') : '-'}
                                           </span>
                                         </div>
                                       )}
@@ -1048,8 +1040,8 @@ const FilaProducao = () => {
                                 <span style={{ fontSize: 11 }}>
                                   {(op.tipo || 'cliente') === 'casa' ? <Tag color="blue" style={{ margin: 0 }}>Casa</Tag> : <Tag style={{ margin: 0 }}>Cliente</Tag>}
                                 </span>
-                                <span style={{ fontSize: 11, color: urgencyColors[getUrgencyLevel(op.dataEntrega, op.status)] }}>
-                                  {op.dataEntrega ? dayjs(op.dataEntrega).format('DD/MM') : '-'}
+                                <span style={{ fontSize: 11, color: urgencyColors[getUrgencyLevel(op.dataEntrega ?? op.itens?.[0]?.dataEntrega, op.status)] ?? undefined }}>
+                                  {(op.dataEntrega ?? op.itens?.[0]?.dataEntrega) ? dayjs(op.dataEntrega ?? op.itens?.[0]?.dataEntrega).format('DD/MM') : '-'}
                                 </span>
                               </div>
                             ))}
@@ -1126,8 +1118,8 @@ const FilaProducao = () => {
                                       <Text ellipsis style={{ flex: 1, fontSize: 12 }}>{op.produto || op.itens?.[0]?.descricaoItem || '-'}</Text>
                                       <Text type="secondary" style={{ fontSize: 11 }}>{op.liga || '-'} / {op.tempera || '-'}</Text>
                                       <Text style={{ fontSize: 11 }}>{(op.quantidade != null && op.quantidade !== '' ? Number(op.quantidade) : (op.itens || []).reduce((s, i) => s + (parseFloat(i.quantidadePecas) || 0), 0)).toLocaleString('pt-BR')} kg</Text>
-                                      <span style={{ fontSize: 11, color: urgencyColors[getUrgencyLevel(op.dataEntrega, op.status)] }}>
-                                        {op.dataEntrega ? dayjs(op.dataEntrega).format('DD/MM') : '-'}
+                                      <span style={{ fontSize: 11, color: urgencyColors[getUrgencyLevel(op.dataEntrega ?? op.itens?.[0]?.dataEntrega, op.status)] ?? undefined }}>
+                                        {(op.dataEntrega ?? op.itens?.[0]?.dataEntrega) ? dayjs(op.dataEntrega ?? op.itens?.[0]?.dataEntrega).format('DD/MM') : '-'}
                                       </span>
                                       {!confirmada && (
                                         <Button

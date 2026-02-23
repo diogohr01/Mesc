@@ -8,3 +8,4 @@ export { default as PeriodFilter } from './PeriodFilter';
 export { periodToDataRange } from './PeriodFilter';
 export { default as FilterCollapse } from './FilterCollapse';
 export { default as FilterModalForm } from './FilterModalForm';
+export { default as DateNavStepper } from './DateNavStepper';
