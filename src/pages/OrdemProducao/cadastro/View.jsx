@@ -219,6 +219,20 @@ const View = ({ record, onEdit, onCancel, onCopy, onAtivarDesativar }) => {
       render: (date) => date ? dayjs(date).format('DD/MM/YYYY') : '-',
     },
     {
+      title: 'Lead time prod. (dias)',
+      dataIndex: 'leadtime_producao',
+      key: 'leadtime_producao',
+      align: 'right',
+      render: (val) => val ?? 0,
+    },
+    {
+      title: 'Tol. atraso (dias)',
+      dataIndex: 'dias_tolerancia_atraso',
+      key: 'dias_tolerancia_atraso',
+      align: 'right',
+      render: (val) => val ?? 0,
+    },
+    {
       title: 'Acabamento',
       dataIndex: 'acabamento',
       key: 'acabamento',

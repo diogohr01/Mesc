@@ -64,6 +64,8 @@ const ItensTable = ({ value = [], onChange, form }) => {
             quantidadeKg: 0,
             dataEntrega: null,
             data_limite_prod: null,
+            leadtime_producao: 0,
+            dias_tolerancia_atraso: 0,
             acabamento: '',
             cubagemPrevista: 0,
             cubagemReal: null,
@@ -282,6 +284,40 @@ const ItensTable = ({ value = [], onChange, form }) => {
             key: 'data_limite_prod',
             width: 110,
             render: (text) => (text ? dayjs(text).format('DD/MM/YYYY') : '-'),
+        },
+        {
+            title: 'Lead time prod. (dias)',
+            dataIndex: 'leadtime_producao',
+            key: 'leadtime_producao',
+            width: 130,
+            align: 'right',
+            render: (text, record) => {
+                if (isEditing(record)) {
+                    return (
+                        <Form.Item name="leadtime_producao" style={{ margin: 0 }} initialValue={0}>
+                            <NumberInput type="integer" min={0} size="small" style={{ width: '100%' }} />
+                        </Form.Item>
+                    );
+                }
+                return (text ?? 0);
+            },
+        },
+        {
+            title: 'Tol. atraso (dias)',
+            dataIndex: 'dias_tolerancia_atraso',
+            key: 'dias_tolerancia_atraso',
+            width: 120,
+            align: 'right',
+            render: (text, record) => {
+                if (isEditing(record)) {
+                    return (
+                        <Form.Item name="dias_tolerancia_atraso" style={{ margin: 0 }} initialValue={0}>
+                            <NumberInput type="integer" min={0} size="small" style={{ width: '100%' }} />
+                        </Form.Item>
+                    );
+                }
+                return (text ?? 0);
+            },
         },
         {
             title: 'Acabamento',

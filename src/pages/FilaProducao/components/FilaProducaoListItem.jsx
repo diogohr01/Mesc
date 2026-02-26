@@ -16,7 +16,7 @@ function formatDataEntrega(dataEntrega) {
 
 function FilaProducaoListItem({ item, index, date }) {
   const { op } = item;
-  const urgency = getUrgencyLevel(op.dataEntrega, op.status);
+  const urgency = getUrgencyLevel(op.dataEntrega, op.status, op.diasToleranciaAtraso);
   const barStyle = urgencyBarColors[urgency] || {};
   const quantidadeTon = (Number(op.quantidade) || 0) / 1000;
 

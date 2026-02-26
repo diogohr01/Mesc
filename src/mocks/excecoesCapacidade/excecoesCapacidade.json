@@ -1,5 +1,6 @@
 {
   "data": [
-    { "id": "ec1", "data": "2026-02-20", "casaPct": 80, "clientePct": 20, "motivo": "Alta demanda interna" }
+    {"id": "ec1", "data": "2026-02-18", "casaPct": 70, "clientePct": 30, "motivo": "Alta demanda interna"},
+    {"id": "ec2", "data": "2026-02-25", "casaPct": 40, "clientePct": 60, "motivo": "Entrega urgente Embraer"}
   ]
 }

@@ -196,7 +196,7 @@ const KanbanProducao = () => {
 };
 
 function KanbanCard({ op, index, isDragging, onDragStart, onDragEnd }) {
-  const urgencyLevel = getUrgencyLevel(op.dataEntrega, op.status);
+  const urgencyLevel = getUrgencyLevel(op.dataEntrega, op.status, op.diasToleranciaAtraso);
   const urgencyColor = urgencyColors[urgencyLevel];
   const borderLeft = urgencyLevel === 'critical' ? '3px solid #ff4d4f' : urgencyLevel === 'warning' ? '3px solid #faad14' : undefined;
 

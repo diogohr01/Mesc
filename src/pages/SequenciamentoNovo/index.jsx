@@ -628,7 +628,8 @@ const FilaProducao = () => {
         width: 110,
         render: (v, record) => {
           const dataEntrega = v ?? record.itens?.[0]?.dataEntrega;
-          const level = getUrgencyLevel(dataEntrega, record.status);
+          const diasTolerancia = record.diasToleranciaAtraso ?? record.itens?.[0]?.dias_tolerancia_atraso ?? 0;
+          const level = getUrgencyLevel(dataEntrega, record.status, diasTolerancia);
           const color = urgencyColors[level];
           return <span style={{ color: color || undefined }}>{dataEntrega ? dayjs(dataEntrega).format('DD/MM/YYYY') : '-'}</span>;
         },
@@ -997,7 +998,7 @@ const FilaProducao = () => {
                                           <span style={{ fontSize: 11 }}>
                                             {(op.tipo || 'cliente') === 'casa' ? <Tag color="blue" style={{ margin: 0 }}>Casa</Tag> : <Tag style={{ margin: 0 }}>Cliente</Tag>}
                                           </span>
-                                          <span style={{ fontSize: 11, color: urgencyColors[getUrgencyLevel(op.dataEntrega ?? op.itens?.[0]?.dataEntrega, op.status)] ?? undefined }}>
+                                          <span style={{ fontSize: 11, color: urgencyColors[getUrgencyLevel(op.dataEntrega ?? op.itens?.[0]?.dataEntrega, op.status, op.diasToleranciaAtraso)] ?? undefined }}>
                                             {(op.dataEntrega ?? op.itens?.[0]?.dataEntrega) ? dayjs(op.dataEntrega ?? op.itens?.[0]?.dataEntrega).format('DD/MM') : '-'}
                                           </span>
                                         </div>
@@ -1044,7 +1045,7 @@ const FilaProducao = () => {
                                 <span style={{ fontSize: 11 }}>
                                   {(op.tipo || 'cliente') === 'casa' ? <Tag color="blue" style={{ margin: 0 }}>Casa</Tag> : <Tag style={{ margin: 0 }}>Cliente</Tag>}
                                 </span>
-                                <span style={{ fontSize: 11, color: urgencyColors[getUrgencyLevel(op.dataEntrega ?? op.itens?.[0]?.dataEntrega, op.status)] ?? undefined }}>
+                                <span style={{ fontSize: 11, color: urgencyColors[getUrgencyLevel(op.dataEntrega ?? op.itens?.[0]?.dataEntrega, op.status, op.diasToleranciaAtraso)] ?? undefined }}>
                                   {(op.dataEntrega ?? op.itens?.[0]?.dataEntrega) ? dayjs(op.dataEntrega ?? op.itens?.[0]?.dataEntrega).format('DD/MM') : '-'}
                                 </span>
                               </div>
@@ -1122,7 +1123,7 @@ const FilaProducao = () => {
                                       <Text ellipsis style={{ flex: 1, fontSize: 12 }}>{op.produto || op.itens?.[0]?.descricaoItem || '-'}</Text>
                                       <Text type="secondary" style={{ fontSize: 11 }}>{op.liga || '-'} / {op.tempera || '-'}</Text>
                                       <Text style={{ fontSize: 11 }}>{(op.quantidade != null && op.quantidade !== '' ? Number(op.quantidade) : (op.itens || []).reduce((s, i) => s + (parseFloat(i.quantidadePecas) || 0), 0)).toLocaleString('pt-BR')} kg</Text>
-                                      <span style={{ fontSize: 11, color: urgencyColors[getUrgencyLevel(op.dataEntrega ?? op.itens?.[0]?.dataEntrega, op.status)] ?? undefined }}>
+                                      <span style={{ fontSize: 11, color: urgencyColors[getUrgencyLevel(op.dataEntrega ?? op.itens?.[0]?.dataEntrega, op.status, op.diasToleranciaAtraso)] ?? undefined }}>
                                         {(op.dataEntrega ?? op.itens?.[0]?.dataEntrega) ? dayjs(op.dataEntrega ?? op.itens?.[0]?.dataEntrega).format('DD/MM') : '-'}
                                       </span>
                                       {!confirmada && (
@@ -1148,8 +1149,9 @@ const FilaProducao = () => {
                         <Text type="secondary" style={{ fontSize: 11 }}>Follow-up: </Text>
                         <Space size="small">
                           <Tag style={{ margin: 0, fontSize: 10 }}>Prensa</Tag>
-                          <Tag style={{ margin: 0, fontSize: 10 }}>Corte</Tag>
+                          <Tag style={{ margin: 0, fontSize: 10 }}>Serra</Tag>
                           <Tag style={{ margin: 0, fontSize: 10 }}>Forno</Tag>
+                          <Tag style={{ margin: 0, fontSize: 10 }}>Esticadeira</Tag>
                           <Tag style={{ margin: 0, fontSize: 10 }}>Embalagem</Tag>
                         </Space>
                       </div>

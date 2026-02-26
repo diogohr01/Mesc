@@ -47,9 +47,13 @@ function EtapaIcon({ status }) {
   return <ClockCircleOutlined style={{ ...iconStyle, color: colors.text?.secondary ?? '#8c8c8c', opacity: 0.6 }} />;
 }
 
+/** Pipeline: Prensa → Serra → Forno → Esticadeira → Embalagem. Usado na Fila de Produção e helpers. */
+export const ETAPA_PIPELINE_LABELS = ['Prensa', 'Serra', 'Forno', 'Esticadeira', 'Embalagem'];
+export const ETAPA_PIPELINE_KEYS = ['prensa', 'serra', 'forno', 'esticadeira', 'embalagem'];
+
 /**
  * Pill com label, status e horário opcional para uma etapa do pipeline.
- * @param {string} label - Nome da etapa (ex.: Prensa, Corte, Forno, Embalagem)
+ * @param {string} label - Nome da etapa (ex.: Prensa, Serra, Forno, Esticadeira, Embalagem)
  * @param {string} status - Chave do status: aguardando | em_processo | concluido | problema
  * @param {object} horario - Opcional: { inicio?: string, fim?: string } para tooltip
  */

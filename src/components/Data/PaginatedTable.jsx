@@ -1,7 +1,108 @@
-import { Button, message, Space, Table } from 'antd';
-import React, { useEffect, useState, forwardRef, useImperativeHandle, useCallback, useMemo } from 'react';
+import { Button, Checkbox, Input, message, Popover, Space, Table } from 'antd';
+import { FilterFilled } from '@ant-design/icons';
+import React, { useEffect, useState, forwardRef, useImperativeHandle, useCallback, useMemo, useRef } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { LoadingSpinner } from '../UI';
+import { colors } from '../../styles/colors';
+
+/** Dropdown de filtro por coluna (estilo Excel): pesquisa + lista de valores distintos com checkboxes + OK/Cancelar */
+function ColumnFilterDropdown({ columnKey, getDistinctValuesForColumn, setSelectedKeys, selectedKeys, confirm, clearFilters }) {
+    const [options, setOptions] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [searchText, setSearchText] = useState('');
+    const selectedSet = useMemo(() => new Set(selectedKeys || []), [selectedKeys]);
+
+    useEffect(() => {
+        let cancelled = false;
+        setLoading(true);
+        (async () => {
+            try {
+                const list = getDistinctValuesForColumn ? await getDistinctValuesForColumn(columnKey) : [];
+                if (!cancelled) setOptions(Array.isArray(list) ? list : (list?.distinctValues || []));
+            } catch (e) {
+                if (!cancelled) setOptions([]);
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [columnKey, getDistinctValuesForColumn]);
+
+    const filteredOptions = useMemo(() => {
+        if (!searchText.trim()) return options;
+        const t = String(searchText).toLowerCase();
+        return options.filter((o) => {
+            const text = (o?.text ?? o?.value ?? '').toString().toLowerCase();
+            const val = (o?.value ?? '').toString().toLowerCase();
+            return text.includes(t) || val.includes(t);
+        });
+    }, [options, searchText]);
+
+    const allValues = useMemo(() => filteredOptions.map((o) => o.value), [filteredOptions]);
+    const allSelected = allValues.length > 0 && allValues.every((v) => selectedSet.has(v));
+
+    const toggleSelectAll = () => {
+        if (allSelected) {
+            const next = selectedKeys.filter((k) => !allValues.includes(k));
+            setSelectedKeys(next);
+        } else {
+            const next = [...new Set([...(selectedKeys || []), ...allValues])];
+            setSelectedKeys(next);
+        }
+    };
+
+    const toggleOption = (value) => {
+        const next = selectedSet.has(value)
+            ? (selectedKeys || []).filter((k) => k !== value)
+            : [...(selectedKeys || []), value];
+        setSelectedKeys(next);
+    };
+
+    return (
+        <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
+            <Input
+                placeholder="Pesquisar"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                style={{ marginBottom: 8 }}
+                allowClear
+            />
+            {loading ? (
+                <div style={{ padding: '8px 0', color: '#999' }}>A carregar...</div>
+            ) : (
+                <>
+                    <div style={{ marginBottom: 8, borderBottom: '1px solid #f0f0f0', paddingBottom: 4 }}>
+                        <Checkbox checked={allSelected} indeterminate={!allSelected && allValues.some((v) => selectedSet.has(v))} onChange={toggleSelectAll}>
+                            (Selecionar Tudo)
+                        </Checkbox>
+                    </div>
+                    <div style={{ maxHeight: 220, overflow: 'auto' }}>
+                        {filteredOptions.map((opt) => {
+                            const val = opt.value;
+                            const text = (opt.text ?? opt.value ?? '').toString();
+                            return (
+                                <div key={val ?? text} style={{ marginBottom: 4 }}>
+                                    <Checkbox checked={selectedSet.has(val)} onChange={() => toggleOption(val)}>
+                                        {text || '(vazio)'}
+                                    </Checkbox>
+                                </div>
+                            );
+                        })}
+                        {filteredOptions.length === 0 && <div style={{ color: '#999', padding: '4px 0' }}>Nenhum valor</div>}
+                    </div>
+                </>
+            )}
+            <Space style={{ marginTop: 8 }}>
+                <Button type="primary" size="small" onClick={() => confirm(selectedKeys)}>
+                    OK
+                </Button>
+                <Button size="small" onClick={() => clearFilters?.()}>
+                    Limpar
+                </Button>
+            </Space>
+        </div>
+    );
+}
 
 const DROPPABLE_ID = 'paginated-table-body';
 
@@ -32,6 +133,8 @@ const DRAG_ROW_DRAGGING_STYLES = {
  * @param {object} expandable - Configurações para linhas expansíveis. Exemplo: { expandedRowRender: (record) => <p>{record.description}</p> }.
  * @param {object} scroll - Define o scroll da tabela para tornar responsiva. Default: { x: 'max-content' }.
  * @param {ReactNode} loadingIcon - Ícone customizado para o loading da tabela. Default: LoadingSpinner.
+ * @param {function} getDistinctValuesForColumn - (columnKey) => Promise<Array<{ text, value }>> para colunas com filterable: true.
+ * @param {boolean} usePopoverForColumnFilter - Se true, usa Popover em vez do Dropdown nativo no header para evitar bugs de posição. Default: false.
  * @param {object} restProps - Outras propriedades padrão para a tabela do Ant Design.
  */
 const PaginatedTable = forwardRef(
@@ -50,6 +153,8 @@ const PaginatedTable = forwardRef(
             scroll = { x: 'max-content' }, // Responsividade
             loadingIcon = <LoadingSpinner />, // Ícone customizado para loading
             hidePagination = false, // Se true, não exibe paginação e carrega todos os itens (pageSize grande)
+            getDistinctValuesForColumn = null, // (columnKey) => Promise<Array<{ text, value }>> para colunas com filterable: true
+            usePopoverForColumnFilter = false, // Se true, usa Popover em vez do Dropdown nativo para evitar bugs de posição
             ...restProps // Permite passar outras propriedades para a tabela
         },
         ref
@@ -66,14 +171,17 @@ const PaginatedTable = forwardRef(
         });
         const [loading, setLoading] = useState(false);
         const [sorter, setSorter] = useState({ field: null, order: null }); // Estado para manter a ordenação atual
+        const [columnFilters, setColumnFilters] = useState({}); // Filtros por coluna (Ant Design filters)
         const [selectedRowKeys, setSelectedRowKeys] = useState([]); // Estado para linhas selecionadas
+        const [openFilterKey, setOpenFilterKey] = useState(null); // Para Popover do filtro por coluna (fallback)
+        const filterContentClickedRef = useRef(false); // Evita fechar o Popover ao clicar dentro do conteúdo
 
-        // Função para buscar dados do backend
-        const getData = async (page, pageSize, sorterField, sortOrder) => {
+        // Função para buscar dados do backend (inclui columnFilters para filtro por coluna)
+        const getData = async (page, pageSize, sorterField, sortOrder, filters) => {
             setLoading(true);
             try {
-                // Passa sorterField e sortOrder para a requisição ao backend
-                const response = await fetchData(page, pageSize, sorterField, sortOrder);
+                const f = filters != null ? filters : columnFilters;
+                const response = await fetchData(page, pageSize, sorterField, sortOrder, f);
                 setData(response.data); // Dados retornados para a tabela
                 setPagination((prev) => ({
                     ...prev,
@@ -88,7 +196,7 @@ const PaginatedTable = forwardRef(
             }
         };
 
-        // Função chamada ao mudar a página, tamanho da página ou a ordenação
+        // Função chamada ao mudar a página, tamanho da página, ordenação ou filtros (API nativa do Table)
         const handleTableChange = (newPagination, filters, newSorter) => {
             if (disabled) return; // Bloqueia mudanças na tabela se `disabled` for true
 
@@ -97,15 +205,20 @@ const PaginatedTable = forwardRef(
             const sortOrder = newSorter?.order || null;
 
             setSorter({ field: sorterField, order: sortOrder }); // Atualiza o estado de ordenação
-            getData(current, pageSize, sorterField, sortOrder);
+            setColumnFilters(filters || {}); // Persiste filtros (Table é a fonte de verdade)
+            getData(current, pageSize, sorterField, sortOrder, filters);
         };
 
-        // Expor a função `reloadTable` para recarregar os dados de fora do componente
-        useImperativeHandle(ref, () => ({
-            reloadTable() {
-                getData(pagination.current, pagination.pageSize, sorter?.field, sorter?.order); // Recarregar a tabela
-            },
-        }));
+        // Expor a função `reloadTable` para recarregar os dados de fora do componente (mantém filtros activos)
+        useImperativeHandle(
+            ref,
+            () => ({
+                reloadTable() {
+                    getData(pagination.current, pagination.pageSize, sorter?.field, sorter?.order, columnFilters);
+                },
+            }),
+            [pagination.current, pagination.pageSize, sorter?.field, sorter?.order, columnFilters]
+        );
 
         const handleDragEnd = useCallback(
             (result) => {
@@ -221,12 +334,115 @@ const PaginatedTable = forwardRef(
             ]
             : [];
 
-        // Mapear colunas e adicionar `sorter` apenas onde for necessário
-        const combinedColumns = columns.map((column) => ({
-            ...column,
-            sorter: column.dataIndex && column.dataIndex !== 'actions', // Adiciona `sorter: true` apenas se `dataIndex` estiver presente e não for a coluna de ações
-            sortOrder: sorter.field === column.dataIndex ? sorter.order : null, // Define a ordenação atual com base no estado
-        })).concat(actionColumn);
+        // Mapear colunas: sorter, e para filterable usar filterDropdown nativo + filteredValue (ou Popover como fallback)
+        const combinedColumns = columns.map((column) => {
+            const colKey = column.key ?? column.dataIndex;
+            const isFilterable = column.filterable && (getDistinctValuesForColumn || column.getDistinctValues);
+            const baseCol = {
+                ...column,
+                sorter: column.dataIndex && column.dataIndex !== 'actions',
+                sortOrder: sorter.field === column.dataIndex ? sorter.order : null,
+            };
+            if (!isFilterable) return baseCol;
+
+            const filteredValue = columnFilters[colKey] || null;
+            if (usePopoverForColumnFilter) {
+                const selectedKeys = filteredValue ?? [];
+                const setSelectedKeys = (keys) => setColumnFilters((prev) => ({ ...prev, [colKey]: keys }));
+                const confirm = (keys) => {
+                    const nextFilters = keys != null ? { ...columnFilters, [colKey]: keys } : { ...columnFilters, [colKey]: selectedKeys };
+                    setColumnFilters(nextFilters);
+                    setOpenFilterKey(null);
+                    getData(pagination.current, pagination.pageSize, sorter?.field ?? null, sorter?.order ?? null, nextFilters);
+                };
+                const clearFilters = () => {
+                    const nextFilters = { ...columnFilters, [colKey]: null };
+                    setColumnFilters(nextFilters);
+                    setOpenFilterKey(null);
+                    getData(pagination.current, pagination.pageSize, sorter?.field ?? null, sorter?.order ?? null, nextFilters);
+                };
+                const titleContent = typeof column.title === 'function' ? column.title(column, {}) : column.title;
+                return {
+                    ...baseCol,
+                    filteredValue,
+                    filterDropdown: undefined,
+                    title: (
+                        <Space size="small">
+                            <span>{titleContent}</span>
+                            <Popover
+                                open={openFilterKey === colKey}
+                                onOpenChange={(open) => {
+                                    if (!open) {
+                                        // Um tick depois: se o clique foi dentro do conteúdo, o ref fica true e não fechamos
+                                        setTimeout(() => {
+                                            if (filterContentClickedRef.current) {
+                                                filterContentClickedRef.current = false;
+                                                return;
+                                            }
+                                            setOpenFilterKey(null);
+                                        }, 0);
+                                    }
+                                }}
+                                trigger="click"
+                                content={
+                                    <div
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            filterContentClickedRef.current = true;
+                                        }}
+                                        onMouseDown={(e) => {
+                                            e.stopPropagation();
+                                            filterContentClickedRef.current = true;
+                                        }}
+                                    >
+                                        <ColumnFilterDropdown
+                                            columnKey={colKey}
+                                            getDistinctValuesForColumn={column.getDistinctValues || getDistinctValuesForColumn}
+                                            setSelectedKeys={setSelectedKeys}
+                                            selectedKeys={selectedKeys}
+                                            confirm={confirm}
+                                            clearFilters={clearFilters}
+                                        />
+                                    </div>
+                                }
+                            >
+                                <span
+                                    role="button"
+                                    tabIndex={-1}
+                                    className={`ant-table-filter-trigger ${filteredValue?.length ? 'active' : ''}`}
+                                    style={{
+                                        color: filteredValue?.length ? colors.white : colors.text.secondary,
+                                    }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenFilterKey((k) => (k === colKey ? null : colKey));
+                                    }}
+                                >
+                                    <FilterFilled />
+                                </span>
+                            </Popover>
+                        </Space>
+                    ),
+                };
+            }
+            return {
+                ...baseCol,
+                filteredValue,
+                filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+                    <ColumnFilterDropdown
+                        columnKey={colKey}
+                        getDistinctValuesForColumn={column.getDistinctValues || getDistinctValuesForColumn}
+                        setSelectedKeys={setSelectedKeys}
+                        selectedKeys={selectedKeys}
+                        confirm={confirm}
+                        clearFilters={clearFilters}
+                    />
+                ),
+                filterDropdownProps: {
+                    getPopupContainer: (node) => node?.parentElement ?? document.body,
+                },
+            };
+        }).concat(actionColumn);
 
         const mergedOnRow = reorderable
             ? (record, index) => ({

@@ -41,7 +41,7 @@ const List = ({ onAdd, onEdit, onView }) => {
   );
 
   const fetchData = useCallback(
-    async (page, pageSize, sorterField, sortOrder) => {
+    async (page, pageSize, sorterField, sortOrder, columnFilters) => {
       setLoading(true);
       try {
         const filters = filterForm.getFieldsValue();
@@ -53,6 +53,14 @@ const List = ({ onAdd, onEdit, onView }) => {
           ...filters,
           search: searchTerm?.trim() || undefined,
         };
+        if (columnFilters && typeof columnFilters === 'object') {
+          if (Array.isArray(columnFilters.liga) && columnFilters.liga.length > 0) {
+            requestData.filter_liga = columnFilters.liga;
+          }
+          if (Array.isArray(columnFilters.tempera) && columnFilters.tempera.length > 0) {
+            requestData.filter_tempera = columnFilters.tempera;
+          }
+        }
         const response = await ItensService.getAll(requestData);
         return {
           data: response.data?.data || [],
@@ -68,6 +76,11 @@ const List = ({ onAdd, onEdit, onView }) => {
     },
     [filterForm, searchTerm]
   );
+
+  const getDistinctValuesForColumn = useCallback(async (columnKey) => {
+    const list = await ItensService.getDistinctValues(columnKey);
+    return Array.isArray(list) ? list : (list?.distinctValues || []);
+  }, []);
 
   useEffect(() => {
     debouncedReloadTable();
@@ -101,12 +114,14 @@ const List = ({ onAdd, onEdit, onView }) => {
         dataIndex: 'liga',
         key: 'liga',
         width: 80,
+        filterable: true,
       },
       {
         title: 'Têmpera',
         dataIndex: 'tempera',
         key: 'tempera',
         width: 80,
+        filterable: true,
         render: (v) =>
           v ? (
             <Tag color={temperaTagColor[v] || temperaTagColor.default} style={{ margin: 0, fontFamily: 'monospace' }}>
@@ -242,10 +257,12 @@ const List = ({ onAdd, onEdit, onView }) => {
                   ref={tableRef}
                   disabled={loading}
                   fetchData={fetchData}
+                  getDistinctValuesForColumn={getDistinctValuesForColumn}
                   initialPageSize={10}
                   columns={columns}
                   loadingIcon={<LoadingSpinner />}
                   rowKey="id"
+                  usePopoverForColumnFilter
                 />
               </div>
             </Card>

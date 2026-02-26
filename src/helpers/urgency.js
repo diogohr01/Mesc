@@ -15,35 +15,45 @@ export function parseLocalDate(dateStr) {
   return new Date(Number(y), Number(m) - 1, Number(d));
 }
 
-/** Verifica se dataEntrega está atrasada (antes de hoje, em data local). */
-export function isDataEntregaAtrasada(dataEntrega) {
+/**
+ * Verifica se dataEntrega está atrasada (antes de hoje, em data local).
+ * @param {string|Date} dataEntrega - Data de entrega
+ * @param {number} [diasToleranciaAtraso=0] - Dias de tolerância após a data de entrega; só após esse período é considerado atrasado
+ */
+export function isDataEntregaAtrasada(dataEntrega, diasToleranciaAtraso = 0) {
   const entrega = parseLocalDate(dataEntrega);
   if (!entrega || isNaN(entrega.getTime())) return false;
+  const dias = Number(diasToleranciaAtraso) || 0;
+  const dataEfetiva = new Date(entrega);
+  dataEfetiva.setDate(dataEfetiva.getDate() + dias);
+  dataEfetiva.setHours(0, 0, 0, 0);
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
-  entrega.setHours(0, 0, 0, 0);
-  return entrega < hoje;
+  return dataEfetiva < hoje;
 }
 
 /**
- * Nível de urgência com base na data de entrega e status.
+ * Nível de urgência com base na data de entrega, status e tolerância de atraso.
  * @param {string|Date} dataEntrega - Data de entrega da OP
  * @param {string} status - Status da OP (ex.: em_producao, concluida)
+ * @param {number} [diasToleranciaAtraso=0] - Dias de tolerância após a data de entrega; a "data efetiva" é dataEntrega + diasToleranciaAtraso
  * @returns {'critical'|'warning'|'ok'}
  */
-export function getUrgencyLevel(dataEntrega, status) {
+export function getUrgencyLevel(dataEntrega, status, diasToleranciaAtraso = 0) {
   if (status === 'concluida' || status === 'cancelada') return 'ok';
   if (!dataEntrega) return 'ok';
 
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
 
-  // Parse dataEntrega como data local (evita bug de timezone: "YYYY-MM-DD" seria UTC)
   const entrega = parseLocalDate(dataEntrega);
   if (!entrega || isNaN(entrega.getTime())) return 'ok';
-  entrega.setHours(0, 0, 0, 0);
+  const dias = Number(diasToleranciaAtraso) || 0;
+  const dataEfetiva = new Date(entrega);
+  dataEfetiva.setDate(dataEfetiva.getDate() + dias);
+  dataEfetiva.setHours(0, 0, 0, 0);
 
-  const diffDays = Math.ceil((entrega - hoje) / (1000 * 60 * 60 * 24));
+  const diffDays = Math.ceil((dataEfetiva - hoje) / (1000 * 60 * 60 * 24));
 
   if (diffDays < 0) return 'critical';   // atrasada → vermelho
   if (diffDays <= 3) return 'warning';  // 3 dias ou menos → amarelo

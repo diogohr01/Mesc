@@ -109,7 +109,8 @@ const OrdemProducaoTotvsList = forwardRef(function OrdemProducaoTotvsList(
   const rowClassName = useCallback((record) => {
     const dataEntrega = record.dataEntrega ?? record.itens?.[0]?.dataEntrega;
     if (!dataEntrega) return '';
-    const atrasada = isDataEntregaAtrasada(dataEntrega) && record.situacao !== 'Encerrada';
+    const diasTolerancia = record.diasToleranciaAtraso ?? record.itens?.[0]?.dias_tolerancia_atraso ?? 0;
+    const atrasada = isDataEntregaAtrasada(dataEntrega, diasTolerancia) && record.situacao !== 'Encerrada';
     return atrasada ? 'op-atrasada' : '';
   }, []);
 
@@ -425,7 +426,8 @@ const OrdemProducaoTotvsList = forwardRef(function OrdemProducaoTotvsList(
         width: 80,
         render: (_, record) => {
           const dataEntrega = record.dataEntrega ?? record.itens?.[0]?.dataEntrega;
-          const level = getUrgencyLevel(dataEntrega, record.situacao === 'Encerrada' ? 'concluida' : '');
+          const diasTolerancia = record.diasToleranciaAtraso ?? record.itens?.[0]?.dias_tolerancia_atraso ?? 0;
+          const level = getUrgencyLevel(dataEntrega, record.situacao === 'Encerrada' ? 'concluida' : '', diasTolerancia);
           const color = urgencyColors[level];
           return <span style={{ color: color || undefined }}>{dataEntrega ? dayjs(dataEntrega).format('DD/MM/YYYY') : '-'}</span>;
         },

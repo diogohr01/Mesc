@@ -283,6 +283,8 @@ const AddEdit = ({ editingRecord, onCancel, onSave, onEdit, onView }) => {
             quantidadeKg: item.quantidadeKg || 0,
             dataEntrega: item.dataEntrega ? dayjs(item.dataEntrega) : null,
             data_limite_prod: item.data_limite_prod ? dayjs(item.data_limite_prod) : null,
+            leadtime_producao: item.leadtime_producao ?? 0,
+            dias_tolerancia_atraso: item.dias_tolerancia_atraso ?? 0,
             acabamento: item.acabamento || '',
             cubagemPrevista: item.cubagemPrevista || 0,
             cubagemReal: item.cubagemReal || null,
@@ -358,6 +360,8 @@ const AddEdit = ({ editingRecord, onCancel, onSave, onEdit, onView }) => {
             quantidadeKg: item.quantidadeKg || 0,
             dataEntrega: item.dataEntrega ? dayjs(item.dataEntrega) : null,
             data_limite_prod: item.data_limite_prod ? dayjs(item.data_limite_prod) : null,
+            leadtime_producao: item.leadtime_producao ?? 0,
+            dias_tolerancia_atraso: item.dias_tolerancia_atraso ?? 0,
             acabamento: item.acabamento || '',
             cubagemPrevista: item.cubagemPrevista || 0,
             cubagemReal: item.cubagemReal || null,
@@ -522,12 +526,14 @@ const AddEdit = ({ editingRecord, onCancel, onSave, onEdit, onView }) => {
           return null;
         };
 
-        // Serializar itens (preserva controle_tipo e data_limite_prod para propagação)
+        // Serializar itens (preserva controle_tipo, data_limite_prod, leadtime_producao, dias_tolerancia_atraso)
         const itensSerializados = itens.map(item => ({
           ...item,
           controle_tipo: item.controle_tipo || 'PEÇA',
           dataEntrega: item.dataEntrega ? (dayjs.isDayjs(item.dataEntrega) ? item.dataEntrega.format('YYYY-MM-DD') : item.dataEntrega) : null,
           data_limite_prod: item.data_limite_prod ? (dayjs.isDayjs(item.data_limite_prod) ? item.data_limite_prod.format('YYYY-MM-DD') : item.data_limite_prod) : null,
+          leadtime_producao: item.leadtime_producao ?? 0,
+          dias_tolerancia_atraso: item.dias_tolerancia_atraso ?? 0,
         }));
 
         const isOpFilha = editingRecord?.tipoOp === 'FILHA' || !editingRecord;
@@ -742,6 +748,8 @@ const AddEdit = ({ editingRecord, onCancel, onSave, onEdit, onView }) => {
                               { title: 'Qtd (kg)', dataIndex: 'quantidadeKg', key: 'quantidadeKg', width: 100, align: 'right', render: (v) => v?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '0.00' },
                               { title: 'Data Entrega', dataIndex: 'dataEntrega', key: 'dataEntrega', width: 120, render: (d) => d ? dayjs(d).format('DD/MM/YYYY') : '-' },
                               { title: 'Dt lim. prod.', dataIndex: 'data_limite_prod', key: 'data_limite_prod', width: 110, render: (d) => d ? dayjs(d).format('DD/MM/YYYY') : '-' },
+                              { title: 'Lead time prod. (dias)', dataIndex: 'leadtime_producao', key: 'leadtime_producao', width: 130, align: 'right', render: (v) => v ?? 0 },
+                              { title: 'Tol. atraso (dias)', dataIndex: 'dias_tolerancia_atraso', key: 'dias_tolerancia_atraso', width: 120, align: 'right', render: (v) => v ?? 0 },
                             ]}
                             rowKey={(r, i) => r.key ?? r.id ?? `item-${i}`}
                             pagination={false}
@@ -804,6 +812,9 @@ const AddEdit = ({ editingRecord, onCancel, onSave, onEdit, onView }) => {
                                   />
                                 ),
                               },
+                              { title: 'Data Entrega', dataIndex: 'dataEntrega', key: 'dataEntrega', width: 120, render: (d) => d ? dayjs(d).format('DD/MM/YYYY') : '-' },
+                              { title: 'Lead time prod. (dias)', dataIndex: 'leadtime_producao', key: 'leadtime_producao', width: 130, align: 'right', render: (v) => v ?? 0 },
+                              { title: 'Tol. atraso (dias)', dataIndex: 'dias_tolerancia_atraso', key: 'dias_tolerancia_atraso', width: 120, align: 'right', render: (v) => v ?? 0 },
                             ]}
                             rowKey={(r, i) => r.key ?? r.id ?? `item-${i}`}
                             pagination={false}

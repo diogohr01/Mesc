@@ -1,6 +1,9 @@
 {
   "data": [
-    { "id": "m1", "recursoId": "rec-3", "dataInicio": "2025-02-10", "dataFim": "2025-02-12", "tipo": "manutencao", "descricao": "Manutenção preventiva" },
-    { "id": "m2", "recursoId": "rec-1", "dataInicio": "2025-02-14", "dataFim": "2025-02-14", "tipo": "parada", "descricao": "Parada programada" }
+    {"id": "m1", "recursoId": "rec-3", "dataInicio": "2026-02-10", "dataFim": "2026-02-14", "tipo": "manutencao", "descricao": "Manutenção preventiva cilindro"},
+    {"id": "m2", "recursoId": "rec-1", "dataInicio": "2026-02-17", "dataFim": "2026-02-17", "tipo": "parada", "descricao": "Troca de tarugo programada"},
+    {"id": "m3", "recursoId": "rec-4", "dataInicio": "2026-02-20", "dataFim": "2026-02-21", "tipo": "manutencao", "descricao": "Recalibragem do forno"},
+    {"id": "m4", "recursoId": "rec-5", "dataInicio": "2026-02-15", "dataFim": "2026-02-16", "tipo": "parada", "descricao": "Troca de disco de corte"},
+    {"id": "m5", "recursoId": "rec-2", "dataInicio": "2026-02-28", "dataFim": "2026-03-01", "tipo": "manutencao", "descricao": "Lubrificação programada"}
   ]
 }

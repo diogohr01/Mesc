@@ -26,6 +26,7 @@ export function normalizeOPParaFila(op, pai) {
             : (pai && pai.produto) || primeiroItem?.descricaoItem || '';
     const codigo = op.codigo != null && op.codigo !== '' ? op.codigo : (op.numeroOPERP || '');
     const dataEntrega = op.dataEntrega ?? primeiroItem?.dataEntrega ?? '';
+    const diasToleranciaAtraso = op.diasToleranciaAtraso ?? primeiroItem?.dias_tolerancia_atraso ?? 0;
     const tipo = op.tipo != null && op.tipo !== '' ? (op.tipo === 'casa' ? 'casa' : 'cliente') : (pai && pai.tipo === 'casa' ? 'casa' : 'cliente');
     return {
         ...op,
@@ -36,6 +37,7 @@ export function normalizeOPParaFila(op, pai) {
         liga: op.liga != null && op.liga !== '' ? op.liga : (pai && pai.liga) || '',
         tempera: op.tempera != null && op.tempera !== '' ? op.tempera : (pai && pai.tempera) || '',
         dataEntrega,
+        diasToleranciaAtraso,
         tipo,
         contingencia: op.contingencia ?? false,
         status: op.status ?? 'nao_programada',
@@ -160,6 +162,8 @@ const getMockData = async (endpoint, data) => {
                     quantidadeKg: 1250.5,
                     dataEntrega: "2024-02-20",
                     data_limite_prod: null,
+                    leadtime_producao: 0,
+                    dias_tolerancia_atraso: 0,
                     acabamento: "Anodizado"
                 }
             ]
@@ -371,14 +375,17 @@ const OrdemProducaoService = {
         const opsResumo = [];
         filhas.forEach((f) => {
             const pai = pais.find((p) => p.id === f.opPaiId);
-            const dataEntrega = (f.itens && f.itens[0] && f.itens[0].dataEntrega) || '';
-            const produto = (pai && pai.produto) || (f.itens && f.itens[0] && f.itens[0].descricaoItem) || '';
+            const primeiroItem = f.itens && f.itens[0];
+            const dataEntrega = (primeiroItem && primeiroItem.dataEntrega) || '';
+            const diasToleranciaAtraso = (primeiroItem && primeiroItem.dias_tolerancia_atraso) ?? 0;
+            const produto = (pai && pai.produto) || (primeiroItem && primeiroItem.descricaoItem) || '';
             const quantidadeKg = (f.itens || []).reduce((s, i) => s + (parseFloat(i.quantidadeKg) || 0), 0);
             opsResumo.push({
                 id: f.id,
                 codigo: f.numeroOPERP || `${pai ? pai.numeroOPERP : ''}-${f.id}`,
                 status: f.status || 'nao_programada',
                 dataEntrega,
+                diasToleranciaAtraso,
                 score: f.score != null ? f.score : 0,
                 produto,
                 cliente: (f.cliente && f.cliente.nome) || '',
@@ -391,15 +398,18 @@ const OrdemProducaoService = {
         pais.forEach((p) => {
             const hasFilhas = filhas.some((f) => f.opPaiId === p.id);
             if (!hasFilhas) {
-                const dataEntrega = (p.itens && p.itens[0] && p.itens[0].dataEntrega) || '';
+                const primeiroItem = p.itens && p.itens[0];
+                const dataEntrega = (primeiroItem && primeiroItem.dataEntrega) || '';
+                const diasToleranciaAtraso = (primeiroItem && primeiroItem.dias_tolerancia_atraso) ?? 0;
                 const quantidadeKg = (p.itens || []).reduce((s, i) => s + (parseFloat(i.quantidadeKg) || 0), 0);
                 opsResumo.push({
                     id: p.id,
                     codigo: p.numeroOPERP || '',
                     status: (p.situacao === 'Em cadastro' ? 'nao_programada' : 'programada') || 'nao_programada',
                     dataEntrega,
+                    diasToleranciaAtraso,
                     score: 0,
-                    produto: p.produto || (p.itens && p.itens[0] && p.itens[0].descricaoItem) || '',
+                    produto: p.produto || (primeiroItem && primeiroItem.descricaoItem) || '',
                     cliente: (p.cliente && p.cliente.nome) || '',
                     quantidadeKg,
                     tipo: p.tipo === 'casa' ? 'casa' : 'cliente',
@@ -473,6 +483,7 @@ const OrdemProducaoService = {
                 const pai = pais.find((p) => p.id === f.opPaiId);
                 const primeiroItem = (f.itens && f.itens[0]) || (pai && pai.itens && pai.itens[0]);
                 const dataEntrega = primeiroItem?.dataEntrega || '';
+                const diasToleranciaAtraso = primeiroItem?.dias_tolerancia_atraso ?? 0;
                 const produto = (pai && pai.produto) || primeiroItem?.descricaoItem || '';
                 const tipo = (f.tipo === 'casa' || (pai && pai.tipo === 'casa')) ? 'casa' : 'cliente';
                 const clienteNome = (f.cliente && f.cliente.nome) || (pai && pai.cliente && pai.cliente.nome) || '';
@@ -486,6 +497,7 @@ const OrdemProducaoService = {
                     liga: (pai && pai.liga) || f.liga || '',
                     tempera: (pai && pai.tempera) || f.tempera || '',
                     dataEntrega,
+                    diasToleranciaAtraso,
                     recurso: f.recurso || '',
                     tipo,
                     dataOP: f.dataOP,
@@ -555,7 +567,9 @@ const OrdemProducaoService = {
             const filhasDoPai = filhas
                 .filter((f) => f.opPaiId === pai.id)
                 .map((f, idx) => {
-                    const dataEntrega = (f.itens && f.itens[0] && f.itens[0].dataEntrega) || '';
+                    const primeiroItem = f.itens && f.itens[0];
+                    const dataEntrega = (primeiroItem && primeiroItem.dataEntrega) || '';
+                    const diasToleranciaAtraso = (primeiroItem && primeiroItem.dias_tolerancia_atraso) ?? 0;
                     const tipo = f.tipo === 'casa' || (pai && pai.tipo === 'casa') ? 'casa' : 'cliente';
                     return {
                         id: String(f.id),
@@ -563,9 +577,10 @@ const OrdemProducaoService = {
                         dataInicio: f.dataInicio || f.dataOP,
                         dataFim: f.dataFim || f.dataOP,
                         dataEntrega,
+                        diasToleranciaAtraso,
                         recurso: f.recurso || '',
                         status: f.status || 'nao_programada',
-                        quantidade: (f.itens && f.itens[0] && f.itens[0].quantidadePecas) || 0,
+                        quantidade: (primeiroItem && primeiroItem.quantidadePecas) || 0,
                         score: f.score != null ? f.score : 0,
                         setupMinutos: f.setupMinutos != null ? f.setupMinutos : 0,
                         setupTipo: f.setupTipo || '',

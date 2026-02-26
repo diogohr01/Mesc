@@ -416,7 +416,7 @@ const Dashboard = () => {
                         style={{
                           fontSize: 12,
                           fontFamily: 'monospace',
-                          color: urgencyColors[getUrgencyLevel(op.dataEntrega, op.status)] || colors.text.secondary,
+                          color: urgencyColors[getUrgencyLevel(op.dataEntrega, op.status, op.diasToleranciaAtraso)] || colors.text.secondary,
                         }}
                       >
                         {op.dataEntrega ? dayjs(op.dataEntrega).format('DD/MM') : '-'}

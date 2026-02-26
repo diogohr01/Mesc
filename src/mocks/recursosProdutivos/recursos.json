@@ -1,9 +1,9 @@
 {
   "data": [
-    { "id": "rec-1", "nome": "Prensa 01", "tipo": "Prensa de Extrusão", "capacidade": 120, "unidade": "t", "status": "operando" },
-    { "id": "rec-2", "nome": "Prensa 02", "tipo": "Prensa de Extrusão", "capacidade": 80, "unidade": "t", "status": "operando" },
-    { "id": "rec-3", "nome": "Prensa 03", "tipo": "Prensa de Extrusão", "capacidade": 80, "unidade": "t", "status": "manutencao" },
-    { "id": "rec-4", "nome": "Forno Homog.", "tipo": "Forno", "capacidade": null, "unidade": null, "status": "operando" },
-    { "id": "rec-5", "nome": "Serra 01", "tipo": "Serra de Corte", "capacidade": null, "unidade": null, "status": "operando" }
+    {"id": "rec-1", "nome": "Prensa 01", "tipo": "Prensa de Extrusão", "capacidade": 2200, "unidade": "t", "status": "operando"},
+    {"id": "rec-2", "nome": "Prensa 02", "tipo": "Prensa de Extrusão", "capacidade": 1800, "unidade": "t", "status": "operando"},
+    {"id": "rec-3", "nome": "Prensa 03", "tipo": "Prensa de Extrusão", "capacidade": 1200, "unidade": "t", "status": "manutencao"},
+    {"id": "rec-4", "nome": "Forno Homog. 01", "tipo": "Forno", "capacidade": 30, "unidade": "t", "status": "operando"},
+    {"id": "rec-5", "nome": "Serra 01", "tipo": "Serra de Corte", "capacidade": null, "unidade": null, "status": "operando"}
   ]
 }

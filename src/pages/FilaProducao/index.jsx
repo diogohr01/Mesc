@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { Button, Form, Layout, Row, Col, Space, Typography } from 'antd';
+import { Button, Form, Input, Layout, Modal, Row, Col, Space, Typography } from 'antd';
 import {
   ThunderboltOutlined,
   HomeOutlined,
@@ -12,11 +12,12 @@ import {
   RightOutlined,
   PlayCircleOutlined,
   ExclamationCircleOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { AiOutlineClear } from 'react-icons/ai';
 import { Card, DateNavStepper, FilterModalForm } from '../../components';
 import { useSequenciamento } from '../../contexts/SequenciamentoContext';
-import { EtapaPill, StatusBadge } from '../../components/Dashboard';
+import { EtapaPill, ETAPA_PIPELINE_LABELS, ETAPA_PIPELINE_KEYS, StatusBadge } from '../../components/Dashboard';
 import { getUrgencyLevel, urgencyColors } from '../../helpers/urgency';
 import { getEtapasFromStatus } from '../../helpers/etapas';
 import { colors } from '../../styles/colors';
@@ -39,8 +40,8 @@ function formatDataEntrega(dataEntrega) {
   return d.isValid() ? d.format('DD/MM') : '-';
 }
 
-const etapaLabels = ['Prensa', 'Corte', 'Forno', 'Embalagem'];
-const etapaKeys = ['prensa', 'corte', 'forno', 'embalagem'];
+const etapaLabels = ETAPA_PIPELINE_LABELS;
+const etapaKeys = ETAPA_PIPELINE_KEYS;
 
 /** Extrai texto de valor que pode ser string ou objeto { codigo, descricao } (evita "Objects are not valid as React child") */
 function toLabel(value) {
@@ -61,6 +62,8 @@ const FilaProducao = () => {
   const [appliedFiltroTipo, setAppliedFiltroTipo] = useState('todos');
   const [expandedIds, setExpandedIds] = useState(() => new Set());
   const [filterForm] = Form.useForm();
+  const [observacoesMap, setObservacoesMap] = useState(() => ({}));
+  const [modalObservacao, setModalObservacao] = useState(null);
 
   const filterFormConfig = useMemo(
     () => [
@@ -230,15 +233,12 @@ const FilaProducao = () => {
                 <Space direction="vertical" size={8} style={{ width: '100%', paddingTop: 8 }}>
                   {filtered.map(({ op, date }, idx) => {
                     const etapas = getEtapasFromStatus(op);
-                    const urgency = getUrgencyLevel(op.dataEntrega, op.status);
+                    const urgency = getUrgencyLevel(op.dataEntrega, op.status, op.diasToleranciaAtraso);
                     const rowKey = `${op.id}-${date}`;
                     const isExpanded = expandedIds.has(rowKey);
                     const temProblema =
                       etapas &&
-                      (etapas.prensa === 'problema' ||
-                        etapas.corte === 'problema' ||
-                        etapas.forno === 'problema' ||
-                        etapas.embalagem === 'problema');
+                      etapaKeys.some((key) => etapas[key] === 'problema');
                     const borderLeftColor = temProblema
                       ? '#ff4d4f'
                       : urgency === 'critical'
@@ -372,6 +372,21 @@ const FilaProducao = () => {
                             {formatDataEntrega(op.dataEntrega)}
                           </span>
                           <StatusBadge status={op.status} />
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<FileTextOutlined style={{ fontSize: 14 }} />}
+                            title="Observação"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setModalObservacao({ opId: op.id, codigo: toLabel(op.codigo) || op.codigo });
+                            }}
+                            style={{
+                              flexShrink: 0,
+                              color: observacoesMap[op.id] ? colors.primary : colors.text?.secondary ?? '#8c8c8c',
+                              padding: '2px 6px',
+                            }}
+                          />
                           {etapas && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                               {etapaKeys.map((key, i) => {
@@ -396,7 +411,7 @@ const FilaProducao = () => {
                                       }}
                                       title={etapaLabels[i]}
                                     />
-                                    {i < 3 && <div style={{ width: 6, height: 1, background: colors.borderColor }} />}
+                                    {i < etapaKeys.length - 1 && <div style={{ width: 6, height: 1, background: colors.borderColor }} />}
                                   </div>
                                 );
                               })}
@@ -429,7 +444,7 @@ const FilaProducao = () => {
                                         status={etapas[key]}
                                         horario={op.etapaHorarios?.[key]}
                                       />
-                                      {i < 3 && <RightOutlined style={{ fontSize: 10, color: colors.text?.secondary ?? '#8c8c8c', opacity: 0.4 }} />}
+                                      {i < etapaKeys.length - 1 && <RightOutlined style={{ fontSize: 10, color: colors.text?.secondary ?? '#8c8c8c', opacity: 0.4 }} />}
                                     </div>
                                   ))}
                                 </div>
@@ -449,6 +464,25 @@ const FilaProducao = () => {
                                   >
                                     <ExclamationCircleOutlined style={{ fontSize: 14, flexShrink: 0 }} />
                                     <span>Problema registrado em uma das etapas. Verificar ocorrência.</span>
+                                  </div>
+                                )}
+                                {observacoesMap[op.id] && (
+                                  <div
+                                    style={{
+                                      marginTop: 8,
+                                      fontSize: 11,
+                                      color: colors.text?.secondary ?? '#666',
+                                      background: colors.backgroundGray,
+                                      padding: '8px 12px',
+                                      borderRadius: 6,
+                                      border: '1px solid #e8e8e8',
+                                    }}
+                                  >
+                                    <Text type="secondary" style={{ fontSize: 10, fontWeight: 600 }}>
+                                      <FileTextOutlined style={{ marginRight: 4 }} />
+                                      Observação:
+                                    </Text>
+                                    <div style={{ marginTop: 4, whiteSpace: 'pre-wrap' }}>{observacoesMap[op.id]}</div>
                                   </div>
                                 )}
                               </>
@@ -480,6 +514,34 @@ const FilaProducao = () => {
             </Card>
           </Col>
         </Row>
+
+        <Modal
+          title={
+            <Space>
+              <FileTextOutlined />
+              <span>Observação — {modalObservacao?.codigo ?? ''}</span>
+            </Space>
+          }
+          open={!!modalObservacao}
+          onCancel={() => setModalObservacao(null)}
+          onOk={() => setModalObservacao(null)}
+          okText="Guardar"
+          cancelText="Cancelar"
+          destroyOnClose
+          width={480}
+        >
+          <Input.TextArea
+            placeholder="Escreva a observação desta OP..."
+            value={modalObservacao ? (observacoesMap[modalObservacao.opId] ?? '') : ''}
+            onChange={(e) =>
+              modalObservacao &&
+              setObservacoesMap((prev) => ({ ...prev, [modalObservacao.opId]: e.target.value }))
+            }
+            rows={4}
+            autoSize={{ minRows: 4, maxRows: 8 }}
+            style={{ marginTop: 8 }}
+          />
+        </Modal>
       </Content>
     </Layout>
   );

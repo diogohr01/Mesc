@@ -38,6 +38,15 @@ const getMockData = async (endpoint, data) => {
     if (typeof filtros.ativo === 'boolean') {
       filteredData = filteredData.filter((item) => item.ativo === filtros.ativo);
     }
+    // Filtros por coluna (múltiplos valores): filter_liga, filter_tempera como arrays
+    if (Array.isArray(filtros.filter_liga) && filtros.filter_liga.length > 0) {
+      const set = new Set(filtros.filter_liga.map((v) => String(v).toLowerCase()));
+      filteredData = filteredData.filter((item) => set.has(String(item.liga || '').toLowerCase()));
+    }
+    if (Array.isArray(filtros.filter_tempera) && filtros.filter_tempera.length > 0) {
+      const set = new Set(filtros.filter_tempera.map((v) => String(v).toLowerCase()));
+      filteredData = filteredData.filter((item) => set.has(String(item.tempera || '').toLowerCase()));
+    }
 
     const start = (page - 1) * pageSize;
     const end = start + pageSize;
@@ -118,6 +127,29 @@ const getMockData = async (endpoint, data) => {
   };
 };
 
+/**
+ * Devolve valores distintos de uma coluna (sobre o dataset completo). Para uso no filtro por coluna (PaginatedTable).
+ * @param {string} columnKey - dataIndex da coluna (ex.: 'liga', 'tempera', 'unidade')
+ * @returns {Promise<Array<{ text: string, value: string }>>}
+ */
+const getDistinctValues = async (columnKey) => {
+  await delay(150);
+  const list = itensMock.data || [];
+  const key = String(columnKey || '').trim();
+  const seen = new Set();
+  const out = [];
+  for (const item of list) {
+    const raw = item[key];
+    const value = raw == null ? '' : String(raw).trim();
+    const text = value || '(vazio)';
+    if (seen.has(value)) continue;
+    seen.add(value);
+    out.push({ text, value });
+  }
+  out.sort((a, b) => a.text.localeCompare(b.text));
+  return out;
+};
+
 const ItensService = {
   getAll: async (requestData) => {
     try {
@@ -127,6 +159,8 @@ const ItensService = {
       throw error;
     }
   },
+
+  getDistinctValues,
 
   getById: async (id) => {
     try {
