@@ -47,6 +47,19 @@ function getDateKey(d) {
   return dayjs(d).format('YYYY-MM-DD');
 }
 
+/** Retorna valores distintos de uma lista para uma coluna (para filterDropdown). */
+function getDistinctFromList(list, columnKey) {
+  const values = [...new Set((list || []).map((op) => op[columnKey] ?? ''))];
+  return Promise.resolve(
+    values
+      .sort((a, b) => String(a).localeCompare(String(b)))
+      .map((val) => ({
+        text: val === '' || val == null ? '-' : String(val),
+        value: val === null || val === undefined ? '' : val,
+      }))
+  );
+}
+
 function getOrCreateSeq(sequenciasPorDia, dateKey) {
   if (!sequenciasPorDia[dateKey]) {
     return { ops: [], casaPct: 60, confirmada: false }; // 60% = 18/(18+12)
@@ -676,13 +689,14 @@ const FilaProducao = () => {
             </Tooltip>
           ) : null,
       },
-      { title: 'Código', dataIndex: 'codigo', key: 'codigo', width: 90, render: (v) => <Text strong style={{ fontFamily: 'monospace' }}>{v || '-'}</Text> },
-      { title: 'Produto', dataIndex: 'produto', key: 'produto', width: 200, ellipsis: true },
+      { title: 'Código', dataIndex: 'codigo', key: 'codigo', width: 90, filterable: true, render: (v) => <Text strong style={{ fontFamily: 'monospace' }}>{v || '-'}</Text> },
+      { title: 'Produto', dataIndex: 'produto', key: 'produto', width: 200, ellipsis: true, filterable: true },
       {
         title: 'Liga',
         dataIndex: 'liga',
         key: 'liga',
         width: 80,
+        filterable: true,
         render: (v) => <Tag color="blue" style={{ margin: 0, fontFamily: 'monospace' }}>{v || '-'}</Tag>,
       },
       {
@@ -690,18 +704,20 @@ const FilaProducao = () => {
         dataIndex: 'tempera',
         key: 'tempera',
         width: 80,
+        filterable: true,
         render: (v) => (
           <Tag color={({ T4: 'error', T5: 'processing', T6: 'blue', H32: 'cyan' }[v] || 'default')} style={{ margin: 0, fontFamily: 'monospace' }}>
             {v || '-'}
           </Tag>
         ),
       },
-      { title: 'Recurso', dataIndex: 'recurso', key: 'recurso', width: 100, ellipsis: true },
+      { title: 'Recurso', dataIndex: 'recurso', key: 'recurso', width: 100, ellipsis: true, filterable: true },
       {
         title: 'Tipo',
         dataIndex: 'tipo',
         key: 'tipo',
         width: 80,
+        filterable: true,
         render: (tipo) => {
           const t = tipo || 'cliente';
           return t === 'casa' ? <Tag color="blue">CASA</Tag> : <Tag color="default">CLIENTE</Tag>;
@@ -764,6 +780,7 @@ const FilaProducao = () => {
         dataIndex: 'status',
         key: 'status',
         width: 140,
+        filterable: true,
         render: (status) => <StatusBadge status={status} />,
       },
     ],
@@ -801,16 +818,52 @@ const FilaProducao = () => {
     return opsFiltradasModalMESC;
   }, [filtroListaOPs, opsDisponiveis, opsFiltradasModalMESC, selectedRowKeys]);
 
-  const fetchDataDisponiveis = useCallback(async (page, pageSize) => {
+  const getDistinctValuesForColumnTotvs = useCallback(
+    async (columnKey) => getDistinctFromList(opsFiltradasModalTotvs, columnKey),
+    [opsFiltradasModalTotvs]
+  );
+
+  const getDistinctValuesForColumnMESC = useCallback(
+    async (columnKey) => getDistinctFromList(opsFiltradasModalMESC, columnKey),
+    [opsFiltradasModalMESC]
+  );
+
+  const applyFiltersAndSort = (list, filters, sorterField, sortOrder) => {
+    let result = [...(list || [])];
+    if (filters && typeof filters === 'object') {
+      Object.keys(filters).forEach((key) => {
+        const selected = filters[key];
+        if (Array.isArray(selected) && selected.length > 0) {
+          result = result.filter((op) => {
+            const val = op[key] ?? '';
+            return selected.includes(val);
+          });
+        }
+      });
+    }
+    if (sorterField && sortOrder) {
+      result.sort((a, b) => {
+        const va = a[sorterField];
+        const vb = b[sorterField];
+        const cmp = va == null && vb == null ? 0 : va == null ? 1 : vb == null ? -1 : (typeof va === 'number' && typeof vb === 'number' ? va - vb : String(va).localeCompare(String(vb)));
+        return sortOrder === 'ascend' ? cmp : -cmp;
+      });
+    }
+    return result;
+  };
+
+  const fetchDataDisponiveis = useCallback(async (page, pageSize, sorterField, sortOrder, filters) => {
+    const list = applyFiltersAndSort(opsParaTabelaMESC, filters, sorterField, sortOrder);
     const start = (page - 1) * pageSize;
-    const data = opsParaTabelaMESC.slice(start, start + pageSize);
-    return { data, total: opsParaTabelaMESC.length };
+    const data = list.slice(start, start + pageSize);
+    return { data, total: list.length };
   }, [opsParaTabelaMESC]);
 
-  const fetchDataTotvsModal = useCallback(async (page, pageSize) => {
+  const fetchDataTotvsModal = useCallback(async (page, pageSize, sorterField, sortOrder, filters) => {
+    const list = applyFiltersAndSort(opsParaTabelaTotvs, filters, sorterField, sortOrder);
     const start = (page - 1) * pageSize;
-    const data = opsParaTabelaTotvs.slice(start, start + pageSize);
-    return { data, total: opsParaTabelaTotvs.length };
+    const data = list.slice(start, start + pageSize);
+    return { data, total: list.length };
   }, [opsParaTabelaTotvs]);
 
   useEffect(() => {
@@ -1483,6 +1536,8 @@ const FilaProducao = () => {
                               scroll={{ x: 'max-content' }}
                               onRow={onRowDisponiveisTotvs}
                               rowSelection={rowSelectionTotvs}
+                              getDistinctValuesForColumn={getDistinctValuesForColumnTotvs}
+                              usePopoverForColumnFilter
                             />
                           </div>
                         ),
@@ -1583,6 +1638,8 @@ const FilaProducao = () => {
                               scroll={{ x: 'max-content' }}
                               onRow={onRowDisponiveis}
                               rowSelection={rowSelection}
+                              getDistinctValuesForColumn={getDistinctValuesForColumnMESC}
+                              usePopoverForColumnFilter
                             />
                             {selectedOPsComPerda.length > 0 && (
                               <div style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
