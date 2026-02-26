@@ -425,18 +425,22 @@ const OrdemProducaoService = {
         };
     },
 
-    // Fila de Produção: OPs FILHA não concluídas/canceladas, ordenadas por score, paginadas
+    // Fila de Produção: OPs FILHA (Totvs) + OPs MESC (opPaiId null) não concluídas/canceladas, ordenadas por score, paginadas
     getFilaProducao: async (requestData) => {
         await delay(300);
         const { page = 1, pageSize = 10, search, filtroTipo } = requestData || {};
         const list = ordensProducaoMock.data || [];
         const pais = list.filter((op) => op.tipoOp === 'PAI');
-        let fila = list
-            .filter((op) => op.tipoOp === 'FILHA' && op.status !== 'concluida' && op.status !== 'cancelada')
+        const filhasTotvs = list
+            .filter((op) => op.tipoOp === 'FILHA' && op.opPaiId != null && op.status !== 'concluida' && op.status !== 'cancelada')
             .map((f) => {
                 const pai = pais.find((p) => p.id === f.opPaiId);
                 return normalizeOPParaFila(f, pai);
             });
+        const opsMESC = list
+            .filter((op) => (op.tipoOp === 'MESC' || (op.tipoOp === 'FILHA' && (op.opPaiId == null || !op.opPaiId))) && op.status !== 'concluida' && op.status !== 'cancelada')
+            .map((op) => normalizeOPParaFila(op, null));
+        let fila = [...filhasTotvs, ...opsMESC];
 
         if (search && String(search).trim()) {
             const term = String(search).trim().toLowerCase();

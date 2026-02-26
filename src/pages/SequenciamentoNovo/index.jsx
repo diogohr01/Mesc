@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, startTransition } from 'react';
 import { Button, Col, Form, Input, Layout, message, Modal, Progress, Row, Select, Space, Tag, Tabs, Tooltip, Typography } from 'antd';
-import { ThunderboltOutlined, LockOutlined, UnlockOutlined, HolderOutlined, DeleteOutlined, InfoCircleOutlined, HomeOutlined, TeamOutlined, UnorderedListOutlined, PlusOutlined } from '@ant-design/icons';
+import { ThunderboltOutlined, LockOutlined, UnlockOutlined, HolderOutlined, DeleteOutlined, InfoCircleOutlined, HomeOutlined, TeamOutlined, UnorderedListOutlined, PlusOutlined, EditOutlined } from '@ant-design/icons';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br';
@@ -14,19 +14,31 @@ import StatusBadge from '../../components/Dashboard/StatusBadge';
 import { statusRowTint } from '../../constants/ordemProducaoStatus';
 import OrdemProducaoService, { normalizeOPParaFila } from '../../services/ordemProducaoService';
 import SequenciamentoService from '../../services/sequenciamentoService';
+import ItensService from '../../services/itensService';
+import { getPerdaPercentual } from '../../helpers/itemFerramentaHelpers';
+import { getBufferDays, bufferColors } from '../../helpers/buffer';
 import { colors } from '../../styles/colors';
 import ModalSequenciarOP from './Modals/ModalSequenciarOP';
 import ModalConfirmarOP from './Modals/ModalConfirmarOP';
 import ModalGerarOPs from './Modals/ModalGerarOPs';
 import CriarOPMESCModal from '../OrdemProducao/components/CriarOPMESCModal';
-import OrdemProducaoTotvsList from '../OrdemProducao/components/OrdemProducaoTotvsList';
+import ExcecoesCapacidadeService, { CONFIG_CAPACIDADE } from '../../services/excecoesCapacidadeService';
+import FerramentasService from '../../services/ferramentasService';
 
 dayjs.locale('pt-br');
 
-const CAPACIDADE_CASA_TON = 18;
-const CAPACIDADE_CLIENTE_TON = 12;
-const CAPACIDADE_TOTAL_TON = CAPACIDADE_CASA_TON + CAPACIDADE_CLIENTE_TON; // 30
 const FILA_PAGE_SIZE = 500;
+
+/** Retorna capacidade do dia (casa/cliente ton e %) com base em exceções ou padrão. */
+function getCapacidadeForDate(excecoesList, dateKey) {
+  const capacidadeTotal = CONFIG_CAPACIDADE.capacidadeDiaria ?? 30;
+  const excecaoDia = (excecoesList || []).find((e) => e.data === dateKey);
+  const casaPct = excecaoDia ? excecaoDia.casaPct : (CONFIG_CAPACIDADE.casaPctPadrao ?? 60);
+  const clientePct = excecaoDia ? excecaoDia.clientePct : (CONFIG_CAPACIDADE.clientePctPadrao ?? 40);
+  const casaCap = (capacidadeTotal * casaPct) / 100;
+  const clienteCap = (capacidadeTotal * clientePct) / 100;
+  return { casaPct, clientePct, casaCap, clienteCap, capacidadeTotal, excecaoDia };
+}
 
 const { Content } = Layout;
 const { Text } = Typography;
@@ -42,15 +54,16 @@ function getOrCreateSeq(sequenciasPorDia, dateKey) {
   return sequenciasPorDia[dateKey];
 }
 
-function buildSequenciamentoPayload(dateKey, sequenciasPorDia) {
+function buildSequenciamentoPayload(dateKey, sequenciasPorDia, capacidadeForDate) {
+  const cap = capacidadeForDate || getCapacidadeForDate([], dateKey);
   const seq = sequenciasPorDia[dateKey];
   if (!seq) {
-    return { data: dateKey, confirmada: false, capacidade: { casaPct: 60, clientePct: 40, casaCap: CAPACIDADE_CASA_TON, clienteCap: CAPACIDADE_CLIENTE_TON }, sequencia: [] };
+    return { data: dateKey, confirmada: false, capacidade: { casaPct: cap.casaPct, clientePct: cap.clientePct, casaCap: cap.casaCap, clienteCap: cap.clienteCap }, sequencia: [] };
   }
-  const casaPct = seq.casaPct ?? 60;
+  const casaPct = seq.casaPct ?? cap.casaPct;
   const clientePct = 100 - casaPct;
-  const casaCap = CAPACIDADE_CASA_TON;
-  const clienteCap = CAPACIDADE_CLIENTE_TON;
+  const casaCap = cap.casaCap;
+  const clienteCap = cap.clienteCap;
   const ops = seq.ops || [];
   const sequencia = ops.map((op, index) => ({
     idOP: op.id,
@@ -83,14 +96,21 @@ const FilaProducao = () => {
   const [modalFiltrosOpen, setModalFiltrosOpen] = useState(false);
   const [modalSequenciarOpen, setModalSequenciarOpen] = useState(false);
   const [modalDisponiveisOpen, setModalDisponiveisOpen] = useState(false);
-  const [tabDisponiveis, setTabDisponiveis] = useState('mesc'); // 'mesc' | 'totvs'
-  const [modalCriarOPMESCPai, setModalCriarOPMESCPai] = useState(null); // record OP Totvs para Criar OP MESC
+  const [tabDisponiveis, setTabDisponiveis] = useState('totvs'); // 'totvs' | 'mesc' — primeira tab aberta por defeito
+  const [modalFiltroTipo, setModalFiltroTipo] = useState('casa'); // 'casa' | 'cliente' — filtro dentro do modal
+  const [modalSearchTerm, setModalSearchTerm] = useState(''); // busca dentro do modal
+  const [selectedRowKeysTotvs, setSelectedRowKeysTotvs] = useState([]); // seleção na tab OPs Totvs
+  const [modalCriarOPMESCPai, setModalCriarOPMESCPai] = useState(undefined); // undefined = fechado, null = Criar OP MESC manual, record = com PAI
   const [viewMode, setViewMode] = useState('dia'); // 'dia' | 'semana'
   const [modalConfirmarOpen, setModalConfirmarOpen] = useState(false);
   const [modalGerarOPsOpen, setModalGerarOPsOpen] = useState(false);
   const [justificativaModal, setJustificativaModal] = useState(null);
   const [justificativaTexto, setJustificativaTexto] = useState('');
   const [diaAlvoAdicionar, setDiaAlvoAdicionar] = useState(null); // dateKey do dia alvo quando viewMode === 'semana' e modal aberto
+  const [excecoesCapacidade, setExcecoesCapacidade] = useState([]);
+  const [itensList, setItensList] = useState([]);
+  const [editOPModal, setEditOPModal] = useState(null); // { op, quantidade, ferramentaCodigo }
+  const [ferramentasOptions, setFerramentasOptions] = useState([]);
   const tableDisponiveisRef = useRef(null);
   const tableTotvsRef = useRef(null);
   const { searchTerm } = useFilterSearchContext();
@@ -102,6 +122,12 @@ const FilaProducao = () => {
   const currentSeq = getOrCreateSeq(sequenciasPorDia, dateKey);
   const casaPct = currentSeq.casaPct;
   const confirmada = currentSeq.confirmada; // pós-confirmação: só visualização (sem adicionar, reordenar, remover ou editar)
+
+  const capacityForDate = useMemo(
+    () => getCapacidadeForDate(excecoesCapacidade, dateKey),
+    [excecoesCapacidade, dateKey]
+  );
+  const { casaCap, clienteCap, capacidadeTotal, excecaoDia } = capacityForDate;
 
   useEffect(() => {
     filterForm.setFieldsValue({
@@ -126,6 +152,13 @@ const FilaProducao = () => {
   }, [modalDisponiveisOpen, viewMode, diaSequenciamento]);
 
   useEffect(() => {
+    if (modalDisponiveisOpen) {
+      setModalFiltroTipo(filtroTipo === 'casa' || filtroTipo === 'cliente' ? filtroTipo : 'casa');
+      setModalSearchTerm('');
+    }
+  }, [modalDisponiveisOpen, filtroTipo]);
+
+  useEffect(() => {
     let cancelled = false;
     setLoadingCenarios(true);
     SequenciamentoService.getAll({ page: 1, pageSize: 100 })
@@ -144,6 +177,62 @@ const FilaProducao = () => {
       });
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    ExcecoesCapacidadeService.getAll({ page: 1, pageSize: 500 })
+      .then((res) => {
+        if (!cancelled && res?.data?.data) {
+          setExcecoesCapacidade(res.data.data);
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    ItensService.getAll({ page: 1, pageSize: 500 })
+      .then((res) => {
+        if (!cancelled && res?.data?.data) {
+          setItensList(Array.isArray(res.data.data) ? res.data.data : []);
+        }
+      })
+      .catch(() => setItensList([]));
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!editOPModal) return;
+    FerramentasService.getAll({ page: 1, pageSize: 500 })
+      .then((res) => {
+        if (res?.data?.data) {
+          setFerramentasOptions(res.data.data.map((f) => ({ value: f.codigo, label: `${f.codigo} - ${f.descricao || ''}` })));
+        }
+      })
+      .catch(() => setFerramentasOptions([]));
+  }, [editOPModal]);
+
+  const handleConfirmEditOP = useCallback(() => {
+    if (!editOPModal) return;
+    const { op, quantidade, ferramentaCodigo } = editOPModal;
+    setSequenciasPorDia((prev) => {
+      const seq = getOrCreateSeq(prev, dateKey);
+      const ops = (seq.ops || []).map((o) =>
+        o.id === op.id
+          ? {
+              ...o,
+              quantidade: Number(quantidade) || o.quantidade,
+              ferramenta: ferramentaCodigo ? { codigo: ferramentaCodigo, descricao: '' } : o.ferramenta,
+              recurso: ferramentaCodigo || o.recurso,
+            }
+          : o
+      );
+      return { ...prev, [dateKey]: { ...seq, ops } };
+    });
+    message.success(`OP ${op.codigo || op.numeroOPERP} atualizada.`);
+    setEditOPModal(null);
+  }, [editOPModal, dateKey]);
 
   const loadAllFila = useCallback(async () => {
     setLoadingFila(true);
@@ -199,6 +288,34 @@ const FilaProducao = () => {
     return list;
   }, [allFilaData, idsEmQualquerSequencia, filtroLiga, filtroTempera, searchTerm]);
 
+  const opsFiltradasModalTotvs = useMemo(() => {
+    let list = opsDisponiveis.filter((op) => op.opPaiId != null && (op.tipo || 'cliente') === modalFiltroTipo);
+    if (modalSearchTerm?.trim()) {
+      const term = modalSearchTerm.trim().toLowerCase();
+      list = list.filter(
+        (op) =>
+          op.codigo?.toLowerCase().includes(term) ||
+          op.produto?.toLowerCase().includes(term) ||
+          op.cliente?.toLowerCase().includes(term)
+      );
+    }
+    return list;
+  }, [opsDisponiveis, modalFiltroTipo, modalSearchTerm]);
+
+  const opsFiltradasModalMESC = useMemo(() => {
+    let list = opsDisponiveis.filter((op) => (op.opPaiId == null || !op.opPaiId) && (op.tipo || 'cliente') === modalFiltroTipo);
+    if (modalSearchTerm?.trim()) {
+      const term = modalSearchTerm.trim().toLowerCase();
+      list = list.filter(
+        (op) =>
+          op.codigo?.toLowerCase().includes(term) ||
+          op.produto?.toLowerCase().includes(term) ||
+          op.cliente?.toLowerCase().includes(term)
+      );
+    }
+    return list;
+  }, [opsDisponiveis, modalFiltroTipo, modalSearchTerm]);
+
   const opcoesLiga = useMemo(() => {
     const set = new Set();
     allFilaData.forEach((op) => {
@@ -216,66 +333,43 @@ const FilaProducao = () => {
   }, [allFilaData]);
 
   const handleAdicionarAoDia = useCallback(() => {
-    if (selectedRowKeys.length === 0) {
-      message.info('Selecione pelo menos uma OP.');
-      return;
-    }
-    const toAdd = opsDisponiveis.filter((op) => selectedRowKeys.includes(op.id));
-    if (toAdd.length === 0) return;
     const targetDateKey =
       viewMode === 'semana' ? (diaAlvoAdicionar || getDateKey(diaSequenciamento.startOf('week'))) : dateKey;
-    const toAddWithFlag = toAdd.map((op) => ({ ...op, jaSequenciada: true }));
-    startTransition(() => {
-      setSequenciasPorDia((prev) => {
-        const seq = getOrCreateSeq(prev, targetDateKey);
-        const newOps = [...(seq.ops || []), ...toAddWithFlag];
-        return { ...prev, [targetDateKey]: { ...seq, ops: newOps } };
+    if (tabDisponiveis === 'totvs') {
+      if (selectedRowKeysTotvs.length === 0) {
+        message.info('Selecione pelo menos uma OP.');
+        return;
+      }
+      const toAdd = opsFiltradasModalTotvs.filter((op) => selectedRowKeysTotvs.includes(op.id));
+      if (toAdd.length === 0) return;
+      const toAddWithFlag = toAdd.map((op) => ({ ...op, jaSequenciada: true }));
+      startTransition(() => {
+        setSequenciasPorDia((prev) => {
+          const seq = getOrCreateSeq(prev, targetDateKey);
+          const newOps = [...(seq.ops || []), ...toAddWithFlag];
+          return { ...prev, [targetDateKey]: { ...seq, ops: newOps } };
+        });
       });
-    });
-    setSelectedRowKeys([]);
+      setSelectedRowKeysTotvs([]);
+    } else {
+      if (selectedRowKeys.length === 0) {
+        message.info('Selecione pelo menos uma OP.');
+        return;
+      }
+      const toAdd = opsDisponiveis.filter((op) => selectedRowKeys.includes(op.id));
+      if (toAdd.length === 0) return;
+      const toAddWithFlag = toAdd.map((op) => ({ ...op, jaSequenciada: true }));
+      startTransition(() => {
+        setSequenciasPorDia((prev) => {
+          const seq = getOrCreateSeq(prev, targetDateKey);
+          const newOps = [...(seq.ops || []), ...toAddWithFlag];
+          return { ...prev, [targetDateKey]: { ...seq, ops: newOps } };
+        });
+      });
+      setSelectedRowKeys([]);
+    }
     queueMicrotask(() => setModalDisponiveisOpen(false));
-  }, [selectedRowKeys, opsDisponiveis, dateKey, viewMode, diaAlvoAdicionar, diaSequenciamento]);
-
-  const handleAdicionarUmaOPAoDia = useCallback(
-    (record) => {
-      const normalized = normalizeOPParaFila(record, null);
-      const toAddWithFlag = [{ ...normalized, jaSequenciada: true }];
-      setSequenciasPorDia((prev) => {
-        const seq = getOrCreateSeq(prev, dateKey);
-        const newOps = [...(seq.ops || []), ...toAddWithFlag];
-        return { ...prev, [dateKey]: { ...seq, ops: newOps } };
-      });
-      message.success('OP adicionada ao dia.');
-      tableTotvsRef.current?.reloadExpandido?.(record.opPaiId);
-    },
-    [dateKey]
-  );
-
-  const handleAdicionarVariasAoDia = useCallback(
-    (records, opPai) => {
-      if (!records?.length) return;
-      const toAddWithFlag = records.map((r) => ({ ...normalizeOPParaFila(r, opPai), jaSequenciada: true }));
-      setSequenciasPorDia((prev) => {
-        const seq = getOrCreateSeq(prev, dateKey);
-        const newOps = [...(seq.ops || []), ...toAddWithFlag];
-        return { ...prev, [dateKey]: { ...seq, ops: newOps } };
-      });
-      message.success(records.length === 1 ? 'OP adicionada ao dia.' : `${records.length} OPs adicionadas ao dia.`);
-      const opPaiId = records[0]?.opPaiId;
-      if (opPaiId) tableTotvsRef.current?.reloadExpandido?.(opPaiId);
-    },
-    [dateKey]
-  );
-
-  const enrichFilhaRecord = useCallback(
-    (record, opPaiId) => {
-      const jaSequenciada = (currentSeq.ops || []).some((op) => op.id === record.id);
-      const naListaDisponiveis = opsDisponiveis.some((op) => op.id === record.id);
-      const disponivelParaSequenciamento = naListaDisponiveis || !jaSequenciada;
-      return { ...record, opPaiId: opPaiId ?? record.opPaiId, jaSequenciada, disponivelParaSequenciamento };
-    },
-    [currentSeq.ops, opsDisponiveis]
-  );
+  }, [tabDisponiveis, selectedRowKeysTotvs, selectedRowKeys, opsFiltradasModalTotvs, opsDisponiveis, dateKey, viewMode, diaAlvoAdicionar, diaSequenciamento]);
 
   const handleRemoverDoDia = useCallback(
     (opId) => {
@@ -303,8 +397,14 @@ const FilaProducao = () => {
       const ops = [...currentSeq.ops];
       const [removed] = ops.splice(sourceIndex, 1);
       ops.splice(destIndex, 0, removed);
-      setJustificativaModal({ op: removed, fromIndex: sourceIndex + 1, toIndex: destIndex + 1 });
-      setJustificativaTexto('');
+      const dataMovida = removed.dataEntrega ?? removed.itens?.[0]?.dataEntrega;
+      const opAcima = destIndex > 0 ? ops[destIndex - 1] : null;
+      const dataAcima = opAcima ? (opAcima.dataEntrega ?? opAcima.itens?.[0]?.dataEntrega) : null;
+      const contraUrgencia = dataMovida && dataAcima && new Date(dataMovida) < new Date(dataAcima);
+      if (contraUrgencia) {
+        setJustificativaModal({ op: removed, fromIndex: sourceIndex + 1, toIndex: destIndex + 1 });
+        setJustificativaTexto('');
+      }
       setSequenciasPorDia((prev) => ({ ...prev, [dateKey]: { ...currentSeq, ops } }));
     },
     [currentSeq, dateKey]
@@ -321,8 +421,14 @@ const FilaProducao = () => {
       const otherOps = isTodos ? [] : fullOpsCurrent.filter((op) => (op.tipo || 'cliente') !== filtroTipo);
       const [removed] = tabOps.splice(sourceIndex, 1);
       tabOps.splice(destIndex, 0, removed);
-      setJustificativaModal({ op: removed, fromIndex: sourceIndex + 1, toIndex: destIndex + 1 });
-      setJustificativaTexto('');
+      const dataMovida = removed.dataEntrega ?? removed.itens?.[0]?.dataEntrega;
+      const opAcima = destIndex > 0 ? tabOps[destIndex - 1] : null;
+      const dataAcima = opAcima ? (opAcima.dataEntrega ?? opAcima.itens?.[0]?.dataEntrega) : null;
+      const contraUrgencia = dataMovida && dataAcima && new Date(dataMovida) < new Date(dataAcima);
+      if (contraUrgencia) {
+        setJustificativaModal({ op: removed, fromIndex: sourceIndex + 1, toIndex: destIndex + 1 });
+        setJustificativaTexto('');
+      }
       const fullOps = isTodos ? tabOps : (filtroTipo === 'casa' ? [...tabOps, ...otherOps] : [...otherOps, ...tabOps]);
       setSequenciasPorDia((prev) => ({ ...prev, [dateKey]: { ...currentSeq, ops: fullOps } }));
     },
@@ -336,8 +442,6 @@ const FilaProducao = () => {
         const opsSeq = seq.ops || [];
         const casaTonSeq = opsSeq.filter((op) => op.tipo === 'casa').reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
         const clienteTonSeq = opsSeq.filter((op) => op.tipo !== 'casa').reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
-        const casaCap = CAPACIDADE_CASA_TON;
-        const clienteCap = CAPACIDADE_CLIENTE_TON;
         if (casaTonSeq > casaCap || clienteTonSeq > clienteCap) {
           message.warning('Capacidade excedida — excedente será rolado para o próximo dia');
         }
@@ -354,12 +458,13 @@ const FilaProducao = () => {
       for (let i = 0; i < 7; i++) {
         const dia = inicio.add(i, 'day');
         const dk = getDateKey(dia);
+        const capDia = getCapacidadeForDate(excecoesCapacidade, dk);
         const seq = getOrCreateSeq(next, dk);
         if ((seq.ops?.length ?? 0) > 0 && !seq.confirmada) {
           const opsSeq = seq.ops || [];
           const casaTonSeq = opsSeq.filter((op) => op.tipo === 'casa').reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
           const clienteTonSeq = opsSeq.filter((op) => op.tipo !== 'casa').reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
-          if (casaTonSeq > CAPACIDADE_CASA_TON || clienteTonSeq > CAPACIDADE_CLIENTE_TON) {
+          if (casaTonSeq > capDia.casaCap || clienteTonSeq > capDia.clienteCap) {
             message.warning(`Capacidade excedida no dia ${dia.format('DD/MM')} — excedente será rolado para o próximo dia`);
           }
           diasConfirmados.push(dia.format('ddd DD/MM'));
@@ -371,7 +476,7 @@ const FilaProducao = () => {
       }
       return next;
     });
-  }, [dateKey, diaSequenciamento, viewMode]);
+  }, [dateKey, diaSequenciamento, viewMode, casaCap, clienteCap, excecoesCapacidade]);
 
   const handleDesbloquearSequencia = useCallback(() => {
     setSequenciasPorDia((prev) => {
@@ -446,17 +551,24 @@ const FilaProducao = () => {
     return Array.from({ length: 7 }, (_, i) => {
       const dia = inicio.add(i, 'day');
       const dk = getDateKey(dia);
+      const capDia = getCapacidadeForDate(excecoesCapacidade, dk);
       const seq = getOrCreateSeq(sequenciasPorDia, dk);
       const ops = seq.ops || [];
       const casaTon = ops.filter((op) => op.tipo === 'casa').reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
       const clienteTon = ops.filter((op) => op.tipo !== 'casa').reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
-      return { dia, dateKey: dk, ops, casaTon, clienteTon, confirmada: !!seq.confirmada };
+      return { dia, dateKey: dk, ops, casaTon, clienteTon, casaCap: capDia.casaCap, clienteCap: capDia.clienteCap, confirmada: !!seq.confirmada };
     });
-  }, [diaSequenciamento, sequenciasPorDia]);
+  }, [diaSequenciamento, sequenciasPorDia, excecoesCapacidade]);
 
-  const CAPACIDADE_CASA_SEMANA = 18 * 7; // 126 ton
-  const CAPACIDADE_CLIENTE_SEMANA = 12 * 7; // 84 ton
-  const CAPACIDADE_TOTAL_SEMANA = CAPACIDADE_CASA_SEMANA + CAPACIDADE_CLIENTE_SEMANA; // 210 ton
+  const CAPACIDADE_CASA_SEMANA = useMemo(
+    () => diasDaSemana.reduce((s, d) => s + (d.casaCap ?? 18), 0),
+    [diasDaSemana]
+  );
+  const CAPACIDADE_CLIENTE_SEMANA = useMemo(
+    () => diasDaSemana.reduce((s, d) => s + (d.clienteCap ?? 12), 0),
+    [diasDaSemana]
+  );
+  const CAPACIDADE_TOTAL_SEMANA = CAPACIDADE_CASA_SEMANA + CAPACIDADE_CLIENTE_SEMANA;
 
   const { casaTonSemana, clienteTonSemana, opsSemanaOrdenadas } = useMemo(() => {
     let casa = 0;
@@ -610,7 +722,8 @@ const FilaProducao = () => {
         align: 'right',
         render: (_, record) => {
           const qtd = record.quantidade != null ? Number(record.quantidade) : 0;
-          const perdaPct = record.percentualPerda != null ? Number(record.percentualPerda) : record.item?.percentualPerda;
+          const perdaFromHelper = getPerdaPercentual(itensList, record.liga, record.tempera, qtd);
+          const perdaPct = perdaFromHelper > 0 ? perdaFromHelper : (record.percentualPerda != null ? Number(record.percentualPerda) : record.item?.percentualPerda);
           if (perdaPct == null || perdaPct === 0) return qtd > 0 ? <Text type="secondary">{qtd.toLocaleString('pt-BR')}</Text> : '-';
           const necessario = qtd;
           const produzir = Math.ceil(necessario / (1 - perdaPct / 100));
@@ -635,6 +748,18 @@ const FilaProducao = () => {
         },
       },
       {
+        title: 'Buffer',
+        key: 'buffer',
+        width: 72,
+        align: 'center',
+        render: (_, record) => {
+          const dataEntrega = record.dataEntrega ?? record.itens?.[0]?.dataEntrega;
+          const buffer = getBufferDays(dataEntrega, record.status);
+          const label = buffer.days > 0 ? `+${buffer.days}d` : `${buffer.days}d`;
+          return <span style={{ color: bufferColors[buffer.level], fontWeight: 600, fontSize: 12 }}>{label}</span>;
+        },
+      },
+      {
         title: 'Status',
         dataIndex: 'status',
         key: 'status',
@@ -642,52 +767,58 @@ const FilaProducao = () => {
         render: (status) => <StatusBadge status={status} />,
       },
     ],
-    []
+    [itensList]
   );
-
-  const fetchDataTotvs = useCallback(async (page, pageSize, sorterField, sortOrder) => {
-    try {
-      const res = await OrdemProducaoService.getAll({
-        tipoOp: 'PAI',
-        page,
-        pageSize,
-        sorterField,
-        sortOrder,
-      });
-      const data = res?.data?.data ?? [];
-      const total = res?.data?.pagination?.totalRecords ?? data.length;
-      return { data, total };
-    } catch (e) {
-      return { data: [], total: 0 };
-    }
-  }, []);
 
   const selectedOPsComPerda = useMemo(() => {
     return opsDisponiveis.filter((op) => {
       if (!selectedRowKeys.includes(op.id)) return false;
-      const perdaPct = op.percentualPerda != null ? Number(op.percentualPerda) : op.item?.percentualPerda;
+      const qtd = Number(op.quantidade) || 0;
+      const perdaFromHelper = getPerdaPercentual(itensList, op.liga, op.tempera, qtd);
+      const perdaPct = perdaFromHelper > 0 ? perdaFromHelper : (op.percentualPerda != null ? Number(op.percentualPerda) : op.item?.percentualPerda);
       return perdaPct != null && perdaPct > 0;
     });
-  }, [opsDisponiveis, selectedRowKeys]);
+  }, [opsDisponiveis, selectedRowKeys, itensList]);
 
-  const opsParaTabela = useMemo(() => {
+  const totvsSelectedTon = useMemo(() => {
+    const selected = opsFiltradasModalTotvs.filter((op) => selectedRowKeysTotvs.includes(op.id));
+    const casa = selected.filter((op) => (op.tipo || 'cliente') === 'casa').reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
+    const cliente = selected.filter((op) => (op.tipo || 'cliente') !== 'casa').reduce((s, op) => s + (Number(op.quantidade) || 0) / 1000, 0);
+    return { totalTon: casa + cliente, casaTon: casa, clienteTon: cliente };
+  }, [opsFiltradasModalTotvs, selectedRowKeysTotvs]);
+
+  const opsParaTabelaTotvs = useMemo(() => {
+    if (filtroListaOPs === 'selecionadas') {
+      return opsFiltradasModalTotvs.filter((op) => selectedRowKeysTotvs.includes(op.id));
+    }
+    return opsFiltradasModalTotvs;
+  }, [filtroListaOPs, opsFiltradasModalTotvs, selectedRowKeysTotvs]);
+
+  const opsParaTabelaMESC = useMemo(() => {
     if (filtroListaOPs === 'selecionadas') {
       return opsDisponiveis.filter((op) => selectedRowKeys.includes(op.id));
     }
-    return opsDisponiveis;
-  }, [filtroListaOPs, opsDisponiveis, selectedRowKeys]);
+    return opsFiltradasModalMESC;
+  }, [filtroListaOPs, opsDisponiveis, opsFiltradasModalMESC, selectedRowKeys]);
 
   const fetchDataDisponiveis = useCallback(async (page, pageSize) => {
     const start = (page - 1) * pageSize;
-    const data = opsParaTabela.slice(start, start + pageSize);
-    return { data, total: opsParaTabela.length };
-  }, [opsParaTabela]);
+    const data = opsParaTabelaMESC.slice(start, start + pageSize);
+    return { data, total: opsParaTabelaMESC.length };
+  }, [opsParaTabelaMESC]);
+
+  const fetchDataTotvsModal = useCallback(async (page, pageSize) => {
+    const start = (page - 1) * pageSize;
+    const data = opsParaTabelaTotvs.slice(start, start + pageSize);
+    return { data, total: opsParaTabelaTotvs.length };
+  }, [opsParaTabelaTotvs]);
 
   useEffect(() => {
     if (modalDisponiveisOpen) {
-      tableDisponiveisRef.current?.reloadTable?.();
+      if (tabDisponiveis === 'totvs') tableTotvsRef.current?.reloadTable?.();
+      else tableDisponiveisRef.current?.reloadTable?.();
     }
-  }, [opsParaTabela, modalDisponiveisOpen]);
+  }, [opsParaTabelaTotvs, opsParaTabelaMESC, modalDisponiveisOpen, tabDisponiveis]);
 
   const onRowDisponiveis = useCallback((record) => {
     const id = record.id;
@@ -709,6 +840,24 @@ const FilaProducao = () => {
     selectedRowKeys,
     onChange: (keys) => setSelectedRowKeys(keys),
   };
+
+  const rowSelectionTotvs = {
+    selectedRowKeys: selectedRowKeysTotvs,
+    onChange: (keys) => setSelectedRowKeysTotvs(keys),
+  };
+
+  const onRowDisponiveisTotvs = useCallback((record) => {
+    const id = record.id;
+    const statusTint = statusRowTint[record.status] || { backgroundColor: 'transparent', borderLeft: '4px solid transparent' };
+    return {
+      style: { cursor: 'pointer', ...statusTint },
+      onClick: () => {
+        setSelectedRowKeysTotvs((prev) =>
+          prev.includes(id) ? prev.filter((k) => k !== id) : [...prev, id]
+        );
+      },
+    };
+  }, []);
 
   const filtrosNaTitulo = (
     <Space wrap size="small">
@@ -732,6 +881,11 @@ const FilaProducao = () => {
           Semana
         </Button>
       </Space>
+      {excecaoDia && (
+        <Tag color="orange" title={excecaoDia.motivo || undefined}>
+          Exceção: {capacityForDate.casaPct}/{capacityForDate.clientePct}
+        </Tag>
+      )}
      
       {/*<Button icon={<UnorderedListOutlined />} onClick={() => setModalSequenciarOpen(true)}>
         Sequenciar OP
@@ -822,21 +976,21 @@ const FilaProducao = () => {
                           label: 'Total',
                           icon: <PlusOutlined style={{ marginRight: 4, fontSize: 11 }} />,
                           ton: viewMode === 'semana' ? casaTonSemana + clienteTonSemana : casaTon + clienteTon,
-                          cap: viewMode === 'semana' ? CAPACIDADE_TOTAL_SEMANA : CAPACIDADE_TOTAL_TON,
+                          cap: viewMode === 'semana' ? CAPACIDADE_TOTAL_SEMANA : capacidadeTotal,
                         },
                         {
                           key: 'casa',
                           label: 'Casa',
                           icon: <HomeOutlined style={{ marginRight: 4, fontSize: 11 }} />,
                           ton: viewMode === 'semana' ? casaTonSemana : casaTon,
-                          cap: viewMode === 'semana' ? CAPACIDADE_CASA_SEMANA : CAPACIDADE_CASA_TON,
+                          cap: viewMode === 'semana' ? CAPACIDADE_CASA_SEMANA : casaCap,
                         },
                         {
                           key: 'cliente',
                           label: 'Cliente',
                           icon: <TeamOutlined style={{ marginRight: 4, fontSize: 11 }} />,
                           ton: viewMode === 'semana' ? clienteTonSemana : clienteTon,
-                          cap: viewMode === 'semana' ? CAPACIDADE_CLIENTE_SEMANA : CAPACIDADE_CLIENTE_TON,
+                          cap: viewMode === 'semana' ? CAPACIDADE_CLIENTE_SEMANA : clienteCap,
                         },
                       ].map(({ key, label, icon, ton, cap }) => {
                         const currentTon = Number(ton) || 0;
@@ -898,8 +1052,8 @@ const FilaProducao = () => {
                         <br />
                         <Text type="secondary" style={{ fontSize: 11 }}>
                           {filtroTipo === 'todos'
-                            ? `Total previsto: ${(casaTon + clienteTon + selectedOpsTon.totalTon).toFixed(1)}/${CAPACIDADE_TOTAL_TON} ton`
-                            : `Total previsto: Casa ${(casaTon + selectedOpsTon.casaTon).toFixed(1)}/${CAPACIDADE_CASA_TON} ton · Cliente ${(clienteTon + selectedOpsTon.clienteTon).toFixed(1)}/${CAPACIDADE_CLIENTE_TON} ton`}
+                            ? `Total previsto: ${(casaTon + clienteTon + selectedOpsTon.totalTon).toFixed(1)}/${capacidadeTotal} ton`
+                            : `Total previsto: Casa ${(casaTon + selectedOpsTon.casaTon).toFixed(1)}/${casaCap} ton · Cliente ${(clienteTon + selectedOpsTon.clienteTon).toFixed(1)}/${clienteCap} ton`}
                         </Text>
                       </div>
                     )}
@@ -1127,14 +1281,30 @@ const FilaProducao = () => {
                                         {(op.dataEntrega ?? op.itens?.[0]?.dataEntrega) ? dayjs(op.dataEntrega ?? op.itens?.[0]?.dataEntrega).format('DD/MM') : '-'}
                                       </span>
                                       {!confirmada && (
-                                        <Button
-                                          type="text"
-                                          danger
-                                          size="small"
-                                          icon={<DeleteOutlined />}
-                                          onClick={() => handleRemoverDoDia(op.id)}
-                                          style={{ padding: '0 4px' }}
-                                        />
+                                        <Space size={0}>
+                                          <Button
+                                            type="text"
+                                            size="small"
+                                            icon={<EditOutlined />}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setEditOPModal({
+                                                op,
+                                                quantidade: op.quantidade ?? (op.itens || []).reduce((s, i) => s + (Number(i.quantidadePecas) || 0), 0),
+                                                ferramentaCodigo: op.ferramenta?.codigo || op.recurso || '',
+                                              });
+                                            }}
+                                            style={{ padding: '0 4px' }}
+                                          />
+                                          <Button
+                                            type="text"
+                                            danger
+                                            size="small"
+                                            icon={<DeleteOutlined />}
+                                            onClick={() => handleRemoverDoDia(op.id)}
+                                            style={{ padding: '0 4px' }}
+                                          />
+                                        </Space>
                                       )}
                                     </div>
                                   )}
@@ -1192,11 +1362,14 @@ const FilaProducao = () => {
                   onCancel={(e) => {
                     e?.stopPropagation?.();
                     setModalDisponiveisOpen(false);
-                    setTabDisponiveis('mesc');
+                    setTabDisponiveis('totvs');
                   }}
                   afterClose={() => {
-                    setTabDisponiveis('mesc');
+                    setTabDisponiveis('totvs');
                     setSelectedRowKeys([]);
+                    setSelectedRowKeysTotvs([]);
+                    setModalSearchTerm('');
+                    setModalFiltroTipo('casa');
                   }}
                   width={1300}
                   footer={null}
@@ -1207,6 +1380,113 @@ const FilaProducao = () => {
                     activeKey={tabDisponiveis}
                     onChange={setTabDisponiveis}
                     items={[
+                      {
+                        key: 'totvs',
+                        label: 'OPs Totvs',
+                        children: (
+                          <div>
+                            {totvsSelectedTon.totalTon > 0 && (
+                              <div style={{ marginBottom: 12, padding: '10px 12px', background: '#e6f7ff', borderRadius: 6, border: '1px solid #91d5ff', fontSize: 12 }}>
+                                <Text strong>Capacidade das OPs selecionadas (filhas Totvs):</Text>
+                                <Text style={{ marginLeft: 6 }}>{totvsSelectedTon.totalTon.toFixed(1)} ton</Text>
+                                <Text type="secondary" style={{ marginLeft: 8 }}>(Casa: {totvsSelectedTon.casaTon.toFixed(1)} · Cliente: {totvsSelectedTon.clienteTon.toFixed(1)})</Text>
+                                <br />
+                                <Text type="secondary" style={{ fontSize: 11 }}>
+                                  Total previsto no dia: Casa {(casaTon + totvsSelectedTon.casaTon).toFixed(1)}/{casaCap} ton · Cliente {(clienteTon + totvsSelectedTon.clienteTon).toFixed(1)}/{clienteCap} ton
+                                </Text>
+                              </div>
+                            )}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                              <Space size="middle" wrap>
+                                <Space size="small">
+                                  <span style={{ fontWeight: 600, fontSize: 13, color: '#666' }}>Filtro:</span>
+                                  <Button
+                                    type={modalFiltroTipo === 'casa' ? 'primary' : 'default'}
+                                    icon={<HomeOutlined />}
+                                    onClick={() => setModalFiltroTipo('casa')}
+                                  >
+                                    Casa
+                                  </Button>
+                                  <Button
+                                    type={modalFiltroTipo === 'cliente' ? 'primary' : 'default'}
+                                    icon={<TeamOutlined />}
+                                    onClick={() => setModalFiltroTipo('cliente')}
+                                  >
+                                    Cliente
+                                  </Button>
+                                </Space>
+                                <Input
+                                  placeholder="Buscar (código, produto, cliente)..."
+                                  allowClear
+                                  value={modalSearchTerm}
+                                  onChange={(e) => setModalSearchTerm(e.target.value)}
+                                  style={{ width: 240 }}
+                                />
+                                <span style={{ fontWeight: 600, fontSize: 14 }}>OPs Disponíveis</span>
+                                <Space size="small">
+                                  <Button
+                                    type={filtroListaOPs === 'disponiveis' ? 'primary' : 'default'}
+                                    onClick={() => setFiltroListaOPs('disponiveis')}
+                                  >
+                                    Disponíveis ({opsFiltradasModalTotvs.length})
+                                  </Button>
+                                  <Button
+                                    type={filtroListaOPs === 'selecionadas' ? 'primary' : 'default'}
+                                    onClick={() => setFiltroListaOPs('selecionadas')}
+                                  >
+                                    Selecionadas ({selectedRowKeysTotvs.length})
+                                  </Button>
+                                </Space>
+                              </Space>
+                              <Space size="middle">
+                                {viewMode === 'semana' && (
+                                  <>
+                                    <Text strong style={{ fontSize: 13 }}>Dia da semana:</Text>
+                                    <Select
+                                      value={diaAlvoAdicionar || getDateKey(diaSequenciamento.startOf('week'))}
+                                      onChange={setDiaAlvoAdicionar}
+                                      options={diasDaSemana.map((d) => ({ value: d.dateKey, label: d.dia.format('ddd DD/MM') }))}
+                                      style={{ minWidth: 140 }}
+                                    />
+                                  </>
+                                )}
+                                <Button
+                                  type="default"
+                                  icon={<PlusOutlined />}
+                                  onClick={() => setModalCriarOPMESCPai(null)}
+                                >
+                                  Criar OP MESC
+                                </Button>
+                                <Button
+                                  type="primary"
+                                  onClick={handleAdicionarAoDia}
+                                  disabled={
+                                    selectedRowKeysTotvs.length === 0 ||
+                                    getOrCreateSeq(
+                                      sequenciasPorDia,
+                                      viewMode === 'semana' ? (diaAlvoAdicionar || getDateKey(diaSequenciamento.startOf('week'))) : dateKey
+                                    ).confirmada
+                                  }
+                                >
+                                  Adicionar ao Dia
+                                </Button>
+                              </Space>
+                            </div>
+                            <PaginatedTable
+                              ref={tableTotvsRef}
+                              fetchData={fetchDataTotvsModal}
+                              initialPageSize={10}
+                              columns={columnsDisponiveis}
+                              rowKey="id"
+                              loadingIcon={<LoadingSpinner />}
+                              disabled={loadingFila}
+                              scroll={{ x: 'max-content' }}
+                              onRow={onRowDisponiveisTotvs}
+                              rowSelection={rowSelectionTotvs}
+                            />
+                          </div>
+                        ),
+                      },
                       {
                         key: 'mesc',
                         label: 'OPs MESC',
@@ -1219,19 +1499,43 @@ const FilaProducao = () => {
                                 <Text type="secondary" style={{ marginLeft: 8 }}>(Casa: {selectedOpsTon.casaTon.toFixed(1)} · Cliente: {selectedOpsTon.clienteTon.toFixed(1)})</Text>
                                 <br />
                                 <Text type="secondary" style={{ fontSize: 11 }}>
-                                  Total previsto no dia: Casa {(casaTon + selectedOpsTon.casaTon).toFixed(1)}/{CAPACIDADE_CASA_TON} ton · Cliente {(clienteTon + selectedOpsTon.clienteTon).toFixed(1)}/{CAPACIDADE_CLIENTE_TON} ton
+                                  Total previsto no dia: Casa {(casaTon + selectedOpsTon.casaTon).toFixed(1)}/{casaCap} ton · Cliente {(clienteTon + selectedOpsTon.clienteTon).toFixed(1)}/{clienteCap} ton
                                 </Text>
                               </div>
                             )}
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
-                              <Space size="middle">
+                              <Space size="middle" wrap>
+                                <Space size="small">
+                                  <span style={{ fontWeight: 600, fontSize: 13, color: '#666' }}>Filtro:</span>
+                                  <Button
+                                    type={modalFiltroTipo === 'casa' ? 'primary' : 'default'}
+                                    icon={<HomeOutlined />}
+                                    onClick={() => setModalFiltroTipo('casa')}
+                                  >
+                                    Casa
+                                  </Button>
+                                  <Button
+                                    type={modalFiltroTipo === 'cliente' ? 'primary' : 'default'}
+                                    icon={<TeamOutlined />}
+                                    onClick={() => setModalFiltroTipo('cliente')}
+                                  >
+                                    Cliente
+                                  </Button>
+                                </Space>
+                                <Input
+                                  placeholder="Buscar (código, produto, cliente)..."
+                                  allowClear
+                                  value={modalSearchTerm}
+                                  onChange={(e) => setModalSearchTerm(e.target.value)}
+                                  style={{ width: 240 }}
+                                />
                                 <span style={{ fontWeight: 600, fontSize: 14 }}>OPs Disponíveis</span>
                                 <Space size="small">
                                   <Button
                                     type={filtroListaOPs === 'disponiveis' ? 'primary' : 'default'}
                                     onClick={() => setFiltroListaOPs('disponiveis')}
                                   >
-                                    Disponíveis ({opsDisponiveis.length})
+                                    Disponíveis ({opsFiltradasModalMESC.length})
                                   </Button>
                                   <Button
                                     type={filtroListaOPs === 'selecionadas' ? 'primary' : 'default'}
@@ -1284,7 +1588,8 @@ const FilaProducao = () => {
                               <div style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
                                 {selectedOPsComPerda.map((op) => {
                                   const qtd = Number(op.quantidade) || 0;
-                                  const perdaPct = op.percentualPerda != null ? Number(op.percentualPerda) : op.item?.percentualPerda || 0;
+                                  const perdaFromHelper = getPerdaPercentual(itensList, op.liga, op.tempera, qtd);
+                                  const perdaPct = perdaFromHelper > 0 ? perdaFromHelper : (op.percentualPerda != null ? Number(op.percentualPerda) : op.item?.percentualPerda || 0);
                                   const produzir = Math.ceil(qtd / (1 - perdaPct / 100));
                                   return (
                                     <div key={op.id}>
@@ -1297,36 +1602,19 @@ const FilaProducao = () => {
                           </div>
                         ),
                       },
-                      {
-                        key: 'totvs',
-                        label: 'OPs Totvs',
-                        children: (
-                          <div style={{ padding: '0' }}>
-                            <OrdemProducaoTotvsList
-                              ref={tableTotvsRef}
-                              fetchData={fetchDataTotvs}
-                              onCriarOPMESC={(record) => setModalCriarOPMESCPai(record)}
-                              onSelecionarFilha={handleAdicionarUmaOPAoDia}
-                              onAdicionarVariasFilhasAoDia={handleAdicionarVariasAoDia}
-                              enrichFilhaRecord={enrichFilhaRecord}
-                            />
-                          </div>
-                        ),
-                      },
                     ]}
                   />
                 </Modal>
                 <CriarOPMESCModal
-                  open={modalCriarOPMESCPai != null}
-                  onClose={() => setModalCriarOPMESCPai(null)}
+                  open={modalCriarOPMESCPai !== undefined}
+                  onClose={() => setModalCriarOPMESCPai(undefined)}
                   opPaiId={modalCriarOPMESCPai?.id}
-                  opPaiRecord={modalCriarOPMESCPai ?? undefined}
+                  opPaiRecord={typeof modalCriarOPMESCPai === 'object' && modalCriarOPMESCPai != null ? modalCriarOPMESCPai : undefined}
+                  itensList={itensList}
                   onSuccess={() => {
-                    const opPaiId = modalCriarOPMESCPai?.id;
                     loadAllFila();
-                    setModalCriarOPMESCPai(null);
+                    setModalCriarOPMESCPai(undefined);
                     tableTotvsRef.current?.reloadTable?.();
-                    tableTotvsRef.current?.reloadExpandido?.(opPaiId);
                   }}
                 />
               </Space>
@@ -1382,6 +1670,45 @@ const FilaProducao = () => {
                 placeholder="Justificativa para alteração de prioridade..."
               />
             </>
+          )}
+        </Modal>
+        <Modal
+          title={`Editar OP ${editOPModal?.op?.codigo || editOPModal?.op?.numeroOPERP || ''}`}
+          open={!!editOPModal}
+          onCancel={() => setEditOPModal(null)}
+          onOk={handleConfirmEditOP}
+          okText="Confirmar"
+          cancelText="Cancelar"
+          destroyOnClose
+        >
+          {editOPModal && (
+            <div style={{ marginTop: 8 }}>
+              <p style={{ marginBottom: 8, fontSize: 12, color: '#666' }}>
+                {editOPModal.op.produto || editOPModal.op.itens?.[0]?.descricaoItem || '-'} • {editOPModal.op.liga || '-'} • {editOPModal.op.tempera || '-'}
+              </p>
+              <Form layout="vertical" style={{ marginTop: 16 }}>
+                <Form.Item label="Quantidade (kg)">
+                  <Input
+                    type="number"
+                    min={1}
+                    value={editOPModal.quantidade}
+                    onChange={(e) => setEditOPModal((prev) => ({ ...prev, quantidade: e.target.value }))}
+                  />
+                </Form.Item>
+                <Form.Item label="Ferramenta">
+                  <Select
+                    allowClear
+                    showSearch
+                    optionFilterProp="label"
+                    placeholder="Selecione a ferramenta"
+                    value={editOPModal.ferramentaCodigo || undefined}
+                    onChange={(v) => setEditOPModal((prev) => ({ ...prev, ferramentaCodigo: v || '' }))}
+                    options={ferramentasOptions}
+                    style={{ width: '100%' }}
+                  />
+                </Form.Item>
+              </Form>
+            </div>
           )}
         </Modal>
       </Content>

@@ -3,7 +3,12 @@ import excecoesCapacidadeMock from '../mocks/excecoesCapacidade/excecoesCapacida
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export const CONFIG_CAPACIDADE = { casaPctPadrao: 70, clientePctPadrao: 30 };
+// capacidadeDiaria em ton; 60/40 dá 18 ton Casa + 12 ton Cliente
+export const CONFIG_CAPACIDADE = {
+  capacidadeDiaria: 30,
+  casaPctPadrao: 60,
+  clientePctPadrao: 40,
+};
 
 const toDataStr = (v) => {
   if (!v) return null;

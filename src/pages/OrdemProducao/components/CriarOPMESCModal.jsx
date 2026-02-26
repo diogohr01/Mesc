@@ -6,10 +6,11 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import OrdemProducaoService from '../../../services/ordemProducaoService';
 import FerramentasService from '../../../services/ferramentasService';
 import ItensService from '../../../services/itensService';
+import { getPerdaPercentual } from '../../../helpers/itemFerramentaHelpers';
 
 const { Text } = Typography;
 
-const CriarOPMESCModal = ({ open, onClose, opPaiId, opPaiRecord, onSuccess }) => {
+const CriarOPMESCModal = ({ open, onClose, opPaiId, opPaiRecord, onSuccess, itensList }) => {
   const [form] = Form.useForm();
   const [saldo, setSaldo] = useState(null);
   const [opPaiResumo, setOpPaiResumo] = useState(null);
@@ -22,7 +23,10 @@ const CriarOPMESCModal = ({ open, onClose, opPaiId, opPaiRecord, onSuccess }) =>
   const isManual = opPaiId == null && !opPaiRecord;
 
   const unidade = opPaiResumo?.useKg ? 'kg' : 'peças';
-  const perdaPct = itemMatch ? (itemMatch.percentual_perda ?? itemMatch.percentualPerda ?? 0) : 0;
+  const perdaPctFromHelper = Array.isArray(itensList) && itensList.length > 0 && (opPaiDisplay?.liga != null || opPaiDisplay?.tempera != null)
+    ? getPerdaPercentual(itensList, opPaiDisplay.liga, opPaiDisplay.tempera, Number(quantidadeAProduzir) || 0)
+    : 0;
+  const perdaPct = perdaPctFromHelper > 0 ? perdaPctFromHelper : (itemMatch ? (itemMatch.percentual_perda ?? itemMatch.percentualPerda ?? 0) : 0);
   const qtdIdeal = perdaPct > 0 && quantidadeAProduzir > 0 ? Math.ceil(Number(quantidadeAProduzir) / (1 - perdaPct / 100)) : 0;
 
   useEffect(() => {
@@ -55,6 +59,8 @@ const CriarOPMESCModal = ({ open, onClose, opPaiId, opPaiRecord, onSuccess }) =>
       setOpPaiDisplay({
         codigo: opPaiRecord.numeroOPERP || opPaiRecord.codigo || '',
         produto: opPaiRecord.produto || opPaiRecord.itens?.[0]?.item?.descricao || '',
+        liga: opPaiRecord.liga,
+        tempera: opPaiRecord.tempera,
       });
     }
     if (!id) return;
@@ -63,10 +69,13 @@ const CriarOPMESCModal = ({ open, onClose, opPaiId, opPaiRecord, onSuccess }) =>
       .then((res) => {
         const pai = res?.data?.data ?? res?.data;
         if (res?.success && pai) {
-          setOpPaiDisplay((prev) => prev || {
+          setOpPaiDisplay((prev) => ({
+            ...(prev || {}),
             codigo: pai.numeroOPERP || pai.codigo || '',
             produto: pai.produto || pai.itens?.[0]?.item?.descricao || '',
-          });
+            liga: pai.liga ?? prev?.liga,
+            tempera: pai.tempera ?? prev?.tempera,
+          }));
           const itens = pai.itens || [];
           const total = itens.reduce((sum, i) => sum + (parseFloat(i.quantidadePecas) || 0), 0);
           const programada = pai.qtdProgramada != null ? Number(pai.qtdProgramada) : 0;

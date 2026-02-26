@@ -217,7 +217,7 @@ const PaginatedTable = forwardRef(
                     getData(pagination.current, pagination.pageSize, sorter?.field, sorter?.order, columnFilters);
                 },
             }),
-            [pagination.current, pagination.pageSize, sorter?.field, sorter?.order, columnFilters]
+            [pagination.current, pagination.pageSize, sorter?.field, sorter?.order, columnFilters, fetchData]
         );
 
         const handleDragEnd = useCallback(

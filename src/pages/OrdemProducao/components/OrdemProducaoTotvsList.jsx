@@ -1,4 +1,4 @@
-import React, { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Badge, Button, message, Space, Tag, Tooltip, Typography } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -40,6 +40,8 @@ const OrdemProducaoTotvsList = forwardRef(function OrdemProducaoTotvsList(
     onAdicionarVariasFilhasAoDia,
     /** Quando definida, cada registo filha é mapeado antes de ser exibido (ex.: para definir disponivelParaSequenciamento e jaSequenciada no contexto da Fila). */
     enrichFilhaRecord,
+    /** Callback quando a seleção de filhas Totvs muda: (payload: { totalTon, casaTon, clienteTon }) => void. Usado no modal de sequenciamento para mostrar capacidade prevista. */
+    onTotvsSelectionTonChange,
     onViewFilha,
     onEditFilha,
     onCopyFilha,
@@ -55,6 +57,26 @@ const OrdemProducaoTotvsList = forwardRef(function OrdemProducaoTotvsList(
   const loadedFilhasRef = useRef({});
   const [modalCriarOPPai, setModalCriarOPPai] = useState(null);
   const [selectedFilhasByOpPaiId, setSelectedFilhasByOpPaiId] = useState({});
+
+  useEffect(() => {
+    if (typeof onTotvsSelectionTonChange !== 'function') return;
+    let totalTon = 0;
+    let casaTon = 0;
+    let clienteTon = 0;
+    Object.values(selectedFilhasByOpPaiId || {}).forEach(({ rows = [] }) => {
+      rows.forEach((row) => {
+        const qtd = row.quantidade != null && row.quantidade !== ''
+          ? Number(row.quantidade)
+          : (row.itens || []).reduce((s, i) => s + (parseFloat(i.quantidadePecas) || 0), 0);
+        const ton = qtd / 1000;
+        const tipo = (row.tipo || 'cliente').toLowerCase();
+        totalTon += ton;
+        if (tipo === 'casa') casaTon += ton;
+        else clienteTon += ton;
+      });
+    });
+    onTotvsSelectionTonChange({ totalTon, casaTon, clienteTon });
+  }, [selectedFilhasByOpPaiId, onTotvsSelectionTonChange]);
 
   useImperativeHandle(ref, () => ({
     reloadTable: () => tableRef.current?.reloadTable?.(),
