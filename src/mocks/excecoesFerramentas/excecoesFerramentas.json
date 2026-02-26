@@ -1,0 +1,22 @@
+{
+  "data": [
+    {
+      "id": "ef1",
+      "ferramentaCodigo": "MTR-023-F08",
+      "quantidadeExtra": 250,
+      "motivo": "Pedido urgente Hydro Alunorte",
+      "aprovadoPor": "Gerson",
+      "data": "2026-02-24",
+      "ativo": true
+    },
+    {
+      "id": "ef2",
+      "ferramentaCodigo": "MTR-012-F14",
+      "quantidadeExtra": 100,
+      "motivo": "Teste de produção extra",
+      "aprovadoPor": "Carlos",
+      "data": "2026-02-20",
+      "ativo": false
+    }
+  ]
+}
