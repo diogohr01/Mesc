@@ -1,5 +1,10 @@
 import React, { createContext, useContext, useState } from 'react';
 
+/**
+ * Contexto de sequenciamento por dia.
+ * Formato de sequenciasPorDia[dateKey]: { ops: Array, preview?: Array<PreviewItem>, casaPct?: number, confirmada: boolean }
+ * PreviewItem: id, opTotvsId, opPaiId?, opTotvsQuantidadeOriginal?, opTotvsCodigo, produto, cliente, liga, tempera, tipo, dataEntrega, quantidade, ferramentaSugerida, ferramentaManual?, semFerramenta
+ */
 const SequenciamentoContext = createContext(null);
 
 export function SequenciamentoProvider({ children }) {

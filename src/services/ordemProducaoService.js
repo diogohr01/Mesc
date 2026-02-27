@@ -178,15 +178,52 @@ const getMockData = async (endpoint, data) => {
     
     if (endpoint.includes('upsert')) {
         const payload = data || {};
+        if (payload.tipoOp === 'FILHA' && payload.opPaiId != null) {
+            const paiIndex = ordensProducaoMock.data.findIndex(op => op.id === payload.opPaiId);
+            if (paiIndex >= 0) {
+                const pai = ordensProducaoMock.data[paiIndex];
+                const itensPai = pai.itens || [];
+                const useKg = itensPai.reduce((s, i) => s + (parseFloat(i.quantidadeKg) || 0), 0) > 0;
+                const qtdNova = (payload.itens || []).length > 0
+                    ? (useKg
+                        ? (payload.itens[0].quantidadeKg != null ? Number(payload.itens[0].quantidadeKg) : 0)
+                        : (payload.itens[0].quantidadePecas != null ? Number(payload.itens[0].quantidadePecas) : 0))
+                    : 0;
+                const qtdProgramadaAtual = pai.qtdProgramada != null ? Number(pai.qtdProgramada) : 0;
+                ordensProducaoMock.data[paiIndex] = {
+                    ...pai,
+                    qtdProgramada: qtdProgramadaAtual + qtdNova,
+                };
+            }
+        }
         const existingIndex = ordensProducaoMock.data.findIndex(op => op.id === payload.id);
+        let resultData = payload;
         if (existingIndex >= 0) {
             ordensProducaoMock.data[existingIndex] = { ...ordensProducaoMock.data[existingIndex], ...payload };
         } else {
-            const newOp = { ...payload, id: payload.id || Date.now() };
+            const newId = payload.id || Date.now() + Math.floor(Math.random() * 1000);
+            const baseCodigo = payload.opTotvsCodigo ? String(payload.opTotvsCodigo).trim() : null;
+            let codigoNova = payload.codigo;
+            if (!codigoNova && baseCodigo) {
+                const prefix = baseCodigo + '-';
+                const existentes = ordensProducaoMock.data.filter(
+                    (op) => op.tipoOp === 'FILHA' && op.opPaiId === payload.opPaiId && op.codigo && String(op.codigo).startsWith(prefix)
+                );
+                const sufixos = existentes
+                    .map((op) => parseInt(String(op.codigo).slice(prefix.length), 10))
+                    .filter((n) => !isNaN(n) && n >= 1);
+                const proximo = sufixos.length > 0 ? Math.max(...sufixos) + 1 : 1;
+                codigoNova = `${baseCodigo}-${String(proximo).padStart(3, '0')}`;
+            }
+            if (!codigoNova) {
+                codigoNova = `${String(payload.numeroOPERP || 'OP').trim() || 'OP'}-001`;
+            }
+            const newOp = { ...payload, id: newId, tipoOp: payload.tipoOp || 'FILHA', status: payload.status || 'nao_programada', codigo: codigoNova, numeroOPERP: payload.numeroOPERP ?? codigoNova };
             ordensProducaoMock.data.push(newOp);
+            resultData = newOp;
         }
         return {
-            data: { data: payload },
+            data: { data: resultData },
             success: true,
             message: payload.id ? "Ordem atualizada com sucesso" : "Ordem criada com sucesso"
         };
@@ -435,7 +472,22 @@ const OrdemProducaoService = {
             .filter((op) => op.tipoOp === 'FILHA' && op.opPaiId != null && op.status !== 'concluida' && op.status !== 'cancelada')
             .map((f) => {
                 const pai = pais.find((p) => p.id === f.opPaiId);
-                return normalizeOPParaFila(f, pai);
+                const normalized = normalizeOPParaFila(f, pai);
+                if (pai) {
+                    const totalPecas = (pai.itens || []).reduce((s, i) => s + (parseFloat(i.quantidadePecas) || 0), 0);
+                    const totalKg = (pai.itens || []).reduce((s, i) => s + (parseFloat(i.quantidadeKg) || 0), 0);
+                    normalized.quantidadeTotalPai = totalKg > 0 ? totalKg : totalPecas;
+                    normalized.qtdProgramadaPai = pai.qtdProgramada != null ? Number(pai.qtdProgramada) : 0;
+                    normalized.useKgPai = totalKg > 0;
+                    // OP Totvs: status parcial quando parte já programada; programada quando total programado
+                    const totalOp = normalized.quantidade != null ? Number(normalized.quantidade) : normalized.quantidadeTotalPai;
+                    const programado = normalized.qtdProgramadaPai;
+                    if (totalOp > 0) {
+                        if (programado >= totalOp) normalized.status = 'programada';
+                        else if (programado > 0) normalized.status = 'parcial';
+                    }
+                }
+                return normalized;
             });
         const opsMESC = list
             .filter((op) => (op.tipoOp === 'MESC' || (op.tipoOp === 'FILHA' && (op.opPaiId == null || !op.opPaiId))) && op.status !== 'concluida' && op.status !== 'cancelada')
