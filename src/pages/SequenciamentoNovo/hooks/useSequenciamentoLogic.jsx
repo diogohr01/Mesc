@@ -203,6 +203,11 @@ export function useSequenciamentoLogic() {
     loadAllFila();
   }, [loadAllFila]);
 
+  // Ao abrir o modal "Adicionar OPs", recarregar a fila para refletir saldos/status atualizados (ex.: após desbloquear)
+  useEffect(() => {
+    if (modalDisponiveisOpen) loadAllFila();
+  }, [modalDisponiveisOpen, loadAllFila]);
+
   const idsEmQualquerSequencia = useMemo(() => {
     const ids = new Set();
     Object.values(sequenciasPorDia).forEach((seq) => {
@@ -643,7 +648,8 @@ export function useSequenciamentoLogic() {
       }
       return next;
     });
-  }, [dateKey, diaSequenciamento, viewMode]);
+    loadAllFila();
+  }, [dateKey, diaSequenciamento, viewMode, loadAllFila]);
 
   const handleDateChange = useCallback((newDateKey) => {
     setDiaSequenciamento(dayjs(newDateKey));

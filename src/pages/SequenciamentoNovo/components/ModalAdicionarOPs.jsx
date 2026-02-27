@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Input, InputNumber, Modal, Select, Space, Tabs, Typography } from 'antd';
 import { HomeOutlined, PlusOutlined, TeamOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -60,6 +60,11 @@ export default function ModalAdicionarOPs({
   itensList,
 }) {
   const [quantityOverrides, setQuantityOverrides] = useState({});
+
+  // Ao abrir o modal, limpar overrides de quantidade para não mostrar valores de uma sessão anterior
+  useEffect(() => {
+    if (open) setQuantityOverrides({});
+  }, [open]);
 
   const totvsDisplayTon = useMemo(() => {
     const selected = opsFiltradasModalTotvs?.filter((op) => selectedRowKeysTotvs?.includes(op.id)) ?? [];
